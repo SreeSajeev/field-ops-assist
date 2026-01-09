@@ -1,23 +1,30 @@
+import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface ConfidenceScoreProps {
-  score: number | null;
+  score?: number | null;
   showLabel?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }
 
-export function ConfidenceScore({ score, showLabel = true, size = 'md' }: ConfidenceScoreProps) {
-  if (score === null) {
-    return <span className="text-muted-foreground">—</span>;
+export function ConfidenceScore({
+  score,
+  showLabel = true,
+  size = 'md',
+}: ConfidenceScoreProps) {
+  if (score === null || score === undefined || Number.isNaN(score)) {
+    return <span className="text-muted-foreground text-xs">—</span>;
   }
 
-  const getConfidenceLevel = (score: number) => {
-    if (score >= 95) return { level: 'high', label: 'High', color: 'confidence-high' };
-    if (score >= 80) return { level: 'medium', label: 'Medium', color: 'confidence-medium' };
-    return { level: 'low', label: 'Low', color: 'confidence-low' };
+  const numericScore = Number(score);
+
+  const getConfidenceMeta = (value: number) => {
+    if (value >= 95) return { label: 'High', color: 'confidence-high' };
+    if (value >= 80) return { label: 'Medium', color: 'confidence-medium' };
+    return { label: 'Low', color: 'confidence-low' };
   };
 
-  const { label, color } = getConfidenceLevel(score);
+  const { label, color } = getConfidenceMeta(numericScore);
 
   const sizeClasses = {
     sm: 'text-xs',
@@ -28,10 +35,11 @@ export function ConfidenceScore({ score, showLabel = true, size = 'md' }: Confid
   return (
     <div className={cn('flex items-center gap-2', sizeClasses[size])}>
       <span className={cn('font-semibold tabular-nums', color)}>
-        {score.toFixed(0)}%
+        {numericScore.toFixed(0)}%
       </span>
-      {showLabel && (
-        <span className={cn('text-muted-foreground', size === 'sm' && 'hidden')}>
+
+      {showLabel && size !== 'sm' && (
+        <span className="text-muted-foreground">
           ({label})
         </span>
       )}
