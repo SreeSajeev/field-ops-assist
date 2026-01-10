@@ -1,27 +1,81 @@
 import { TicketStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { 
+  Circle, 
+  AlertTriangle, 
+  UserCheck, 
+  Truck, 
+  MapPin, 
+  CheckCircle2, 
+  RotateCcw,
+  Clock
+} from 'lucide-react';
 
 interface StatusBadgeProps {
   status: TicketStatus;
   className?: string;
+  showIcon?: boolean;
 }
 
-const statusConfig: Record<TicketStatus, { label: string; className: string }> = {
-  OPEN: { label: 'Open', className: 'status-open' },
-  NEEDS_REVIEW: { label: 'Needs Review', className: 'status-needs-review' },
-  ASSIGNED: { label: 'Assigned', className: 'status-assigned' },
-  EN_ROUTE: { label: 'En Route', className: 'status-en-route' },
-  ON_SITE: { label: 'On Site', className: 'status-on-site' },
-  RESOLVED_PENDING_VERIFICATION: { label: 'Pending Verification', className: 'status-assigned' },
-  RESOLVED: { label: 'Resolved', className: 'status-resolved' },
-  REOPENED: { label: 'Reopened', className: 'status-reopened' },
+const statusConfig: Record<TicketStatus, { 
+  label: string; 
+  className: string; 
+  icon: typeof Circle;
+}> = {
+  OPEN: { 
+    label: 'Open', 
+    className: 'status-open',
+    icon: Circle
+  },
+  NEEDS_REVIEW: { 
+    label: 'Needs Review', 
+    className: 'status-needs-review',
+    icon: AlertTriangle
+  },
+  ASSIGNED: { 
+    label: 'Assigned', 
+    className: 'status-assigned',
+    icon: UserCheck
+  },
+  EN_ROUTE: { 
+    label: 'En Route', 
+    className: 'status-en-route',
+    icon: Truck
+  },
+  ON_SITE: { 
+    label: 'On Site', 
+    className: 'status-on-site',
+    icon: MapPin
+  },
+  RESOLVED_PENDING_VERIFICATION: { 
+    label: 'Pending Verify', 
+    className: 'status-pending',
+    icon: Clock
+  },
+  RESOLVED: { 
+    label: 'Resolved', 
+    className: 'status-resolved',
+    icon: CheckCircle2
+  },
+  REOPENED: { 
+    label: 'Reopened', 
+    className: 'status-reopened',
+    icon: RotateCcw
+  },
 };
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const config = statusConfig[status] || { label: status, className: 'status-open' };
+export function StatusBadge({ status, className, showIcon = true }: StatusBadgeProps) {
+  const config = statusConfig[status] || { 
+    label: status, 
+    className: 'status-open',
+    icon: Circle
+  };
+  
+  const Icon = config.icon;
   
   return (
     <span className={cn('status-badge', config.className, className)}>
+      {showIcon && <Icon className="h-3 w-3" />}
       {config.label}
     </span>
   );
