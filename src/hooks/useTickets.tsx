@@ -34,6 +34,11 @@ export function useTickets(filters?: TicketFilters) {
         query = query.or(`ticket_number.ilike.%${filters.search}%,complaint_id.ilike.%${filters.search}%,vehicle_number.ilike.%${filters.search}%`);
       }
 
+      // Filter for unassigned tickets only (Review Queue requirement)
+      if (filters?.unassignedOnly) {
+        query = query.is('current_assignment_id', null);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
