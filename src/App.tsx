@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import TicketsList from "./pages/TicketsList";
 import TicketDetail from "./pages/TicketDetail";
 import ReviewQueue from "./pages/ReviewQueue";
+import RawEmails from "./pages/RawEmails";
+import FieldExecutives from "./pages/FieldExecutives";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
             <Route path="/tickets" element={<TicketsList />} />
             <Route path="/tickets/:ticketId" element={<TicketDetail />} />
             <Route path="/review" element={<ReviewQueue />} />
+            <Route path="/emails" element={<RawEmails />} />
+            <Route path="/field-executives" element={<FieldExecutives />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

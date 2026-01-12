@@ -18,6 +18,19 @@ export type WhatsAppEventType = 'SENT' | 'CLICKED' | 'EN_ROUTE' | 'UPLOAD' | 'RE
 // Comment source types
 export type CommentSource = 'EMAIL' | 'FE' | 'STAFF' | 'SYSTEM';
 
+// Email processing status - State Machine
+export type EmailProcessingStatus = 
+  | 'RECEIVED' 
+  | 'PARSED' 
+  | 'DRAFT' 
+  | 'NEEDS_REVIEW' 
+  | 'TICKET_CREATED' 
+  | 'COMMENT_ADDED' 
+  | 'ERROR';
+
+// JSON type matching Supabase
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
 // Raw email from database
 export interface RawEmail {
   id: string;
@@ -27,9 +40,16 @@ export interface RawEmail {
   to_email: string;
   subject: string | null;
   received_at: string;
-  payload: Record<string, unknown>;
-  ticket_created: boolean;
-  created_at: string;
+  payload: Json;
+  ticket_created: boolean | null;
+  created_at: string | null;
+}
+
+// Raw email with parsed data
+export interface RawEmailWithParsed extends RawEmail {
+  parsed_email?: ParsedEmail | null;
+  processing_status: EmailProcessingStatus;
+  linked_ticket_id?: string | null;
 }
 
 // Parsed email from database
@@ -57,6 +77,14 @@ export interface FieldExecutive {
   skills: Record<string, unknown> | null;
   active: boolean;
   created_at: string;
+}
+
+// Field Executive with stats
+export interface FieldExecutiveWithStats extends FieldExecutive {
+  active_tickets: number;
+  resolved_this_week: number;
+  avg_resolution_time_hours: number;
+  sla_compliance_rate: number;
 }
 
 // Ticket from database
@@ -152,4 +180,16 @@ export interface TicketFilters {
   search?: string;
   dateFrom?: string;
   dateTo?: string;
+  unassignedOnly?: boolean;
+}
+
+// Audit log entry
+export interface AuditLog {
+  id: string;
+  entity_type: string;
+  entity_id: string | null;
+  action: string;
+  performed_by: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
 }
