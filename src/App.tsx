@@ -10,6 +10,11 @@ import TicketDetail from "./pages/TicketDetail";
 import ReviewQueue from "./pages/ReviewQueue";
 import RawEmails from "./pages/RawEmails";
 import FieldExecutives from "./pages/FieldExecutives";
+import SLAMonitor from "./pages/SLAMonitor";
+import AuditLogs from "./pages/AuditLogs";
+import Analytics from "./pages/Analytics";
+import Users from "./pages/Users";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +33,11 @@ const App = () => (
             <Route path="/review" element={<ReviewQueue />} />
             <Route path="/emails" element={<RawEmails />} />
             <Route path="/field-executives" element={<FieldExecutives />} />
+            <Route path="/sla" element={<SLAMonitor />} />
+            <Route path="/audit" element={<AuditLogs />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
