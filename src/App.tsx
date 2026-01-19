@@ -15,6 +15,7 @@ import AuditLogs from "./pages/AuditLogs";
 import Analytics from "./pages/Analytics";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import FEMyTickets from "./pages/FEMyTickets";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/users" element={<Users />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/fe/my-tickets" element={<FEMyTickets />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

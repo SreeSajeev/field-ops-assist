@@ -10,7 +10,7 @@ export type TicketStatus =
   | 'REOPENED';
 
 // User role enum
-export type UserRole = 'STAFF' | 'ADMIN' | 'SUPER_ADMIN';
+export type UserRole = 'STAFF' | 'FIELD_EXECUTIVE' | 'ADMIN' | 'SUPER_ADMIN';
 
 // WhatsApp event types
 export type WhatsAppEventType = 'SENT' | 'CLICKED' | 'EN_ROUTE' | 'UPLOAD' | 'RESOLUTION';

@@ -40,7 +40,21 @@ const adminNavigation = [
 
 export function Sidebar() {
   const location = useLocation();
-  const { signOut, user } = useAuth();
+  const { signOut, user, userProfile, isAdmin } = useAuth();
+
+  // Get role display name
+  const getRoleDisplay = () => {
+    switch (userProfile?.role) {
+      case 'ADMIN':
+        return 'Admin';
+      case 'SUPER_ADMIN':
+        return 'Super Admin';
+      case 'FIELD_EXECUTIVE':
+        return 'Field Executive';
+      default:
+        return 'Service Staff';
+    }
+  };
 
   const NavSection = ({ 
     title, 
@@ -95,9 +109,13 @@ export function Sidebar() {
         
         <NavSection title="Monitoring" items={monitoringNav} />
         
-        <div className="my-4 border-t" style={{ borderColor: 'hsl(285 35% 25%)' }} />
-        
-        <NavSection title="Administration" items={adminNavigation} />
+        {/* Only show Admin section for admins */}
+        {isAdmin && (
+          <>
+            <div className="my-4 border-t" style={{ borderColor: 'hsl(285 35% 25%)' }} />
+            <NavSection title="Administration" items={adminNavigation} />
+          </>
+        )}
       </nav>
 
       {/* User section */}
@@ -105,13 +123,19 @@ export function Sidebar() {
         <div className="mb-3 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full font-semibold"
                style={{ background: 'hsl(285 40% 28%)', color: 'hsl(32 95% 60%)' }}>
-            {user?.email?.charAt(0).toUpperCase() || 'U'}
+            {userProfile?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-medium text-white">
-              {user?.email || 'User'}
+              {userProfile?.name || user?.email || 'User'}
             </p>
-            <p className="text-xs" style={{ color: 'hsl(270 10% 60%)' }}>Service Staff</p>
+            <Badge 
+              variant="outline" 
+              className="text-[10px] px-1.5 py-0 border-primary/50"
+              style={{ color: 'hsl(32 95% 60%)' }}
+            >
+              {getRoleDisplay()}
+            </Badge>
           </div>
         </div>
         <Button

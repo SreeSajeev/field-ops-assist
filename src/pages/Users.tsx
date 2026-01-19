@@ -38,6 +38,7 @@ import { User, UserRole } from '@/lib/types';
 
 const ROLE_BADGES: Record<UserRole, { label: string; className: string }> = {
   STAFF: { label: 'Service Staff', className: 'bg-blue-100 text-blue-700 border-blue-200' },
+  FIELD_EXECUTIVE: { label: 'Field Executive', className: 'bg-green-100 text-green-700 border-green-200' },
   ADMIN: { label: 'Admin', className: 'bg-purple-100 text-purple-700 border-purple-200' },
   SUPER_ADMIN: { label: 'Super Admin', className: 'bg-amber-100 text-amber-700 border-amber-200' },
 };
