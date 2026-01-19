@@ -1,10 +1,12 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { UserRole } from '@/lib/types';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  role: UserRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
@@ -16,20 +18,60 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Fetch user role from users table
+  const fetchUserRole = async (authId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('auth_id', authId)
+        .single();
+
+      if (error) {
+        console.warn('Failed to fetch user role:', error);
+        setRole(null);
+        return;
+      }
+
+      if (data) {
+        setRole(data.role as UserRole);
+      }
+    } catch (err) {
+      console.error('Error fetching user role:', err);
+      setRole(null);
+    }
+  };
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      
+      // Fetch role if user exists
+      if (session?.user?.id) {
+        fetchUserRole(session.user.id);
+      } else {
+        setRole(null);
+        setLoading(false);
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Fetch role if user exists
+      if (session?.user?.id) {
+        fetchUserRole(session.user.id);
+      } else {
+        setRole(null);
+      }
+      
       setLoading(false);
     });
 
@@ -68,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
@@ -80,4 +122,10 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+}
+
+// Type-safe hook to access user role
+export function useUserRole() {
+  const { role } = useAuth();
+  return role;
 }
