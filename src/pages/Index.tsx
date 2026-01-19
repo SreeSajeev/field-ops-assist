@@ -1,9 +1,10 @@
 import { useAuth } from '@/hooks/useAuth';
 import { LoginForm } from '@/components/auth/LoginForm';
 import Dashboard from './Dashboard';
+import FEMyTickets from './FEMyTickets';
 
 const Index = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isFieldExecutive, userProfile } = useAuth();
 
   if (loading) {
     return (
@@ -15,6 +16,11 @@ const Index = () => {
 
   if (!user) {
     return <LoginForm />;
+  }
+
+  // Route Field Executives to their dedicated portal
+  if (isFieldExecutive) {
+    return <FEMyTickets />;
   }
 
   return <Dashboard />;
