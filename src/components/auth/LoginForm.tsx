@@ -5,12 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Truck, Mail, ArrowRight } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Shield, Truck, Mail, ArrowRight, User, Briefcase } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { UserRole } from '@/lib/types';
 
 export function LoginForm() {
   const { signIn, signUp } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole>('STAFF');
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -42,7 +45,7 @@ export function LoginForm() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const { error } = await signUp(email, password, name);
+    const { error } = await signUp(email, password, name, selectedRole);
     
     if (error) {
       toast({
@@ -53,7 +56,7 @@ export function LoginForm() {
     } else {
       toast({
         title: 'Account created',
-        description: 'You can now sign in with your credentials.',
+        description: `You can now sign in as ${selectedRole === 'FIELD_EXECUTIVE' ? 'a Field Executive' : 'Service Staff'}.`,
       });
     }
     
@@ -91,7 +94,7 @@ export function LoginForm() {
 
           <div className="grid gap-4">
             {[
-              { icon: Truck, title: 'Field Operations', desc: 'WhatsApp-driven field executive management' },
+              { icon: Truck, title: 'Field Operations', desc: 'Coordinated field executive management' },
               { icon: Mail, title: 'Email Automation', desc: 'Intelligent email parsing and ticket creation' },
             ].map((feature, i) => (
               <div key={i} className="flex items-start gap-4 p-4 rounded-xl" 
@@ -208,6 +211,33 @@ export function LoginForm() {
                       minLength={6}
                       required
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-role" className="text-sm font-medium">Role</Label>
+                    <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as UserRole)}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select your role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="STAFF">
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="h-4 w-4" />
+                            <span>Service Staff</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="FIELD_EXECUTIVE">
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4" />
+                            <span>Field Executive</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedRole === 'FIELD_EXECUTIVE' 
+                        ? 'You will receive ticket assignments and work on field operations.'
+                        : 'You will manage tickets, assignments, and monitor operations.'}
+                    </p>
                   </div>
                   <Button 
                     type="submit" 
