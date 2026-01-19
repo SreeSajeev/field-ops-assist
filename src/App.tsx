@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+
 import Index from "./pages/Index";
 import TicketsList from "./pages/TicketsList";
 import TicketDetail from "./pages/TicketDetail";
@@ -15,36 +16,57 @@ import AuditLogs from "./pages/AuditLogs";
 import Analytics from "./pages/Analytics";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
-import FEMyTickets from "./pages/FEMyTickets";
 import NotFound from "./pages/NotFound";
+
+// ✅ FE TOKEN PAGE (NO AUTH)
+import FETicketView from "./pages/FETicketView";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
+    <BrowserRouter>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/tickets" element={<TicketsList />} />
-            <Route path="/tickets/:ticketId" element={<TicketDetail />} />
-            <Route path="/review" element={<ReviewQueue />} />
-            <Route path="/emails" element={<RawEmails />} />
-            <Route path="/field-executives" element={<FieldExecutives />} />
-            <Route path="/sla" element={<SLAMonitor />} />
-            <Route path="/audit" element={<AuditLogs />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/fe/my-tickets" element={<FEMyTickets />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+
+        <Routes>
+          {/* ========================= */}
+          {/* 🔓 FIELD EXECUTIVE ROUTES */}
+          {/* ========================= */}
+          <Route
+            path="/fe/ticket/:ticketId"
+            element={<FETicketView />}
+          />
+
+          {/* ========================= */}
+          {/* 🔒 STAFF / ADMIN ROUTES */}
+          {/* ========================= */}
+          <Route
+            path="/*"
+            element={
+              <AuthProvider>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/tickets" element={<TicketsList />} />
+                  <Route path="/tickets/:ticketId" element={<TicketDetail />} />
+                  <Route path="/review" element={<ReviewQueue />} />
+                  <Route path="/emails" element={<RawEmails />} />
+                  <Route path="/field-executives" element={<FieldExecutives />} />
+                  <Route path="/sla" element={<SLAMonitor />} />
+                  <Route path="/audit" element={<AuditLogs />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/users" element={<Users />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AuthProvider>
+            }
+          />
+        </Routes>
+
       </TooltipProvider>
-    </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
