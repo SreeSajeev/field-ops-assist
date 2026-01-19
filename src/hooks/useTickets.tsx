@@ -248,14 +248,16 @@ export function useAddComment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      ticketId, 
-      body, 
-      source = 'STAFF' 
-    }: { 
-      ticketId: string; 
-      body: string; 
-      source?: 'EMAIL' | 'FE' | 'STAFF' | 'SYSTEM' 
+    mutationFn: async ({
+      ticketId,
+      body,
+      source = 'STAFF',
+      attachments = null,
+    }: {
+      ticketId: string;
+      body: string;
+      source?: 'EMAIL' | 'FE' | 'STAFF' | 'SYSTEM';
+      attachments?: any[] | null;
     }) => {
       const { data, error } = await supabase
         .from('ticket_comments')
@@ -263,6 +265,7 @@ export function useAddComment() {
           ticket_id: ticketId,
           body,
           source,
+          attachments, // ✅ NEW (JSONB)
         })
         .select()
         .single();
@@ -271,7 +274,9 @@ export function useAddComment() {
       return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['ticket-comments', variables.ticketId] });
+      queryClient.invalidateQueries({
+        queryKey: ['ticket-comments', variables.ticketId],
+      });
       toast({
         title: 'Comment added',
         description: 'Your comment has been added to the ticket.',
