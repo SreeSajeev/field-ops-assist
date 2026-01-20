@@ -1,3 +1,12 @@
+/**
+ * TicketDetail.tsx
+ * 
+ * Detailed view of a single ticket with assignment, verification, and close functionality.
+ * Includes:
+ * - Requirement 2: Close Ticket functionality with confirmation
+ * - Requirement 3: Integration with FE Assignment modal (confirmation handled there)
+ */
+
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -5,6 +14,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatusBadge } from '@/components/tickets/StatusBadge';
 import { ConfidenceScore } from '@/components/tickets/ConfidenceScore';
 import { FEAssignmentModal } from '@/components/tickets/FEAssignmentModal';
+import { CloseTicketDialog } from '@/components/tickets/CloseTicketDialog';
 import { useTicket, useTicketComments, useTicketAssignments, useUpdateTicketStatus } from '@/hooks/useTickets';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,9 +31,11 @@ import {
   User,
   Clock,
   Image,
-  Video
+  Video,
+  XCircle
 } from 'lucide-react';
 import { TicketStatus } from '@/lib/types';
+import { toast } from '@/hooks/use-toast';
 
 export default function TicketDetail() {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -32,6 +44,7 @@ export default function TicketDetail() {
   const { data: assignments } = useTicketAssignments(ticketId || '');
   const updateStatus = useUpdateTicketStatus();
   const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -60,8 +73,35 @@ export default function TicketDetail() {
     }
   };
 
+  // Handle verification and close from pending verification state
   const handleVerifyAndClose = () => {
-    updateStatus.mutate({ ticketId: ticket.id, status: 'RESOLVED' as TicketStatus });
+    updateStatus.mutate(
+      { ticketId: ticket.id, status: 'RESOLVED' as TicketStatus },
+      {
+        onSuccess: () => {
+          toast({
+            title: 'Ticket Closed',
+            description: `Ticket ${ticket.ticket_number} has been verified and closed.`,
+          });
+        },
+      }
+    );
+  };
+
+  // Handle closing ticket from close dialog (Requirement 2)
+  const handleCloseTicket = () => {
+    updateStatus.mutate(
+      { ticketId: ticket.id, status: 'RESOLVED' as TicketStatus },
+      {
+        onSuccess: () => {
+          setCloseDialogOpen(false);
+          toast({
+            title: 'Ticket Closed',
+            description: `Ticket ${ticket.ticket_number} has been resolved and closed.`,
+          });
+        },
+      }
+    );
   };
 
   const currentAssignment = assignments?.[0];
@@ -69,6 +109,12 @@ export default function TicketDetail() {
 
   // Check if ticket is pending verification
   const isPendingVerification = ticket.status === 'RESOLVED_PENDING_VERIFICATION';
+  
+  // Check if ticket can be closed (Requirement 2: only from ON_SITE or RESOLVED_PENDING_VERIFICATION)
+  const canCloseTicket = ['ON_SITE', 'RESOLVED_PENDING_VERIFICATION'].includes(ticket.status);
+  
+  // Check if ticket is already resolved
+  const isResolved = ticket.status === 'RESOLVED';
 
   return (
     <DashboardLayout>
@@ -103,6 +149,27 @@ export default function TicketDetail() {
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Approve & Mark Open
               </Button>
+            )}
+            
+            {/* Requirement 2: Close Ticket Button - Only show for closeable states */}
+            {canCloseTicket && !isPendingVerification && (
+              <Button 
+                variant="outline" 
+                onClick={() => setCloseDialogOpen(true)}
+                disabled={updateStatus.isPending}
+                className="border-green-500 text-green-600 hover:bg-green-50"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Close Ticket
+              </Button>
+            )}
+            
+            {/* Show resolved badge if already resolved */}
+            {isResolved && (
+              <Badge className="bg-green-100 text-green-800 border-0 py-2 px-4">
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Resolved
+              </Badge>
             )}
           </div>
         </div>
@@ -305,6 +372,15 @@ export default function TicketDetail() {
         ticket={ticket}
         open={assignModalOpen}
         onOpenChange={setAssignModalOpen}
+      />
+
+      {/* Close Ticket Dialog - Requirement 2 */}
+      <CloseTicketDialog
+        ticket={ticket}
+        open={closeDialogOpen}
+        onOpenChange={setCloseDialogOpen}
+        onConfirm={handleCloseTicket}
+        isPending={updateStatus.isPending}
       />
     </DashboardLayout>
   );

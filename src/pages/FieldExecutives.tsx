@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { FECard, FECardSkeleton } from '@/components/field-executives/FECard';
 import { FEDetailSheet } from '@/components/field-executives/FEDetailSheet';
+import { CreateFEModal } from '@/components/field-executives/CreateFEModal';
 import { useFieldExecutivesWithStats } from '@/hooks/useFieldExecutives';
 import { FieldExecutive, FieldExecutiveWithStats } from '@/lib/types';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,8 @@ import {
   Users,
   CheckCircle2,
   AlertCircle,
-  Info
+  Info,
+  UserPlus
 } from 'lucide-react';
 import {
   Select,
@@ -26,10 +28,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+/**
+ * FieldExecutives page with ability to create new FEs.
+ * Service staff can add new field executives via the "Add Field Executive" button.
+ */
 export default function FieldExecutives() {
   const { data: executives, isLoading, refetch } = useFieldExecutivesWithStats();
   const [selectedFE, setSelectedFE] = useState<FieldExecutiveWithStats | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [createFEModalOpen, setCreateFEModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [workloadFilter, setWorkloadFilter] = useState<'all' | 'available' | 'low' | 'moderate' | 'high'>('all');
@@ -87,15 +94,25 @@ export default function FieldExecutives() {
               </p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            {/* Requirement 4: Add Field Executive Button */}
+            <Button 
+              size="sm"
+              onClick={() => setCreateFEModalOpen(true)}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Field Executive
+            </Button>
+          </div>
         </div>
 
         {/* Info Alert */}
@@ -239,6 +256,9 @@ export default function FieldExecutives() {
           open={sheetOpen}
           onOpenChange={setSheetOpen}
         />
+
+        {/* Create FE Modal - Requirement 4 */}
+        <CreateFEModal open={createFEModalOpen} onOpenChange={setCreateFEModalOpen} />
       </div>
     </DashboardLayout>
   );
