@@ -1,3 +1,10 @@
+/**
+ * FEAssignmentModal.tsx
+ * 
+ * Modal for assigning Field Executives to tickets with recommendations.
+ * Includes confirmation pop-up before assignment (Requirement 3).
+ */
+
 import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AssignmentConfirmDialog } from './AssignmentConfirmDialog';
 import { 
   MapPin, 
   Star, 
@@ -21,6 +29,7 @@ import { Ticket, FieldExecutive } from '@/lib/types';
 import { useFieldExecutivesWithStats } from '@/hooks/useFieldExecutives';
 import { useAssignTicket } from '@/hooks/useTickets';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 interface FEAssignmentModalProps {
   ticket: Ticket;
@@ -41,6 +50,7 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
   const [selectedFE, setSelectedFE] = useState<string | null>(null);
   const [overrideReason, setOverrideReason] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   // Calculate recommendations based on location and skill matching
   const scoredExecutives = useMemo(() => {
@@ -122,7 +132,14 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
     fe.base_location?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAssign = async () => {
+  // Get the selected FE object for confirmation dialog
+  const selectedFEObject = useMemo(() => {
+    if (!selectedFE) return null;
+    return filteredExecutives.find(fe => fe.id === selectedFE) || null;
+  }, [selectedFE, filteredExecutives]);
+
+  // Handle clicking the assign button - shows confirmation dialog
+  const handleAssignClick = () => {
     if (!selectedFE) return;
 
     const needsOverride = !isRecommended(selectedFE) && !overrideReason;
@@ -130,15 +147,36 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
       return; // UI will show warning
     }
 
-    await assignTicket.mutateAsync({
-      ticketId: ticket.id,
-      feId: selectedFE,
-      overrideReason: isRecommended(selectedFE) ? undefined : overrideReason
-    });
+    // Show confirmation dialog (Requirement 3)
+    setConfirmDialogOpen(true);
+  };
 
-    onOpenChange(false);
-    setSelectedFE(null);
-    setOverrideReason('');
+  // Handle actual assignment after confirmation
+  const handleConfirmAssign = async () => {
+    if (!selectedFE) return;
+
+    try {
+      await assignTicket.mutateAsync({
+        ticketId: ticket.id,
+        feId: selectedFE,
+        overrideReason: isRecommended(selectedFE) ? undefined : overrideReason
+      });
+
+      // Show success toast (Requirement 3)
+      const feName = selectedFEObject?.name || 'Field Executive';
+      toast({
+        title: 'Ticket Assigned Successfully',
+        description: `${ticket.ticket_number} has been assigned to ${feName}.`,
+      });
+
+      setConfirmDialogOpen(false);
+      onOpenChange(false);
+      setSelectedFE(null);
+      setOverrideReason('');
+    } catch (error) {
+      // Error is handled by the mutation's onError
+      setConfirmDialogOpen(false);
+    }
   };
 
   const selectedIsRecommended = selectedFE ? isRecommended(selectedFE) : true;
@@ -304,7 +342,7 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
               Cancel
             </Button>
             <Button 
-              onClick={handleAssign}
+              onClick={handleAssignClick}
               disabled={
                 !selectedFE || 
                 assignTicket.isPending || 
@@ -319,13 +357,31 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
               ) : (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  Assign to {filteredExecutives.find(fe => fe.id === selectedFE)?.name || 'Selected FE'}
+                  Assign to {selectedFEObject?.name || 'Selected FE'}
                 </>
               )}
             </Button>
           </div>
         </div>
       </DialogContent>
+
+      {/* Confirmation Dialog - Requirement 3 */}
+      {selectedFEObject && (
+        <AssignmentConfirmDialog
+          open={confirmDialogOpen}
+          onOpenChange={setConfirmDialogOpen}
+          ticket={ticket}
+          fieldExecutive={{
+            ...selectedFEObject,
+            locationMatch: selectedFEObject.locationMatch,
+            skillMatch: selectedFEObject.skillMatch,
+          }}
+          isRecommended={isRecommended(selectedFE!)}
+          overrideReason={overrideReason}
+          onConfirm={handleConfirmAssign}
+          isPending={assignTicket.isPending}
+        />
+      )}
     </Dialog>
   );
 }
