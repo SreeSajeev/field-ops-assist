@@ -1,6 +1,4 @@
 import { useParams, useSearchParams } from "react-router-dom";
-import { useState } from "react";
-
 import { useFETokenAccess } from "@/hooks/useFETokenAccess";
 import {
   useTicket,
@@ -8,78 +6,64 @@ import {
   useAddComment,
   useUpdateTicketStatus,
 } from "@/hooks/useTickets";
-
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useState } from "react";
 
 export default function FETicketView() {
-  const { ticketId } = useParams<{ ticketId: string }>();
+  const { ticketId } = useParams();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
 
-  /* ---------------------------------
-     1. Validate FE Token
-  ----------------------------------*/
-  const {
-    data: tokenRow,
-    isLoading: tokenLoading,
-    error: tokenError,
-  } = useFETokenAccess(token);
-
-  if (tokenLoading) {
-    return <div className="p-6">Validating access…</div>;
-  }
-
-  if (tokenError || !tokenRow) {
-    return <div className="p-6 text-red-600">Access denied or link expired.</div>;
-  }
-
-  if (tokenRow.ticket_id !== ticketId) {
-    return <div className="p-6 text-red-600">This link is not valid for this ticket.</div>;
-  }
-
-  /* ---------------------------------
-     2. Fetch Ticket + Comments
-  ----------------------------------*/
-  const { data: ticket } = useTicket(ticketId!);
-  const { data: comments } = useTicketComments(ticketId!);
+  // ✅ ALWAYS call hooks
+  const tokenQuery = useFETokenAccess(token);
+  const ticketQuery = useTicket(ticketId ?? "");
+  const commentsQuery = useTicketComments(ticketId ?? "");
 
   const addComment = useAddComment();
   const updateStatus = useUpdateTicketStatus();
 
-  /* ---------------------------------
-     3. Local State
-  ----------------------------------*/
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  /* ---------------------------------
-     4. FE Action: Reached Site
-  ----------------------------------*/
+  // ---- ACCESS CHECKS (AFTER hooks) ----
+  if (tokenQuery.isLoading) {
+    return <div className="p-6">Validating access…</div>;
+  }
+
+  if (tokenQuery.error || !tokenQuery.data) {
+    return <div className="p-6 text-red-600">Access denied or link expired.</div>;
+  }
+
+  if (tokenQuery.data.ticket_id !== ticketId) {
+    return <div className="p-6 text-red-600">This link is not for this ticket.</div>;
+  }
+
+  const ticket = ticketQuery.data;
+  const comments = commentsQuery.data;
+
   const handleReachedSite = async () => {
     if (!file) {
-      alert("Please upload a photo as proof.");
+      alert("Please upload an image first");
       return;
     }
 
     try {
       setSubmitting(true);
 
-      /* Upload proof image */
-      const storagePath = `fe-proofs/${ticketId}/${Date.now()}-${file.name}`;
+      const filePath = `fe-proofs/${ticketId}/${Date.now()}-${file.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from("fe-proofs")
-        .upload(storagePath, file);
+        .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: publicUrlData } = supabase.storage
+      const { data: urlData } = supabase.storage
         .from("fe-proofs")
-        .getPublicUrl(storagePath);
+        .getPublicUrl(filePath);
 
-      /* Add FE comment with attachment */
       await addComment.mutateAsync({
         ticketId: ticketId!,
         body: "FE reached site and uploaded proof.",
@@ -87,38 +71,31 @@ export default function FETicketView() {
         attachments: [
           {
             type: "image",
-            storage_path: storagePath,
-            url: publicUrlData.publicUrl,
+            url: urlData.publicUrl,
             uploaded_at: new Date().toISOString(),
           },
         ],
       });
 
-      /* Update ticket status */
       await updateStatus.mutateAsync({
         ticketId: ticketId!,
         status: "ON_SITE",
       });
 
-      alert("Proof submitted successfully.");
+      alert("Proof submitted successfully");
     } catch (err: any) {
-      console.error(err);
-      alert(err.message || "Something went wrong.");
+      alert(err.message || "Something went wrong");
     } finally {
       setSubmitting(false);
     }
   };
 
-  /* ---------------------------------
-     5. UI
-  ----------------------------------*/
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <Card className="p-6 space-y-4">
         <h2 className="text-xl font-semibold">
           Ticket #{ticket?.ticket_number}
         </h2>
-
         <p>Status: {ticket?.status}</p>
 
         <input
@@ -134,9 +111,9 @@ export default function FETicketView() {
       </Card>
 
       <div className="mt-6">
-        <h3 className="font-semibold mb-2">Activity</h3>
+        <h3 className="font-semibold">Activity</h3>
         {comments?.map((c) => (
-          <div key={c.id} className="border-b py-2 text-sm">
+          <div key={c.id} className="text-sm border-b py-2">
             <strong>{c.source}</strong>: {c.body}
           </div>
         ))}
