@@ -3,9 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Ticket, TicketFilters, TicketStatus } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
 
-/* =========================
+/* =====================================================
    Tickets list
-========================= */
+===================================================== */
 export function useTickets(filters?: TicketFilters) {
   return useQuery({
     queryKey: ["tickets", filters],
@@ -24,12 +24,16 @@ export function useTickets(filters?: TicketFilters) {
       }
 
       if (filters?.confidenceRange && filters.confidenceRange !== "all") {
-        if (filters.confidenceRange === "high") {
-          query = query.gte("confidence_score", 95);
-        } else if (filters.confidenceRange === "medium") {
-          query = query.gte("confidence_score", 80).lt("confidence_score", 95);
-        } else {
-          query = query.lt("confidence_score", 80);
+        switch (filters.confidenceRange) {
+          case "high":
+            query = query.gte("confidence_score", 95);
+            break;
+          case "medium":
+            query = query.gte("confidence_score", 80).lt("confidence_score", 95);
+            break;
+          case "low":
+            query = query.lt("confidence_score", 80);
+            break;
         }
       }
 
@@ -51,13 +55,13 @@ export function useTickets(filters?: TicketFilters) {
   });
 }
 
-/* =========================
+/* =====================================================
    Single ticket
-========================= */
+===================================================== */
 export function useTicket(ticketId: string) {
   return useQuery({
     queryKey: ["ticket", ticketId],
-    enabled: !!ticketId,
+    enabled: Boolean(ticketId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tickets")
@@ -71,13 +75,13 @@ export function useTicket(ticketId: string) {
   });
 }
 
-/* =========================
+/* =====================================================
    Ticket comments
-========================= */
+===================================================== */
 export function useTicketComments(ticketId: string) {
   return useQuery({
     queryKey: ["ticket-comments", ticketId],
-    enabled: !!ticketId,
+    enabled: Boolean(ticketId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ticket_comments")
@@ -91,13 +95,13 @@ export function useTicketComments(ticketId: string) {
   });
 }
 
-/* =========================
+/* =====================================================
    Ticket assignments
-========================= */
+===================================================== */
 export function useTicketAssignments(ticketId: string) {
   return useQuery({
     queryKey: ["ticket-assignments", ticketId],
-    enabled: !!ticketId,
+    enabled: Boolean(ticketId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ticket_assignments")
@@ -111,9 +115,9 @@ export function useTicketAssignments(ticketId: string) {
   });
 }
 
-/* =========================
+/* =====================================================
    Update ticket (generic)
-========================= */
+===================================================== */
 export function useUpdateTicket() {
   const queryClient = useQueryClient();
 
@@ -127,7 +131,10 @@ export function useUpdateTicket() {
     }) => {
       const { data, error } = await supabase
         .from("tickets")
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", ticketId)
         .select()
         .single();
@@ -143,9 +150,9 @@ export function useUpdateTicket() {
   });
 }
 
-/* =========================
+/* =====================================================
    Update ticket status
-========================= */
+===================================================== */
 export function useUpdateTicketStatus() {
   const queryClient = useQueryClient();
 
@@ -159,7 +166,10 @@ export function useUpdateTicketStatus() {
     }) => {
       const { data, error } = await supabase
         .from("tickets")
-        .update({ status, updated_at: new Date().toISOString() })
+        .update({
+          status,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", ticketId)
         .select()
         .single();
@@ -182,9 +192,9 @@ export function useUpdateTicketStatus() {
   });
 }
 
-/* =========================
+/* =====================================================
    Assign ticket
-========================= */
+===================================================== */
 export function useAssignTicket() {
   const queryClient = useQueryClient();
 
@@ -210,17 +220,23 @@ export function useAssignTicket() {
 
       if (error) throw error;
 
-      await supabase.from("tickets").update({
-        status: "ASSIGNED",
-        current_assignment_id: assignment.id,
-        updated_at: new Date().toISOString(),
-      }).eq("id", ticketId);
+      await supabase
+        .from("tickets")
+        .update({
+          status: "ASSIGNED",
+          current_assignment_id: assignment.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", ticketId);
 
       await supabase.from("audit_logs").insert({
         entity_type: "ticket",
         entity_id: ticketId,
         action: "assigned",
-        metadata: { fe_id: feId, assignment_id: assignment.id },
+        metadata: {
+          fe_id: feId,
+          assignment_id: assignment.id,
+        },
       });
 
       return assignment;
@@ -233,9 +249,9 @@ export function useAssignTicket() {
   });
 }
 
-/* =========================
+/* =====================================================
    Add comment (FE + STAFF)
-========================= */
+===================================================== */
 export function useAddComment() {
   const queryClient = useQueryClient();
 
