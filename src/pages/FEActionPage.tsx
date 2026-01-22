@@ -25,8 +25,8 @@ export default function FEActionPage() {
 
         console.log("🔍 Loading FE token:", tokenId);
 
-        // 1️⃣ Fetch token
-        const tokenResult = await supabase
+        // 1️⃣ Load token
+        const { data: tokenRow, error: tokenError } = await supabase
           .from("fe_action_tokens" as any)
           .select("*")
           .eq("id", tokenId)
@@ -34,44 +34,43 @@ export default function FEActionPage() {
           .gt("expires_at", new Date().toISOString())
           .single();
 
-        if (tokenResult.error || !tokenResult.data) {
-          console.error("❌ TOKEN LOAD ERROR:", tokenResult.error);
+        if (tokenError || !tokenRow) {
+          console.error("❌ TOKEN ERROR:", tokenError);
           toast({
             title: "Invalid or expired link",
-            description: tokenResult.error?.message,
+            description: tokenError?.message,
             variant: "destructive",
           });
           setLoading(false);
           return;
         }
 
-        const tokenRow = tokenResult.data as any;
         console.log("✅ Token loaded:", tokenRow);
         setToken(tokenRow);
 
-        // 2️⃣ Fetch ticket
-        const ticketResult = await supabase
+        // 2️⃣ Load ticket
+        const { data: ticketRow, error: ticketError } = await supabase
           .from("tickets")
           .select("*")
           .eq("id", tokenRow.ticket_id)
           .single();
 
-        if (ticketResult.error || !ticketResult.data) {
-          console.error("❌ TICKET LOAD ERROR:", ticketResult.error);
+        if (ticketError || !ticketRow) {
+          console.error("❌ TICKET ERROR:", ticketError);
           toast({
             title: "Ticket not found",
-            description: ticketResult.error?.message,
+            description: ticketError?.message,
             variant: "destructive",
           });
           setLoading(false);
           return;
         }
 
-        console.log("✅ Ticket loaded:", ticketResult.data);
-        setTicket(ticketResult.data);
+        console.log("✅ Ticket loaded:", ticketRow);
+        setTicket(ticketRow);
         setLoading(false);
       } catch (err) {
-        console.error("🔥 UNEXPECTED LOAD ERROR:", err);
+        console.error("🔥 LOAD FAILED:", err);
         toast({
           title: "Unexpected error",
           description: "Check console for details",
@@ -84,7 +83,7 @@ export default function FEActionPage() {
     load();
   }, [tokenId]);
 
-  /* ================= SUBMIT PROOF ================= */
+  /* ================= SUBMIT PROOF (BASE64) ================= */
   const handleSubmit = async () => {
     if (!file || !token || !ticket) {
       toast({ title: "Please upload a photo" });
@@ -92,58 +91,43 @@ export default function FEActionPage() {
     }
 
     try {
-      console.log("🚀 Submitting proof…");
+      console.log("🚀 Submitting proof (BASE64)");
 
-      const filePath = `${ticket.id}/${token.action_type}_${Date.now()}.jpg`;
-      console.log("📁 Upload path:", filePath);
+      // Convert image to base64
+      const toBase64 = (file: File) =>
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+        });
 
-      // 1️⃣ Upload image
-      const uploadResult = await supabase.storage
-        .from("Ticket_Uploads")
-        .upload(filePath, file);
+      const base64Image = await toBase64(file);
 
-      if (uploadResult.error) {
-        console.error("❌ UPLOAD ERROR:", uploadResult.error);
-        throw new Error(uploadResult.error.message);
+      // Insert ticket comment
+      const { error: commentError } = await supabase
+        .from("ticket_comments")
+        .insert({
+          ticket_id: ticket.id,
+          source: "FE",
+          body:
+            token.action_type === "ON_SITE"
+              ? "Field Executive uploaded on-site proof"
+              : "Field Executive uploaded resolution proof",
+          attachments: {
+            image_base64: base64Image,
+            remarks,
+            action_type: token.action_type,
+          },
+        });
+
+      if (commentError) {
+        console.error("❌ COMMENT ERROR:", commentError);
+        throw new Error(commentError.message);
       }
 
-      console.log("✅ Image uploaded");
-
-      // 2️⃣ Get public URL
-      const { data: urlData } = supabase.storage
-        .from("Ticket_Uploads")
-        .getPublicUrl(filePath);
-
-      if (!urlData?.publicUrl) {
-        throw new Error("Failed to get public image URL");
-      }
-
-      console.log("🔗 Image URL:", urlData.publicUrl);
-
-      // 3️⃣ Insert ticket comment
-      const commentResult = await supabase.from("ticket_comments").insert({
-        ticket_id: ticket.id,
-        source: "FE",
-        body:
-          token.action_type === "ON_SITE"
-            ? "Field Executive uploaded on-site proof"
-            : "Field Executive uploaded resolution proof",
-        attachments: {
-          image_url: urlData.publicUrl,
-          remarks,
-          action_type: token.action_type,
-        },
-      });
-
-      if (commentResult.error) {
-        console.error("❌ COMMENT INSERT ERROR:", commentResult.error);
-        throw new Error(commentResult.error.message);
-      }
-
-      console.log("✅ Comment inserted");
-
-      // 4️⃣ Update ticket status
-      const statusUpdateResult = await supabase
+      // Update ticket status
+      const { error: statusError } = await supabase
         .from("tickets")
         .update({
           status:
@@ -153,25 +137,21 @@ export default function FEActionPage() {
         })
         .eq("id", ticket.id);
 
-      if (statusUpdateResult.error) {
-        console.error("❌ TICKET STATUS UPDATE ERROR:", statusUpdateResult.error);
-        throw new Error(statusUpdateResult.error.message);
+      if (statusError) {
+        console.error("❌ STATUS ERROR:", statusError);
+        throw new Error(statusError.message);
       }
 
-      console.log("✅ Ticket status updated");
-
-      // 5️⃣ Mark token as used
-      const tokenUpdateResult = await supabase
+      // Mark token as used
+      const { error: tokenUpdateError } = await supabase
         .from("fe_action_tokens" as any)
         .update({ used: true })
         .eq("id", token.id);
 
-      if (tokenUpdateResult.error) {
-        console.error("❌ TOKEN UPDATE ERROR:", tokenUpdateResult.error);
-        throw new Error(tokenUpdateResult.error.message);
+      if (tokenUpdateError) {
+        console.error("❌ TOKEN UPDATE ERROR:", tokenUpdateError);
+        throw new Error(tokenUpdateError.message);
       }
-
-      console.log("✅ Token marked as used");
 
       toast({
         title: "Proof submitted successfully",
@@ -181,7 +161,7 @@ export default function FEActionPage() {
       console.error("🔥 SUBMISSION FAILED:", err);
       toast({
         title: "Submission failed",
-        description: err?.message || "Check console for details",
+        description: err?.message || "Check console",
         variant: "destructive",
       });
     }

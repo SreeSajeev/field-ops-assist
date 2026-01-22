@@ -257,31 +257,56 @@ export default function TicketDetail() {
                 </CardContent>
               </Card>
             )}
-            
+        </div>
+                        {/* Activity */}
             {/* Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Activity Timeline</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {comments?.map((c) => (
-                  <div key={c.id} className="border-l-2 pl-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Badge variant="outline">{c.source}</Badge>
-                      {format(new Date(c.created_at), "PPp")}
-                    </div>
-                    <p className="mt-1">{c.body}</p>
-                    {c.attachments && (
-                      <div className="mt-2 flex items-center gap-2 text-sm text-primary">
-                        <ImageIcon className="h-4 w-4" />
-                        Proof attached
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+<Card>
+  <CardHeader>
+    <CardTitle>Activity Timeline</CardTitle>
+  </CardHeader>
+
+  <CardContent className="space-y-4">
+    {comments?.length ? (
+      comments.map((c) => {
+        const attachments = c.attachments as any;
+
+        return (
+          <div key={c.id} className="border-l-2 pl-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant="outline">{c.source}</Badge>
+              {format(new Date(c.created_at), "PPp")}
+            </div>
+
+            <p className="mt-1 whitespace-pre-wrap">{c.body}</p>
+
+            {/* ✅ BASE64 IMAGE RENDER */}
+            {attachments?.image_base64 && (
+              <div className="mt-3">
+                <img
+                  src={attachments.image_base64}
+                  alt="Proof"
+                  className="max-h-64 rounded border"
+                />
+              </div>
+            )}
+
+            {/* Fallback */}
+            {!attachments?.image_base64 && attachments && (
+              <div className="mt-2 flex items-center gap-2 text-sm text-primary">
+                <ImageIcon className="h-4 w-4" />
+                Proof attached
+              </div>
+            )}
           </div>
+        );
+      })
+    ) : (
+      <p className="text-muted-foreground text-center">No activity yet</p>
+    )}
+  </CardContent>
+</Card>
+
+
 
           <div className="space-y-6">
             <Card>
