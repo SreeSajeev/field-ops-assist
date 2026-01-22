@@ -17,6 +17,7 @@ import Analytics from "./pages/Analytics";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import FEActionPage from "@/pages/FEActionPage";
 
 // ✅ FE TOKEN PAGE (NO AUTH)
 import FETicketView from "./pages/FETicketView";
@@ -59,6 +60,8 @@ const App = () => (
                   <Route path="/users" element={<Users />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="*" element={<NotFound />} />
+                  <Route path="/fe/action/:tokenId" element={<FEActionPage />} />
+
                 </Routes>
               </AuthProvider>
             }

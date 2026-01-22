@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   MapPin,
   Truck,
-  Calendar,
   Mail,
   AlertTriangle,
   CheckCircle,
@@ -19,6 +18,7 @@ import { StatusBadge } from "@/components/tickets/StatusBadge";
 import { ConfidenceScore } from "@/components/tickets/ConfidenceScore";
 import { FEAssignmentModal } from "@/components/tickets/FEAssignmentModal";
 import { CloseTicketDialog } from "@/components/tickets/CloseTicketDialog";
+import { generateFEToken } from "@/lib/feToken";
 
 import {
   useTicket,
@@ -44,8 +44,8 @@ export default function TicketDetail() {
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
 
-  /* ---------------- Loading & Not Found ---------------- */
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -69,7 +69,6 @@ export default function TicketDetail() {
     );
   }
 
-  /* ---------------- Derived State ---------------- */
   const currentAssignment = assignments?.[0];
   const assignedFE = currentAssignment?.field_executives;
 
@@ -82,7 +81,6 @@ export default function TicketDetail() {
 
   const isResolved = ticket.status === "RESOLVED";
 
-  /* ---------------- Handlers ---------------- */
   const handleApprove = () => {
     if (ticket.needs_review) {
       updateStatus.mutate({ ticketId: ticket.id, status: "OPEN" });
@@ -102,6 +100,26 @@ export default function TicketDetail() {
     );
   };
 
+  const handleGenerateOnSiteToken = async () => {
+    if (!ticket || !currentAssignment) return;
+
+    try {
+      const token = await generateFEToken(
+        ticket.id,
+        currentAssignment.fe_id,
+        "ON_SITE"
+      );
+      setGeneratedToken(token.id);
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Token generation failed",
+        description: "Could not generate on-site token.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCloseTicket = () => {
     updateStatus.mutate(
       { ticketId: ticket.id, status: "RESOLVED" as TicketStatus },
@@ -117,7 +135,6 @@ export default function TicketDetail() {
     );
   };
 
-  /* ======================= UI ======================= */
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -177,20 +194,17 @@ export default function TicketDetail() {
           </div>
         </div>
 
-        {/* Pending Verification */}
         {isPendingVerification && (
           <Alert className="border-amber-500/50 bg-amber-50">
             <Clock className="h-4 w-4 text-amber-600" />
             <AlertDescription className="flex items-center justify-between">
               <span>
                 <strong>Pending Verification:</strong> FE marked work complete.
-                Please review proof and verify.
               </span>
               <Button
                 onClick={handleVerifyAndClose}
                 className="ml-4 bg-green-600 hover:bg-green-700"
               >
-                <CheckCircle className="mr-2 h-4 w-4" />
                 Verify & Close
               </Button>
             </AlertDescription>
@@ -198,7 +212,6 @@ export default function TicketDetail() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left */}
           <div className="lg:col-span-2 space-y-6">
             {/* Ticket Details */}
             <Card>
@@ -215,69 +228,31 @@ export default function TicketDetail() {
               </CardContent>
             </Card>
 
-            {/* Assignment */}
-            {currentAssignment && assignedFE && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Truck className="h-5 w-5" />
-                    Assigned Field Executive
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-semibold">
-                    {assignedFE.name.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold">{assignedFE.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Assigned{" "}
-                      {format(
-                        new Date(
-                          currentAssignment.assigned_at ||
-                            currentAssignment.created_at
-                        ),
-                        "PPp"
-                      )}
-                    </p>
-                  </div>
-                  <Badge>{assignedFE.active ? "Active" : "Inactive"}</Badge>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Activity */}
             <Card>
               <CardHeader>
                 <CardTitle>Activity Timeline</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {comments?.length ? (
-                  comments.map((c) => (
-                    <div key={c.id} className="border-l-2 pl-4">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Badge variant="outline">{c.source}</Badge>
-                        {format(new Date(c.created_at), "PPp")}
-                      </div>
-                      <p className="mt-1 whitespace-pre-wrap">{c.body}</p>
-                      {c.attachments && (
-                        <div className="mt-2 flex items-center gap-2 text-sm text-primary">
-                          <ImageIcon className="h-4 w-4" />
-                          Proof attached
-                        </div>
-                      )}
+                {comments?.map((c) => (
+                  <div key={c.id} className="border-l-2 pl-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Badge variant="outline">{c.source}</Badge>
+                      {format(new Date(c.created_at), "PPp")}
                     </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground text-center">
-                    No activity yet
-                  </p>
-                )}
+                    <p className="mt-1">{c.body}</p>
+                    {c.attachments && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-primary">
+                        <ImageIcon className="h-4 w-4" />
+                        Proof attached
+                      </div>
+                    )}
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>
 
-          {/* Right */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -301,9 +276,60 @@ export default function TicketDetail() {
                 </CardContent>
               </Card>
             )}
+
+            {ticket.status === "ASSIGNED" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Field Executive Action</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Button className="w-full" onClick={handleGenerateOnSiteToken}>
+                    Generate On-Site Token
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Token Modal */}
+      {generatedToken && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md space-y-4">
+            <h2 className="text-lg font-semibold">On-Site Token Generated</h2>
+
+            <div className="flex gap-2">
+              <input
+                readOnly
+                value={generatedToken}
+                className="flex-1 border rounded px-2 py-1 font-mono text-sm"
+              />
+              <Button
+                variant="outline"
+                onClick={() => {
+                  navigator.clipboard.writeText(generatedToken);
+                  toast({ title: "Copied to clipboard" });
+                }}
+              >
+                Copy
+              </Button>
+            </div>
+
+            <input
+              readOnly
+              value={`${window.location.origin}/fe/action/${generatedToken}`}
+              className="w-full border rounded px-2 py-1 font-mono text-sm"
+            />
+
+            <div className="flex justify-end">
+              <Button variant="ghost" onClick={() => setGeneratedToken(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <FEAssignmentModal
         ticket={ticket}
@@ -322,17 +348,7 @@ export default function TicketDetail() {
   );
 }
 
-/* ================= Small helpers ================= */
-
-function Info({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value?: string | null;
-  mono?: boolean;
-}) {
+function Info({ label, value, mono }: any) {
   return (
     <div>
       <p className="text-sm text-muted-foreground">{label}</p>
@@ -343,15 +359,7 @@ function Info({
   );
 }
 
-function IconInfo({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: any;
-  label: string;
-  value?: string | null;
-}) {
+function IconInfo({ icon: Icon, label, value }: any) {
   return (
     <div className="flex items-start gap-2">
       <Icon className="mt-1 h-4 w-4 text-muted-foreground" />
