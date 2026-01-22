@@ -45,6 +45,7 @@ export default function TicketDetail() {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+  const [tokenLabel, setTokenLabel] = useState<"ON_SITE" | "RESOLUTION">("ON_SITE");
 
   if (isLoading) {
     return (
@@ -75,11 +76,9 @@ export default function TicketDetail() {
   const isPendingVerification =
     ticket.status === "RESOLVED_PENDING_VERIFICATION";
 
-  const canCloseTicket = ["ON_SITE", "RESOLVED_PENDING_VERIFICATION"].includes(
-    ticket.status
-  );
-
   const isResolved = ticket.status === "RESOLVED";
+
+  /* ================= ACTION HANDLERS ================= */
 
   const handleApprove = () => {
     if (ticket.needs_review) {
@@ -100,41 +99,20 @@ export default function TicketDetail() {
     );
   };
 
-  const handleGenerateOnSiteToken = async () => {
+  const generateToken = async (type: "ON_SITE" | "RESOLUTION") => {
     if (!ticket || !currentAssignment) return;
 
     try {
       const token = await generateFEToken(
         ticket.id,
         currentAssignment.fe_id,
-        "ON_SITE"
+        type
       );
+      setTokenLabel(type);
       setGeneratedToken(token.id);
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast({
         title: "Token generation failed",
-        description: "Could not generate on-site token.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleGenerateResolutionToken = async () => {
-    if (!ticket || !currentAssignment) return;
-
-    try {
-      const token = await generateFEToken(
-        ticket.id,
-        currentAssignment.fe_id,
-        "RESOLUTION"
-      );
-      setGeneratedToken(token.id);
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: "Token generation failed",
-        description: "Could not generate resolution token.",
         variant: "destructive",
       });
     }
@@ -155,10 +133,12 @@ export default function TicketDetail() {
     );
   };
 
+  /* ================= UI ================= */
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
+        {/* HEADER */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <Link to="/tickets">
@@ -194,14 +174,12 @@ export default function TicketDetail() {
               </Button>
             )}
 
-            {canCloseTicket && !isPendingVerification && !isResolved && (
+            {isPendingVerification && (
               <Button
-                variant="outline"
-                className="border-green-500 text-green-600"
-                onClick={() => setCloseDialogOpen(true)}
+                onClick={handleVerifyAndClose}
+                className="bg-green-600 hover:bg-green-700"
               >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Close Ticket
+                Verify & Close
               </Button>
             )}
 
@@ -214,26 +192,11 @@ export default function TicketDetail() {
           </div>
         </div>
 
-        {isPendingVerification && (
-          <Alert className="border-amber-500/50 bg-amber-50">
-            <Clock className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="flex items-center justify-between">
-              <span>
-                <strong>Pending Verification:</strong> FE marked work complete.
-              </span>
-              <Button
-                onClick={handleVerifyAndClose}
-                className="ml-4 bg-green-600 hover:bg-green-700"
-              >
-                Verify & Close
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
+        {/* MAIN GRID */}
         <div className="grid gap-6 lg:grid-cols-3">
+          {/* LEFT */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Ticket Details */}
+            {/* DETAILS */}
             <Card>
               <CardHeader>
                 <CardTitle>Ticket Details</CardTitle>
@@ -248,86 +211,88 @@ export default function TicketDetail() {
               </CardContent>
             </Card>
             {/* Assignment */}
-            {currentAssignment && assignedFE && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Truck className="h-5 w-5" />
-                    Assigned Field Executive
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-semibold">
-                    {assignedFE.name.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold">{assignedFE.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Assigned{" "}
-                      {format(
-                        new Date(
-                          currentAssignment.assigned_at ||
-                            currentAssignment.created_at
-                        ),
-                        "PPp"
+                        {currentAssignment && assignedFE && (
+                          <Card>
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                                <Truck className="h-5 w-5" />
+                                Assigned Field Executive
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex items-center gap-4">
+                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-semibold">
+                                {assignedFE.name.charAt(0)}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-semibold">{assignedFE.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Assigned{" "}
+                                  {format(
+                                    new Date(
+                                      currentAssignment.assigned_at ||
+                                        currentAssignment.created_at
+                                    ),
+                                    "PPp"
+                                  )}
+                                </p>
+                              </div>
+                              <Badge>{assignedFE.active ? "Active" : "Inactive"}</Badge>
+                            </CardContent>
+                          </Card>
+                        )}
+            {ticket.status === "OPEN" && (
+  <Card>
+    <CardHeader>
+      <CardTitle>Assign Field Executive</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <Button
+        className="w-full"
+        onClick={() => setAssignModalOpen(true)}
+      >
+        <User className="mr-2 h-4 w-4" />
+        Assign Field Executive
+      </Button>
+    </CardContent>
+  </Card>
+)}
+
+            {/* ACTIVITY */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Activity Timeline</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {comments?.map((c) => {
+                  const a = c.attachments as any;
+                  return (
+                    <div key={c.id} className="border-l-2 pl-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Badge variant="outline">{c.source}</Badge>
+                        {format(new Date(c.created_at), "PPp")}
+                      </div>
+                      <p className="mt-1">{c.body}</p>
+
+                      {a?.image_base64 && (
+                        <img
+                          src={a.image_base64}
+                          className="mt-3 max-h-64 rounded border"
+                        />
                       )}
-                    </p>
-                  </div>
-                  <Badge>{assignedFE.active ? "Active" : "Inactive"}</Badge>
-                </CardContent>
-              </Card>
-            )}
-        </div>
-                        {/* Activity */}
-            {/* Activity */}
-<Card>
-  <CardHeader>
-    <CardTitle>Activity Timeline</CardTitle>
-  </CardHeader>
 
-  <CardContent className="space-y-4">
-    {comments?.length ? (
-      comments.map((c) => {
-        const attachments = c.attachments as any;
-
-        return (
-          <div key={c.id} className="border-l-2 pl-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Badge variant="outline">{c.source}</Badge>
-              {format(new Date(c.created_at), "PPp")}
-            </div>
-
-            <p className="mt-1 whitespace-pre-wrap">{c.body}</p>
-
-            {/* ✅ BASE64 IMAGE RENDER */}
-            {attachments?.image_base64 && (
-              <div className="mt-3">
-                <img
-                  src={attachments.image_base64}
-                  alt="Proof"
-                  className="max-h-64 rounded border"
-                />
-              </div>
-            )}
-
-            {/* Fallback */}
-            {!attachments?.image_base64 && attachments && (
-              <div className="mt-2 flex items-center gap-2 text-sm text-primary">
-                <ImageIcon className="h-4 w-4" />
-                Proof attached
-              </div>
-            )}
+                      {a?.remarks && (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          <strong>Remarks:</strong> {a.remarks}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
           </div>
-        );
-      })
-    ) : (
-      <p className="text-muted-foreground text-center">No activity yet</p>
-    )}
-  </CardContent>
-</Card>
 
-
-
+          {/* RIGHT */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -338,86 +303,48 @@ export default function TicketDetail() {
               </CardContent>
             </Card>
 
-            {ticket.status === "OPEN" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Assign Field Executive</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Button className="w-full" onClick={() => setAssignModalOpen(true)}>
-                    <User className="mr-2 h-4 w-4" />
-                    Assign
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
             {ticket.status === "ASSIGNED" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Field Executive Action</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Button className="w-full" onClick={handleGenerateOnSiteToken}>
-                    Generate On-Site Token
-                  </Button>
-                </CardContent>
-              </Card>
+              <Button onClick={() => generateToken("ON_SITE")} className="w-full">
+                Generate On-Site Token
+              </Button>
             )}
 
             {ticket.status === "ON_SITE" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Field Executive Action</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Button className="w-full" onClick={handleGenerateResolutionToken}>
-                    Generate Resolution Token
-                  </Button>
-                </CardContent>
-              </Card>
+              <Button onClick={() => generateToken("RESOLUTION")} className="w-full">
+                Generate Resolution Token
+              </Button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Token Modal */}
+      {/* TOKEN MODAL */}
       {generatedToken && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md space-y-4">
-            <h2 className="text-lg font-semibold">On-Site Token Generated</h2>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white p-6 rounded w-full max-w-md space-y-3">
+            <h2 className="font-semibold">
+              {tokenLabel === "ON_SITE" ? "On-Site Token" : "Resolution Token"}
+            </h2>
 
-            <div className="flex gap-2">
-              <input
-                readOnly
-                value={generatedToken}
-                className="flex-1 border rounded px-2 py-1 font-mono text-sm"
-              />
-              <Button
-                variant="outline"
-                onClick={() => {
-                  navigator.clipboard.writeText(generatedToken);
-                  toast({ title: "Copied to clipboard" });
-                }}
-              >
-                Copy
-              </Button>
-            </div>
+            <input
+              readOnly
+              value={generatedToken}
+              className="w-full border px-2 py-1 font-mono"
+            />
 
             <input
               readOnly
               value={`${window.location.origin}/fe/action/${generatedToken}`}
-              className="w-full border rounded px-2 py-1 font-mono text-sm"
+              className="w-full border px-2 py-1 font-mono text-sm"
             />
 
-            <div className="flex justify-end">
-              <Button variant="ghost" onClick={() => setGeneratedToken(null)}>
-                Close
-              </Button>
-            </div>
+            <Button onClick={() => setGeneratedToken(null)} variant="ghost">
+              Close
+            </Button>
           </div>
         </div>
       )}
+      
 
       <FEAssignmentModal
         ticket={ticket}
@@ -436,6 +363,7 @@ export default function TicketDetail() {
   );
 }
 
+/* ===== Helpers ===== */
 function Info({ label, value, mono }: any) {
   return (
     <div>

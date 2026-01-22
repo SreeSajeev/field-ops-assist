@@ -1,341 +1,215 @@
-import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { format } from "date-fns";
-import {
-  ArrowLeft,
-  MapPin,
-  Truck,
-  Mail,
-  AlertTriangle,
-  CheckCircle,
-  User,
-  Clock,
-  Image as ImageIcon,
-} from "lucide-react";
-
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { StatusBadge } from "@/components/tickets/StatusBadge";
-import { ConfidenceScore } from "@/components/tickets/ConfidenceScore";
-import { FEAssignmentModal } from "@/components/tickets/FEAssignmentModal";
-import { CloseTicketDialog } from "@/components/tickets/CloseTicketDialog";
-import { generateFEToken } from "@/lib/feToken";
-
-import {
-  useTicket,
-  useTicketComments,
-  useTicketAssignments,
-  useUpdateTicketStatus,
-} from "@/hooks/useTickets";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { TicketStatus } from "@/lib/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 
-export default function TicketDetail() {
-  const { ticketId } = useParams<{ ticketId: string }>();
+export default function FEActionPage() {
+  const { tokenId } = useParams<{ tokenId: string }>();
 
-  const { data: ticket, isLoading } = useTicket(ticketId ?? "");
-  const { data: comments } = useTicketComments(ticketId ?? "");
-  const { data: assignments } = useTicketAssignments(ticketId ?? "");
-  const updateStatus = useUpdateTicketStatus();
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<any>(null);
+  const [ticket, setTicket] = useState<any>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [remarks, setRemarks] = useState("");
 
-  const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
-  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
-  const [tokenLabel, setTokenLabel] = useState<"ON_SITE" | "RESOLUTION">("ON_SITE");
+  /* ================= LOAD TOKEN + TICKET ================= */
+  useEffect(() => {
+    const load = async () => {
+      try {
+        if (!tokenId) {
+          setLoading(false);
+          return;
+        }
 
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex h-64 items-center justify-center text-muted-foreground">
-          Loading ticket…
-        </div>
-      </DashboardLayout>
-    );
-  }
+        console.log("🔍 Loading FE token:", tokenId);
 
-  if (!ticket) {
-    return (
-      <DashboardLayout>
-        <div className="text-center space-y-2">
-          <h2 className="text-xl font-semibold">Ticket not found</h2>
-          <Link to="/tickets" className="text-primary hover:underline">
-            Back to tickets
-          </Link>
-        </div>
-      </DashboardLayout>
-    );
-  }
+        // 1️⃣ Load token
+        const { data: tokenRow, error: tokenError } = await supabase
+          .from("fe_action_tokens" as any)
+          .select("*")
+          .eq("id", tokenId)
+          .eq("used", false)
+          .gt("expires_at", new Date().toISOString())
+          .single();
 
-  const currentAssignment = assignments?.[0];
-  const assignedFE = currentAssignment?.field_executives;
-
-  const isPendingVerification =
-    ticket.status === "RESOLVED_PENDING_VERIFICATION";
-
-  const isResolved = ticket.status === "RESOLVED";
-
-  /* ================= ACTION HANDLERS ================= */
-
-  const handleApprove = () => {
-    if (ticket.needs_review) {
-      updateStatus.mutate({ ticketId: ticket.id, status: "OPEN" });
-    }
-  };
-
-  const handleVerifyAndClose = () => {
-    updateStatus.mutate(
-      { ticketId: ticket.id, status: "RESOLVED" as TicketStatus },
-      {
-        onSuccess: () =>
+        if (tokenError || !tokenRow) {
+          console.error("❌ TOKEN ERROR:", tokenError);
           toast({
-            title: "Ticket Closed",
-            description: `Ticket ${ticket.ticket_number} verified and closed.`,
-          }),
-      }
-    );
-  };
+            title: "Invalid or expired link",
+            description: tokenError?.message,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
 
-  const generateToken = async (type: "ON_SITE" | "RESOLUTION") => {
-    if (!ticket || !currentAssignment) return;
+        console.log("✅ Token loaded:", tokenRow);
+        setToken(tokenRow);
+
+        // 2️⃣ Load ticket
+        const { data: ticketRow, error: ticketError } = await supabase
+          .from("tickets")
+          .select("*")
+          .eq("id", tokenRow.ticket_id)
+          .single();
+
+        if (ticketError || !ticketRow) {
+          console.error("❌ TICKET ERROR:", ticketError);
+          toast({
+            title: "Ticket not found",
+            description: ticketError?.message,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
+        console.log("✅ Ticket loaded:", ticketRow);
+        setTicket(ticketRow);
+        setLoading(false);
+      } catch (err) {
+        console.error("🔥 LOAD FAILED:", err);
+        toast({
+          title: "Unexpected error",
+          description: "Check console for details",
+          variant: "destructive",
+        });
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [tokenId]);
+
+  /* ================= SUBMIT PROOF (BASE64) ================= */
+  const handleSubmit = async () => {
+    if (!file || !token || !ticket) {
+      toast({ title: "Please upload a photo" });
+      return;
+    }
 
     try {
-      const token = await generateFEToken(
-        ticket.id,
-        currentAssignment.fe_id,
-        type
-      );
-      setTokenLabel(type);
-      setGeneratedToken(token.id);
-    } catch {
+      console.log("🚀 Submitting proof (BASE64)");
+
+      // Convert image to base64
+      const toBase64 = (file: File) =>
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+        });
+
+      const base64Image = await toBase64(file);
+
+      // Insert ticket comment
+      const { error: commentError } = await supabase
+        .from("ticket_comments")
+        .insert({
+          ticket_id: ticket.id,
+          source: "FE",
+          body:
+            token.action_type === "ON_SITE"
+              ? "Field Executive uploaded on-site proof"
+              : "Field Executive uploaded resolution proof",
+          attachments: {
+            image_base64: base64Image,
+            remarks,
+            action_type: token.action_type,
+          },
+        });
+
+      if (commentError) {
+        console.error("❌ COMMENT ERROR:", commentError);
+        throw new Error(commentError.message);
+      }
+
+      // Update ticket status
+      const { error: statusError } = await supabase
+        .from("tickets")
+        .update({
+          status:
+            token.action_type === "ON_SITE"
+              ? "ON_SITE"
+              : "RESOLVED_PENDING_VERIFICATION",
+        })
+        .eq("id", ticket.id);
+
+      if (statusError) {
+        console.error("❌ STATUS ERROR:", statusError);
+        throw new Error(statusError.message);
+      }
+
+      // Mark token as used
+      const { error: tokenUpdateError } = await supabase
+        .from("fe_action_tokens" as any)
+        .update({ used: true })
+        .eq("id", token.id);
+
+      if (tokenUpdateError) {
+        console.error("❌ TOKEN UPDATE ERROR:", tokenUpdateError);
+        throw new Error(tokenUpdateError.message);
+      }
+
       toast({
-        title: "Token generation failed",
+        title: "Proof submitted successfully",
+        description: "You may now close this page.",
+      });
+    } catch (err: any) {
+      console.error("🔥 SUBMISSION FAILED:", err);
+      toast({
+        title: "Submission failed",
+        description: err?.message || "Check console",
         variant: "destructive",
       });
     }
   };
 
-  const handleCloseTicket = () => {
-    updateStatus.mutate(
-      { ticketId: ticket.id, status: "RESOLVED" as TicketStatus },
-      {
-        onSuccess: () => {
-          setCloseDialogOpen(false);
-          toast({
-            title: "Ticket Closed",
-            description: `Ticket ${ticket.ticket_number} closed successfully.`,
-          });
-        },
-      }
-    );
-  };
-
   /* ================= UI ================= */
+  if (loading) {
+    return <div className="p-8 text-center">Loading…</div>;
+  }
+
+  if (!token || !ticket) {
+    return <div className="p-8 text-center">Invalid or expired link</div>;
+  }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* HEADER */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/tickets">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>
+            {token.action_type === "ON_SITE"
+              ? "On-Site Proof Upload"
+              : "Resolution Proof Upload"}
+          </CardTitle>
+        </CardHeader>
 
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold font-mono">
-                  {ticket.ticket_number}
-                </h1>
-                <StatusBadge status={ticket.status} />
-                {ticket.needs_review && (
-                  <Badge variant="outline" className="border-warning text-warning">
-                    <AlertTriangle className="mr-1 h-3 w-3" />
-                    Needs Review
-                  </Badge>
-                )}
-              </div>
-              <p className="text-muted-foreground">
-                Opened {format(new Date(ticket.opened_at), "PPpp")}
-              </p>
-            </div>
+        <CardContent className="space-y-4">
+          <div className="text-sm">
+            <strong>Ticket:</strong> {ticket.ticket_number}
           </div>
 
-          <div className="flex gap-2">
-            {ticket.needs_review && (
-              <Button onClick={handleApprove}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Approve & Open
-              </Button>
-            )}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+          />
 
-            {isPendingVerification && (
-              <Button
-                onClick={handleVerifyAndClose}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Verify & Close
-              </Button>
-            )}
+          <textarea
+            className="w-full border rounded p-2 text-sm"
+            placeholder="Optional remarks"
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
+          />
 
-            {isResolved && (
-              <Badge className="bg-green-100 text-green-800">
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Resolved
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* MAIN GRID */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* LEFT */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* DETAILS */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Ticket Details</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                <Info label="Complaint ID" value={ticket.complaint_id} />
-                <Info label="Vehicle Number" value={ticket.vehicle_number} mono />
-                <Info label="Category" value={ticket.category} />
-                <Info label="Issue Type" value={ticket.issue_type} />
-                <IconInfo icon={MapPin} label="Location" value={ticket.location} />
-                <IconInfo icon={Mail} label="Reported By" value={ticket.opened_by_email} />
-              </CardContent>
-            </Card>
-
-            {/* ACTIVITY */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Activity Timeline</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {comments?.map((c) => {
-                  const a = c.attachments as any;
-                  return (
-                    <div key={c.id} className="border-l-2 pl-4">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Badge variant="outline">{c.source}</Badge>
-                        {format(new Date(c.created_at), "PPp")}
-                      </div>
-                      <p className="mt-1">{c.body}</p>
-
-                      {a?.image_base64 && (
-                        <img
-                          src={a.image_base64}
-                          className="mt-3 max-h-64 rounded border"
-                        />
-                      )}
-
-                      {a?.remarks && (
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          <strong>Remarks:</strong> {a.remarks}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* RIGHT */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Parsing Confidence</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ConfidenceScore score={ticket.confidence_score} size="lg" />
-              </CardContent>
-            </Card>
-
-            {ticket.status === "ASSIGNED" && (
-              <Button onClick={() => generateToken("ON_SITE")} className="w-full">
-                Generate On-Site Token
-              </Button>
-            )}
-
-            {ticket.status === "ON_SITE" && (
-              <Button onClick={() => generateToken("RESOLUTION")} className="w-full">
-                Generate Resolution Token
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* TOKEN MODAL */}
-      {generatedToken && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded w-full max-w-md space-y-3">
-            <h2 className="font-semibold">
-              {tokenLabel === "ON_SITE" ? "On-Site Token" : "Resolution Token"}
-            </h2>
-
-            <input
-              readOnly
-              value={generatedToken}
-              className="w-full border px-2 py-1 font-mono"
-            />
-
-            <input
-              readOnly
-              value={`${window.location.origin}/fe/action/${generatedToken}`}
-              className="w-full border px-2 py-1 font-mono text-sm"
-            />
-
-            <Button onClick={() => setGeneratedToken(null)} variant="ghost">
-              Close
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <FEAssignmentModal
-        ticket={ticket}
-        open={assignModalOpen}
-        onOpenChange={setAssignModalOpen}
-      />
-
-      <CloseTicketDialog
-        ticket={ticket}
-        open={closeDialogOpen}
-        onOpenChange={setCloseDialogOpen}
-        onConfirm={handleCloseTicket}
-        isPending={updateStatus.isPending}
-      />
-    </DashboardLayout>
-  );
-}
-
-/* ===== Helpers ===== */
-function Info({ label, value, mono }: any) {
-  return (
-    <div>
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={mono ? "font-mono font-medium" : "font-medium"}>
-        {value || "—"}
-      </p>
-    </div>
-  );
-}
-
-function IconInfo({ icon: Icon, label, value }: any) {
-  return (
-    <div className="flex items-start gap-2">
-      <Icon className="mt-1 h-4 w-4 text-muted-foreground" />
-      <div>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="font-medium">{value || "—"}</p>
-      </div>
+          <Button className="w-full" onClick={handleSubmit}>
+            Submit Proof
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
