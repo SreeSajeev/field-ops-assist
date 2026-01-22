@@ -227,7 +227,37 @@ export default function TicketDetail() {
                 <IconInfo icon={Mail} label="Reported By" value={ticket.opened_by_email} />
               </CardContent>
             </Card>
-
+            {/* Assignment */}
+            {currentAssignment && assignedFE && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5" />
+                    Assigned Field Executive
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-semibold">
+                    {assignedFE.name.charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold">{assignedFE.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Assigned{" "}
+                      {format(
+                        new Date(
+                          currentAssignment.assigned_at ||
+                            currentAssignment.created_at
+                        ),
+                        "PPp"
+                      )}
+                    </p>
+                  </div>
+                  <Badge>{assignedFE.active ? "Active" : "Inactive"}</Badge>
+                </CardContent>
+              </Card>
+            )}
+            
             {/* Activity */}
             <Card>
               <CardHeader>
