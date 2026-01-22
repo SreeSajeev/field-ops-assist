@@ -120,6 +120,26 @@ export default function TicketDetail() {
     }
   };
 
+  const handleGenerateResolutionToken = async () => {
+    if (!ticket || !currentAssignment) return;
+
+    try {
+      const token = await generateFEToken(
+        ticket.id,
+        currentAssignment.fe_id,
+        "RESOLUTION"
+      );
+      setGeneratedToken(token.id);
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Token generation failed",
+        description: "Could not generate resolution token.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCloseTicket = () => {
     updateStatus.mutate(
       { ticketId: ticket.id, status: "RESOLVED" as TicketStatus },
@@ -340,6 +360,19 @@ export default function TicketDetail() {
                 <CardContent>
                   <Button className="w-full" onClick={handleGenerateOnSiteToken}>
                     Generate On-Site Token
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {ticket.status === "ON_SITE" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Field Executive Action</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Button className="w-full" onClick={handleGenerateResolutionToken}>
+                    Generate Resolution Token
                   </Button>
                 </CardContent>
               </Card>
