@@ -2,7 +2,8 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { UserRole } from '@/lib/types';
-
+import { SignUpSchema, formatZodError } from '@/lib/validation';
+import { z } from 'zod';
 interface UserProfile {
   id: string;
   auth_id: string | null;
@@ -93,23 +94,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, name: string, role: UserRole = 'STAFF') => {
+    // Validate input using Zod schema
+    try {
+      SignUpSchema.parse({ email, password, name, role });
+    } catch (validationError) {
+      if (validationError instanceof z.ZodError) {
+        return { error: new Error(formatZodError(validationError)) };
+      }
+      return { error: validationError as Error };
+    }
+
     const redirectUrl = `${window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({ 
-      email, 
+      email: email.trim(), 
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: { name, role }
+        data: { name: name.trim(), role }
       }
     });
 
     if (!error && data.user) {
-      // Create user profile in users table
+      // Create user profile in users table with validated/trimmed data
       const { error: profileError } = await supabase.from('users').insert({
         auth_id: data.user.id,
-        email,
-        name,
+        email: email.trim(),
+        name: name.trim(),
         role
       });
 
@@ -120,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // If signing up as FIELD_EXECUTIVE, also create a field_executives record
       if (role === 'FIELD_EXECUTIVE') {
         const { error: feError } = await supabase.from('field_executives').insert({
-          name,
+          name: name.trim(),
           phone: null,
           base_location: null,
           skills: null,

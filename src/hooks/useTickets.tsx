@@ -2,7 +2,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Ticket, TicketFilters, TicketStatus } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
-
+import { 
+  TicketUpdateSchema, 
+  CommentSchema, 
+  AssignmentSchema, 
+  UUIDSchema,
+  formatZodError 
+} from "@/lib/validation";
+import { z } from "zod";
 /* =====================================================
    Tickets list
 ===================================================== */
@@ -129,13 +136,19 @@ export function useUpdateTicket() {
       ticketId: string;
       updates: Partial<Ticket>;
     }) => {
+      // Validate ticketId is a valid UUID
+      const validatedId = UUIDSchema.parse(ticketId);
+      
+      // Validate updates against allowed schema (strip unknown fields)
+      const validatedUpdates = TicketUpdateSchema.parse(updates);
+      
       const { data, error } = await supabase
         .from("tickets")
         .update({
-          ...updates,
+          ...validatedUpdates,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", ticketId)
+        .eq("id", validatedId)
         .select()
         .single();
 
@@ -146,6 +159,11 @@ export function useUpdateTicket() {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
       queryClient.invalidateQueries({ queryKey: ["ticket", data.id] });
       toast({ title: "Ticket updated" });
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
+        toast({ title: "Validation Error", description: formatZodError(error), variant: "destructive" });
+      }
     },
   });
 }
@@ -164,13 +182,20 @@ export function useUpdateTicketStatus() {
       ticketId: string;
       status: TicketStatus;
     }) => {
+      // Validate inputs
+      const validatedId = UUIDSchema.parse(ticketId);
+      const validatedStatus = z.enum([
+        'OPEN', 'NEEDS_REVIEW', 'ASSIGNED', 'EN_ROUTE', 'ON_SITE', 
+        'RESOLVED_PENDING_VERIFICATION', 'RESOLVED', 'REOPENED'
+      ]).parse(status);
+      
       const { data, error } = await supabase
         .from("tickets")
         .update({
-          status,
+          status: validatedStatus,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", ticketId)
+        .eq("id", validatedId)
         .select()
         .single();
 
@@ -178,9 +203,9 @@ export function useUpdateTicketStatus() {
 
       await supabase.from("audit_logs").insert({
         entity_type: "ticket",
-        entity_id: ticketId,
-        action: `status_changed_to_${status}`,
-        metadata: { new_status: status },
+        entity_id: validatedId,
+        action: `status_changed_to_${validatedStatus}`,
+        metadata: { new_status: validatedStatus },
       });
 
       return data;
@@ -188,6 +213,11 @@ export function useUpdateTicketStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
       toast({ title: "Status updated" });
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
+        toast({ title: "Validation Error", description: formatZodError(error), variant: "destructive" });
+      }
     },
   });
 }
@@ -208,12 +238,19 @@ export function useAssignTicket() {
       feId: string;
       overrideReason?: string;
     }) => {
+      // Validate inputs
+      const validated = AssignmentSchema.parse({ 
+        ticketId, 
+        feId, 
+        overrideReason: overrideReason?.trim() || null 
+      });
+      
       const { data: assignment, error } = await supabase
         .from("ticket_assignments")
         .insert({
-          ticket_id: ticketId,
-          fe_id: feId,
-          override_reason: overrideReason ?? null,
+          ticket_id: validated.ticketId,
+          fe_id: validated.feId,
+          override_reason: validated.overrideReason ?? null,
         })
         .select()
         .single();
@@ -227,14 +264,14 @@ export function useAssignTicket() {
           current_assignment_id: assignment.id,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", ticketId);
+        .eq("id", validated.ticketId);
 
       await supabase.from("audit_logs").insert({
         entity_type: "ticket",
-        entity_id: ticketId,
+        entity_id: validated.ticketId,
         action: "assigned",
         metadata: {
-          fe_id: feId,
+          fe_id: validated.feId,
           assignment_id: assignment.id,
         },
       });
@@ -245,6 +282,11 @@ export function useAssignTicket() {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
       queryClient.invalidateQueries({ queryKey: ["ticket-assignments"] });
       toast({ title: "Ticket assigned" });
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
+        toast({ title: "Validation Error", description: formatZodError(error), variant: "destructive" });
+      }
     },
   });
 }
@@ -267,13 +309,21 @@ export function useAddComment() {
       source?: "EMAIL" | "FE" | "STAFF" | "SYSTEM";
       attachments?: any[] | null;
     }) => {
+      // Validate inputs
+      const validated = CommentSchema.parse({ 
+        ticketId, 
+        body: body.trim(), 
+        source, 
+        attachments 
+      });
+      
       const { data, error } = await supabase
         .from("ticket_comments")
         .insert({
-          ticket_id: ticketId,
-          body,
-          source,
-          attachments,
+          ticket_id: validated.ticketId,
+          body: validated.body,
+          source: validated.source,
+          attachments: validated.attachments,
         })
         .select()
         .single();
@@ -286,6 +336,11 @@ export function useAddComment() {
         queryKey: ["ticket-comments", vars.ticketId],
       });
       toast({ title: "Comment added" });
+    },
+    onError: (error) => {
+      if (error instanceof z.ZodError) {
+        toast({ title: "Validation Error", description: formatZodError(error), variant: "destructive" });
+      }
     },
   });
 }
