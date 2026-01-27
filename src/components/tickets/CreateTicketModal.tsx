@@ -32,6 +32,8 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Plus, Ticket } from 'lucide-react';
+import { CreateTicketSchema, CommentSchema, formatZodError } from '@/lib/validation';
+import { z } from 'zod';
 
 interface CreateTicketModalProps {
   open: boolean;
@@ -83,24 +85,37 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
     return `TKT-${timestamp}-${random}`;
   };
 
-  // Mutation to create the ticket
+  // Mutation to create the ticket with validation
   const createTicketMutation = useMutation({
     mutationFn: async () => {
       const ticketNumber = generateTicketNumber();
       
+      // Validate ticket data using Zod schema
+      const validatedTicket = CreateTicketSchema.parse({
+        ticket_number: ticketNumber,
+        vehicle_number: vehicleNumber.trim() || null,
+        category: category || null,
+        issue_type: issueType || null,
+        location: location.trim() || null,
+        complaint_id: complaintId.trim() || null,
+        source: 'MANUAL',
+        needs_review: false,
+        confidence_score: 100,
+      });
+      
       const { data, error } = await supabase
         .from('tickets')
         .insert({
-          ticket_number: ticketNumber,
-          vehicle_number: vehicleNumber || null,
-          category: category || null,
-          issue_type: issueType || null,
-          location: location || null,
-          complaint_id: complaintId || null,
+          ticket_number: validatedTicket.ticket_number,
+          vehicle_number: validatedTicket.vehicle_number,
+          category: validatedTicket.category,
+          issue_type: validatedTicket.issue_type,
+          location: validatedTicket.location,
+          complaint_id: validatedTicket.complaint_id,
+          source: validatedTicket.source,
+          needs_review: validatedTicket.needs_review,
+          confidence_score: validatedTicket.confidence_score,
           status: 'OPEN',
-          source: 'MANUAL', // Distinguish from email-generated tickets
-          needs_review: false, // Manual tickets don't need AI review
-          confidence_score: 100, // Manual entry = 100% confidence
           opened_at: new Date().toISOString(),
         })
         .select()
@@ -110,10 +125,17 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
 
       // Add initial comment with description if provided
       if (description.trim()) {
-        await supabase.from('ticket_comments').insert({
-          ticket_id: data.id,
-          body: description,
+        // Validate comment
+        const validatedComment = CommentSchema.parse({
+          ticketId: data.id,
+          body: description.trim(),
           source: 'STAFF',
+        });
+        
+        await supabase.from('ticket_comments').insert({
+          ticket_id: validatedComment.ticketId,
+          body: validatedComment.body,
+          source: validatedComment.source,
         });
       }
 
@@ -145,6 +167,15 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
       onOpenChange(false);
     },
     onError: (error: Error) => {
+      // Handle validation errors specifically
+      if (error instanceof z.ZodError) {
+        toast({
+          title: 'Validation Error',
+          description: formatZodError(error),
+          variant: 'destructive',
+        });
+        return;
+      }
       toast({
         title: 'Failed to Create Ticket',
         description: error.message,

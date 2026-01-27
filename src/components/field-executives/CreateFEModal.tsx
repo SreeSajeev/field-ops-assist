@@ -25,6 +25,8 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, UserPlus, X } from 'lucide-react';
+import { CreateFESchema, formatZodError } from '@/lib/validation';
+import { z } from 'zod';
 
 interface CreateFEModalProps {
   open: boolean;
@@ -66,17 +68,26 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
     );
   };
 
-  // Mutation to create the FE
+  // Mutation to create the FE with validation
   const createFEMutation = useMutation({
     mutationFn: async () => {
+      // Validate input using Zod schema
+      const validated = CreateFESchema.parse({
+        name: name.trim(),
+        phone: phone.trim() || null,
+        base_location: baseLocation.trim() || null,
+        skills: selectedSkills.length > 0 ? { categories: selectedSkills } : null,
+        active: isActive,
+      });
+      
       const { data, error } = await supabase
         .from('field_executives')
         .insert({
-          name: name.trim(),
-          phone: phone.trim() || null,
-          base_location: baseLocation.trim() || null,
-          skills: selectedSkills.length > 0 ? { categories: selectedSkills } : null,
-          active: isActive,
+          name: validated.name,
+          phone: validated.phone,
+          base_location: validated.base_location,
+          skills: validated.skills,
+          active: validated.active,
         })
         .select()
         .single();
@@ -111,6 +122,15 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
       onOpenChange(false);
     },
     onError: (error: Error) => {
+      // Handle validation errors specifically
+      if (error instanceof z.ZodError) {
+        toast({
+          title: 'Validation Error',
+          description: formatZodError(error),
+          variant: 'destructive',
+        });
+        return;
+      }
       toast({
         title: 'Failed to Create Field Executive',
         description: error.message,
