@@ -1,3 +1,16 @@
+/**
+ * App.tsx - Main Application Router
+ * 
+ * Route Structure:
+ * - /fe/ticket/:ticketId - Public FE token-based access (no auth required)
+ * - /fe/action/:tokenId - Public FE action page (no auth required)
+ * - /* - Protected routes requiring authentication
+ *   - / - Dashboard (routes FE to their portal, Staff to dashboard)
+ *   - /tickets, /review, etc. - Staff-only routes
+ * 
+ * Authentication is handled by AuthProvider wrapping protected routes.
+ * Role-based routing is handled by Index.tsx based on user role.
+ */
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,7 +32,7 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import FEActionPage from "@/pages/FEActionPage";
 
-// ✅ FE TOKEN PAGE (NO AUTH)
+// Token-based FE access (no auth required)
 import FETicketView from "./pages/FETicketView";
 
 const queryClient = new QueryClient();
@@ -33,22 +46,32 @@ const App = () => (
 
         <Routes>
           {/* ========================= */}
-          {/* 🔓 FIELD EXECUTIVE ROUTES */}
+          {/* 🔓 PUBLIC ROUTES (NO AUTH) */}
+          {/* These routes use token-based access for Field Executives */}
           {/* ========================= */}
           <Route
             path="/fe/ticket/:ticketId"
             element={<FETicketView />}
           />
+          <Route
+            path="/fe/action/:tokenId"
+            element={<FEActionPage />}
+          />
 
           {/* ========================= */}
-          {/* 🔒 STAFF / ADMIN ROUTES */}
+          {/* 🔒 PROTECTED ROUTES (REQUIRE AUTH) */}
+          {/* AuthProvider wraps all protected routes */}
+          {/* Role-based routing handled by Index.tsx */}
           {/* ========================= */}
           <Route
             path="/*"
             element={
               <AuthProvider>
                 <Routes>
+                  {/* Main entry point - routes based on role */}
                   <Route path="/" element={<Index />} />
+                  
+                  {/* Service Staff routes */}
                   <Route path="/tickets" element={<TicketsList />} />
                   <Route path="/tickets/:ticketId" element={<TicketDetail />} />
                   <Route path="/review" element={<ReviewQueue />} />
@@ -59,9 +82,9 @@ const App = () => (
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/users" element={<Users />} />
                   <Route path="/settings" element={<Settings />} />
+                  
+                  {/* Catch-all for 404 */}
                   <Route path="*" element={<NotFound />} />
-                  <Route path="/fe/action/:tokenId" element={<FEActionPage />} />
-
                 </Routes>
               </AuthProvider>
             }
