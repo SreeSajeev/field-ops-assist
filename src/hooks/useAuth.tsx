@@ -4,9 +4,9 @@ import { User, Session } from '@supabase/supabase-js';
 import { UserRole } from '@/lib/types';
 import { SignUpSchema, formatZodError } from '@/lib/validation';
 import { z } from 'zod';
+
 interface UserProfile {
   id: string;
-  auth_id: string | null;
   name: string;
   email: string;
   role: UserRole;
@@ -19,7 +19,12 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, name: string, role: UserRole) => Promise<{ error: Error | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    name: string,
+    role: UserRole
+  ) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isFieldExecutive: boolean;
   isServiceStaff: boolean;
@@ -34,142 +39,140 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user profile from users table
-  const fetchUserProfile = async (authId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_id', authId)
-        .maybeSingle();
+  /**
+   * Resolve profile from public.users
+   */
+  const resolveUserProfile = async (authUser: User) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, email, role, active')
+      .eq('auth_id', authUser.id)
+      .single();
 
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return null;
-      }
-      return data as UserProfile | null;
-    } catch (err) {
-      console.error('Error in fetchUserProfile:', err);
+    if (error) {
+      console.error('Failed to resolve user profile:', error);
       return null;
     }
+
+    return data as UserProfile;
   };
 
+  /**
+   * Bootstrap auth
+   */
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        // Defer profile fetch
-        setTimeout(() => {
-          fetchUserProfile(session.user.id).then(setUserProfile);
-        }, 0);
-      }
-      setLoading(false);
-    });
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       if (session?.user) {
-        // Defer profile fetch to avoid deadlock
-        setTimeout(() => {
-          fetchUserProfile(session.user.id).then(setUserProfile);
-        }, 0);
+        const profile = await resolveUserProfile(session.user);
+        setUserProfile(profile);
+      }
+
+      setLoading(false);
+    };
+
+    init();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        const profile = await resolveUserProfile(session.user);
+        setUserProfile(profile);
       } else {
         setUserProfile(null);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  /**
+   * Sign in
+   */
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
     return { error: error as Error | null };
   };
 
-  const signUp = async (email: string, password: string, name: string, role: UserRole = 'STAFF') => {
-    // Validate input using Zod schema
+  /**
+   * Sign up (CORRECT)
+   */
+  const signUp = async (
+    email: string,
+    password: string,
+    name: string,
+    role: UserRole
+  ): Promise<{ error: Error | null }> => {
     try {
       SignUpSchema.parse({ email, password, name, role });
-    } catch (validationError) {
-      if (validationError instanceof z.ZodError) {
-        return { error: new Error(formatZodError(validationError)) };
-      }
-      return { error: validationError as Error };
-    }
 
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { data, error } = await supabase.auth.signUp({ 
-      email: email.trim(), 
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: { name: name.trim(), role }
-      }
-    });
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
 
-    if (!error && data.user) {
-      // Create user profile in users table with validated/trimmed data
-      const { error: profileError } = await supabase.from('users').insert({
+      if (error) return { error };
+      if (!data.user) return { error: new Error('Auth user not created') };
+
+      const { error: insertError } = await supabase.from('users').insert({
         auth_id: data.user.id,
         email: email.trim(),
         name: name.trim(),
-        role
+        role,
+        active: true,
       });
 
-      if (profileError) {
-        console.error('Error creating user profile:', profileError);
-      }
+      if (insertError) return { error: insertError };
 
-      // If signing up as FIELD_EXECUTIVE, also create a field_executives record
-      if (role === 'FIELD_EXECUTIVE') {
-        const { error: feError } = await supabase.from('field_executives').insert({
-          name: name.trim(),
-          phone: null,
-          base_location: null,
-          skills: null,
-          active: true
-        });
-
-        if (feError) {
-          console.error('Error creating field executive record:', feError);
-        }
+      return { error: null };
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return { error: new Error(formatZodError(err)) };
       }
+      return { error: err as Error };
     }
-
-    return { error: error as Error | null };
   };
 
+  /**
+   * Sign out
+   */
   const signOut = async () => {
     await supabase.auth.signOut();
     setUserProfile(null);
   };
 
-  // Role helpers
   const isFieldExecutive = userProfile?.role === 'FIELD_EXECUTIVE';
   const isServiceStaff = userProfile?.role === 'STAFF';
-  const isAdmin = userProfile?.role === 'ADMIN' || userProfile?.role === 'SUPER_ADMIN';
+  const isAdmin =
+    userProfile?.role === 'ADMIN' || userProfile?.role === 'SUPER_ADMIN';
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      userProfile,
-      loading, 
-      signIn, 
-      signUp, 
-      signOut,
-      isFieldExecutive,
-      isServiceStaff,
-      isAdmin
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        userProfile,
+        loading,
+        signIn,
+        signUp,
+        signOut,
+        isFieldExecutive,
+        isServiceStaff,
+        isAdmin,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -177,14 +180,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
 
-// Type-safe hook to access user role
 export function useUserRole() {
   const { userProfile } = useAuth();
   return userProfile?.role ?? null;
 }
+
