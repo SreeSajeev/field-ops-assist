@@ -1,123 +1,85 @@
-import { useParams, useSearchParams } from "react-router-dom";
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useFETokenAccess } from "@/hooks/useFETokenAccess";
-import {
-  useTicket,
-  useTicketComments,
-  useAddComment,
-  useUpdateTicketStatus,
-} from "@/hooks/useTickets";
+import { useTicket, useTicketComments } from "@/hooks/useTickets";
+import { useFETokenForTicket } from "@/hooks/useFETokenForTicket";
 
 export default function FETicketView() {
-  const { ticketId } = useParams<{ ticketId: string }>();
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const params = useParams<{ ticketId: string }>();
+  const navigate = useNavigate();
 
-  const tokenQuery = useFETokenAccess(token);
-  const ticketQuery = useTicket(ticketId ?? "");
-  const commentsQuery = useTicketComments(ticketId ?? "");
+  const ticketId = params.ticketId ?? "";
 
-  const addComment = useAddComment();
-  const updateStatus = useUpdateTicketStatus();
+  const ticketQuery = useTicket(ticketId);
+  const commentsQuery = useTicketComments(ticketId);
+  const tokenQuery = useFETokenForTicket(ticketId);
 
-  const [file, setFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
+  if (!ticketId) {
+    return <div className="p-6 text-red-600">Invalid ticket.</div>;
+  }
 
-  if (tokenQuery.isLoading || ticketQuery.isLoading) {
+  if (ticketQuery.isLoading || tokenQuery.isLoading) {
     return <div className="p-6">Loading…</div>;
   }
 
-  if (!tokenQuery.data || tokenQuery.error) {
-    return <div className="p-6 text-red-600">Access denied or expired.</div>;
+  if (!ticketQuery.data) {
+    return <div className="p-6 text-red-600">Ticket not found.</div>;
   }
 
-  if (tokenQuery.data.ticket_id !== ticketId) {
-    return <div className="p-6 text-red-600">Invalid ticket link.</div>;
-  }
-
-  const handleReachedSite = async () => {
-    if (!file || !ticketId) return alert("Upload an image");
-
-    try {
-      setSubmitting(true);
-
-      const path = `${ticketId}/${Date.now()}-${file.name}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("Ticket_Uploads")
-        .upload(path, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: url } = supabase.storage
-        .from("Ticket_Uploads")
-        .getPublicUrl(path);
-
-      await addComment.mutateAsync({
-        ticketId,
-        body: "FE reached site and uploaded proof.",
-        source: "FE",
-        attachments: [
-          {
-            type: "image",
-            bucket: "Ticket_Uploads",
-            path,
-            public_url: url.publicUrl,
-            uploaded_at: new Date().toISOString(),
-          },
-        ],
-      });
-
-      await updateStatus.mutateAsync({
-        ticketId,
-        status: "ON_SITE",
-      });
-
-      setDone(true);
-    } catch (e: any) {
-      alert(e.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // Narrow intentionally to avoid TS union explosion
+  const token = tokenQuery.data as any | null;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <Card className="p-6 space-y-4">
+    <div className="p-6 max-w-2xl mx-auto space-y-6">
+      {/* Ticket Info */}
+      <Card className="p-6 space-y-2">
         <h2 className="text-xl font-semibold">
-          Ticket #{ticketQuery.data?.ticket_number}
+          Ticket #{ticketQuery.data.ticket_number}
         </h2>
-
-        <p>Status: {ticketQuery.data?.status}</p>
-
-        {!done && (
-          <>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-            <Button disabled={submitting} onClick={handleReachedSite}>
-              {submitting ? "Submitting…" : "Reached Site"}
-            </Button>
-          </>
-        )}
-
-        {done && <p className="text-green-600">Proof submitted successfully.</p>}
+        <p>Status: {ticketQuery.data.status}</p>
+        <p>Location: {ticketQuery.data.location ?? "Not specified"}</p>
+        <p>Issue Type: {ticketQuery.data.issue_type ?? "—"}</p>
       </Card>
 
-      <div className="mt-6">
+      {/* Action Token */}
+      {token ? (
+        <Card className="p-4 flex items-center justify-between">
+          <span className="font-medium">
+            {token.action_type === "ON_SITE"
+              ? "On-Site Proof Required"
+              : "Resolution Proof Required"}
+          </span>
+
+          <Button
+            onClick={() =>
+              navigate(`/fe/action/${token.token_hash}`)
+            }
+          >
+            {token.action_type === "ON_SITE"
+              ? "Upload On-Site Proof"
+              : "Upload Resolution Proof"}
+          </Button>
+        </Card>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          No pending actions for this ticket.
+        </p>
+      )}
+
+      {/* Activity Timeline */}
+      <div className="space-y-2">
         <h3 className="font-semibold">Activity</h3>
-        {commentsQuery.data?.map((c) => (
-          <div key={c.id} className="border-b py-2 text-sm">
-            <strong>{c.source}</strong>: {c.body}
-          </div>
-        ))}
+        {commentsQuery.data?.length ? (
+          commentsQuery.data.map((c) => (
+            <div key={c.id} className="border-b py-2 text-sm">
+              <strong>{c.source}</strong>: {c.body}
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No activity yet.
+          </p>
+        )}
       </div>
     </div>
   );

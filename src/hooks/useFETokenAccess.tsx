@@ -2,42 +2,34 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export function useFETokenAccess(token: string | null) {
-  // ✅ Logs must be OUTSIDE the useQuery config
-  console.log("🔥 useFETokenAccess CALLED");
-  console.log("🔥 raw token param =", token);
+  const cleanToken = token?.trim() ?? "";
 
   return useQuery({
-    queryKey: ["fe-token", token],
-    enabled: !!token,
+    queryKey: ["fe-token-access", cleanToken || "none"],
+    enabled: !!cleanToken,
     retry: false,
 
     queryFn: async () => {
-      if (!token) {
-        throw new Error("No token provided");
+      if (!cleanToken) {
+        return null;
       }
 
-      const cleanToken = token.trim();
-      console.log("🧪 cleanToken =", cleanToken);
-
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("access_tokens")
         .select("*")
         .eq("token_hash", cleanToken)
         .maybeSingle();
 
-      console.log("🧪 token query result =", data);
-      console.log("🧪 token query error =", error);
-
       if (error || !data) {
-        throw new Error("Invalid token");
+        return null;
       }
 
       if (data.revoked) {
-        throw new Error("Token revoked");
+        return null;
       }
 
       if (new Date(data.expires_at) < new Date()) {
-        throw new Error("Token expired");
+        return null;
       }
 
       return data;

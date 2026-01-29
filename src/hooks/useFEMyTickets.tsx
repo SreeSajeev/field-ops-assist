@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 
+/* ======================================================
+   Types
+====================================================== */
 type FETwitter = {
   id: string;
   ticket_number: string;
@@ -11,6 +15,10 @@ type FETwitter = {
   opened_at?: string | null;
 };
 
+/* ======================================================
+   useFEMyTickets
+   Fetch tickets assigned to the logged-in FE
+====================================================== */
 export function useFEMyTickets() {
   const { session } = useAuth();
   const [tickets, setTickets] = useState<FETwitter[]>([]);
@@ -25,28 +33,19 @@ export function useFEMyTickets() {
       setError(null);
 
       try {
-        /* --------------------------------------------------
-           STEP 1: Fetch FE ID (BREAK SUPABASE GENERICS HERE)
-        -------------------------------------------------- */
+        // 1️⃣ Get FE ID from profiles (break TS generics intentionally)
         const profileRes = await (supabase as any)
           .from("profiles")
           .select("fe_id")
           .eq("id", session.user.id)
           .single();
 
-        if (profileRes.error) {
-          throw profileRes.error;
-        }
+        if (profileRes.error) throw profileRes.error;
 
         const feId = profileRes.data?.fe_id as string | undefined;
+        if (!feId) throw new Error("FE profile not linked");
 
-        if (!feId) {
-          throw new Error("FE profile not linked");
-        }
-
-        /* --------------------------------------------------
-           STEP 2: Fetch tickets via ticket_assignments
-        -------------------------------------------------- */
+        // 2️⃣ Fetch tickets via ticket_assignments
         const assignmentsRes = await (supabase as any)
           .from("ticket_assignments")
           .select(`
@@ -62,9 +61,7 @@ export function useFEMyTickets() {
           .eq("fe_id", feId)
           .order("assigned_at", { ascending: false });
 
-        if (assignmentsRes.error) {
-          throw assignmentsRes.error;
-        }
+        if (assignmentsRes.error) throw assignmentsRes.error;
 
         const resolvedTickets: FETwitter[] =
           assignmentsRes.data
@@ -84,9 +81,37 @@ export function useFEMyTickets() {
     fetchTickets();
   }, [session?.user?.id]);
 
-  return {
-    tickets,
-    loading,
-    error,
-  };
+  return { tickets, loading, error };
 }
+
+/* ======================================================
+   useFEProfile
+   Used by FE pages to resolve role + fe_id
+====================================================== */
+export function useFEProfile() {
+  const { session } = useAuth();
+
+  return useQuery({
+    queryKey: ["fe-profile", session?.user?.id],
+    enabled: !!session?.user?.id,
+
+    queryFn: async () => {
+      if (!session?.user?.id) {
+        throw new Error("No active session");
+      }
+
+      const { data, error } = await (supabase as any)
+        .from("profiles")
+        .select("role, fe_id, base_location")
+        .eq("id", session.user.id)
+        .single();
+
+      if (error) throw error;
+
+      return data as { role: string; fe_id: string | null; base_location: string | null };
+
+    },
+  });
+  
+}
+
