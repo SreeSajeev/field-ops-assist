@@ -1,101 +1,92 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
-import { Ticket } from '@/lib/types';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+
+type FETwitter = {
+  id: string;
+  ticket_number: string;
+  status: string;
+  location?: string | null;
+  issue_type?: string | null;
+  opened_at?: string | null;
+};
 
 export function useFEMyTickets() {
-  const { userProfile } = useAuth();
+  const { session } = useAuth();
+  const [tickets, setTickets] = useState<FETwitter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  return useQuery({
-    queryKey: ['fe-my-tickets', userProfile?.email],
-    enabled: !!userProfile?.email,
+  useEffect(() => {
+    if (!session?.user?.id) return;
 
-    queryFn: async () => {
-      // 🔴 HARD ESCAPE FROM SUPABASE TYPES
-      const feRes = await (supabase as any)
-        .from('field_executives')
-        .select('id')
-        .eq('email', userProfile!.email)
-        .maybeSingle();
+    const fetchTickets = async () => {
+      setLoading(true);
+      setError(null);
 
-      if (feRes.error) {
-        console.error('FE lookup failed', feRes.error);
-        throw feRes.error;
+      try {
+        /* --------------------------------------------------
+           STEP 1: Fetch FE ID (BREAK SUPABASE GENERICS HERE)
+        -------------------------------------------------- */
+        const profileRes = await (supabase as any)
+          .from("profiles")
+          .select("fe_id")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profileRes.error) {
+          throw profileRes.error;
+        }
+
+        const feId = profileRes.data?.fe_id as string | undefined;
+
+        if (!feId) {
+          throw new Error("FE profile not linked");
+        }
+
+        /* --------------------------------------------------
+           STEP 2: Fetch tickets via ticket_assignments
+        -------------------------------------------------- */
+        const assignmentsRes = await (supabase as any)
+          .from("ticket_assignments")
+          .select(`
+            ticket:ticket_id (
+              id,
+              ticket_number,
+              status,
+              location,
+              issue_type,
+              opened_at
+            )
+          `)
+          .eq("fe_id", feId)
+          .order("assigned_at", { ascending: false });
+
+        if (assignmentsRes.error) {
+          throw assignmentsRes.error;
+        }
+
+        const resolvedTickets: FETwitter[] =
+          assignmentsRes.data
+            ?.map((row: any) => row.ticket)
+            .filter(Boolean) ?? [];
+
+        setTickets(resolvedTickets);
+      } catch (err: any) {
+        console.error("FE ticket fetch failed:", err);
+        setError(err.message || "Failed to load tickets");
+        setTickets([]);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      if (!feRes.data) {
-        console.warn('No FE record for', userProfile?.email);
-        return [];
-      }
+    fetchTickets();
+  }, [session?.user?.id]);
 
-      const feId = feRes.data.id;
-
-      // Fetch assigned tickets
-      const assignRes = await (supabase as any)
-        .from('ticket_assignments')
-        .select(
-          `
-          tickets (
-            id,
-            ticket_number,
-            status,
-            created_at,
-            location,
-            issue_type,
-            category,
-            vehicle_number
-          )
-        `
-        )
-        .eq('fe_id', feId);
-
-      if (assignRes.error) {
-        console.error('Assignment fetch failed', assignRes.error);
-        throw assignRes.error;
-      }
-
-      const ACTIVE = [
-        'ASSIGNED',
-        'ON_SITE',
-        'RESOLVED_PENDING_VERIFICATION',
-      ];
-
-      return (assignRes.data || [])
-        .map((row: any) => row.tickets)
-        .filter(
-          (t: Ticket | null): t is Ticket =>
-            !!t && ACTIVE.includes(t.status)
-        )
-        .sort(
-          (a: Ticket, b: Ticket) =>
-            new Date(b.created_at).getTime() -
-            new Date(a.created_at).getTime()
-        );
-    },
-
-    refetchInterval: 30000,
-  });
-}
-
-/**
- * FE profile (demo-safe)
- */
-export function useFEProfile() {
-  const { userProfile } = useAuth();
-
-  return useQuery({
-    queryKey: ['fe-profile', userProfile?.email],
-    enabled: !!userProfile?.email,
-
-    queryFn: async () => {
-      const res = await (supabase as any)
-        .from('field_executives')
-        .select('*')
-        .eq('email', userProfile!.email)
-        .maybeSingle();
-
-      if (res.error) throw res.error;
-      return res.data;
-    },
-  });
+  return {
+    tickets,
+    loading,
+    error,
+  };
 }
