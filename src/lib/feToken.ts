@@ -1,94 +1,72 @@
-/**
- * FE Token Generation Utilities
- * 
- * This module provides functions to generate access tokens for Field Executives.
- * Tokens allow FEs to access ticket actions via a link without requiring login.
- * 
- * Uses the existing `access_tokens` table which has:
- * - token_hash: unique identifier for the token
- * - ticket_id: the ticket this token grants access to
- * - fe_id: the field executive this token is for
- * - expires_at: when the token expires
- * - revoked: whether the token has been used/revoked
- */
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Generate a unique token hash
- * Creates a random string that can be used as a URL-safe token
- */
-function generateTokenHash(): string {
-  const array = new Uint8Array(24);
-  crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+export type FEActionType = 'ON_SITE' | 'RESOLUTION';
+
+interface GenerateFEActionTokenParams {
+  ticketId: string;
+  feId: string;
+  actionType: FEActionType;
+  expiryHours?: number;
 }
 
 /**
- * Generate an access token for a Field Executive to access a ticket
- * 
- * @param ticketId - The ticket ID to grant access to
- * @param feId - The Field Executive ID
- * @param expiryHours - How many hours until the token expires (default: 24)
- * @returns The created token record including the token_hash for URL generation
+ * Generates a Field Executive action token.
+ * This does NOT update ticket status.
+ * Ticket status must only change when token is USED.
  */
-export async function generateFEToken(
-  ticketId: string,
-  feId: string,
-  _actionType?: string, // Kept for backward compatibility but not stored
-  expiryHours: number = 24
-) {
-  const tokenHash = generateTokenHash();
+export async function generateFEActionToken({
+  ticketId,
+  feId,
+  actionType,
+  expiryHours = 24,
+}: GenerateFEActionTokenParams) {
+  // 1️⃣ Check for existing active token (important)
+  const { data: existingToken, error: existingError } = await (supabase as any)
+    .from('fe_action_tokens')
+    .select('id')
+    .eq('ticket_id', ticketId)
+    .eq('fe_id', feId)
+    .eq('action_type', actionType)
+    .eq('used', false)
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle();
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  if (existingToken) {
+    // Prevent token spam
+    return {
+      tokenId: existingToken.id,
+      alreadyExists: true,
+    };
+  }
+
+  // 2️⃣ Create expiry timestamp
   const expiresAt = new Date(
     Date.now() + expiryHours * 60 * 60 * 1000
   ).toISOString();
 
-  const { data, error } = await supabase
-    .from('access_tokens')
+  // 3️⃣ Insert token
+  const { data, error } = await (supabase as any)
+    .from('fe_action_tokens')
     .insert({
-      token_hash: tokenHash,
       ticket_id: ticketId,
       fe_id: feId,
+      action_type: actionType,
       expires_at: expiresAt,
-      revoked: false,
+      used: false,
     })
-    .select()
+    .select('id')
     .single();
 
   if (error) {
-    console.error('Failed to generate FE access token:', error);
     throw error;
   }
 
-  // Return with 'id' property for backward compatibility with existing code
   return {
-    ...data,
-    id: data.token_hash, // Use token_hash as the URL identifier
+    tokenId: data.id,
+    alreadyExists: false,
   };
-}
-
-/**
- * Revoke an access token
- * 
- * @param tokenHash - The token hash to revoke
- */
-export async function revokeFEToken(tokenHash: string) {
-  const { error } = await supabase
-    .from('access_tokens')
-    .update({ revoked: true })
-    .eq('token_hash', tokenHash);
-
-  if (error) {
-    console.error('Failed to revoke token:', error);
-    throw error;
-  }
-}
-
-/**
- * Get the FE action URL for a token
- * 
- * @param tokenHash - The token hash
- * @returns The full URL for the FE action page
- */
-export function getFEActionUrl(tokenHash: string): string {
-  return `${window.location.origin}/fe/action/${tokenHash}`;
 }

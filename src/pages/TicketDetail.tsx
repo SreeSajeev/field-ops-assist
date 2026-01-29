@@ -9,8 +9,6 @@ import {
   AlertTriangle,
   CheckCircle,
   User,
-  Clock,
-  Image as ImageIcon,
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -18,7 +16,7 @@ import { StatusBadge } from "@/components/tickets/StatusBadge";
 import { ConfidenceScore } from "@/components/tickets/ConfidenceScore";
 import { FEAssignmentModal } from "@/components/tickets/FEAssignmentModal";
 import { CloseTicketDialog } from "@/components/tickets/CloseTicketDialog";
-import { generateFEToken } from "@/lib/feToken";
+import { generateFEActionToken } from "@/lib/feToken";
 
 import {
   useTicket,
@@ -45,7 +43,8 @@ export default function TicketDetail() {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
-  const [tokenLabel, setTokenLabel] = useState<"ON_SITE" | "RESOLUTION">("ON_SITE");
+  const [tokenLabel, setTokenLabel] =
+    useState<"ON_SITE" | "RESOLUTION">("ON_SITE");
 
   if (isLoading) {
     return (
@@ -100,17 +99,19 @@ export default function TicketDetail() {
   };
 
   const generateToken = async (type: "ON_SITE" | "RESOLUTION") => {
-    if (!ticket || !currentAssignment) return;
+    if (!ticket || !currentAssignment?.fe_id) return;
 
     try {
-      const token = await generateFEToken(
-        ticket.id,
-        currentAssignment.fe_id,
-        type
-      );
+      const res = await generateFEActionToken({
+        ticketId: ticket.id,
+        feId: currentAssignment.fe_id,
+        actionType: type,
+      });
+
       setTokenLabel(type);
-      setGeneratedToken(token.id);
-    } catch {
+      setGeneratedToken(res.tokenId);
+    } catch (err) {
+      console.error(err);
       toast({
         title: "Token generation failed",
         variant: "destructive",
@@ -207,55 +208,61 @@ export default function TicketDetail() {
                 <Info label="Category" value={ticket.category} />
                 <Info label="Issue Type" value={ticket.issue_type} />
                 <IconInfo icon={MapPin} label="Location" value={ticket.location} />
-                <IconInfo icon={Mail} label="Reported By" value={ticket.opened_by_email} />
+                <IconInfo
+                  icon={Mail}
+                  label="Reported By"
+                  value={ticket.opened_by_email}
+                />
               </CardContent>
             </Card>
+
             {/* Assignment */}
-                        {currentAssignment && assignedFE && (
-                          <Card>
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2">
-                                <Truck className="h-5 w-5" />
-                                Assigned Field Executive
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex items-center gap-4">
-                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-semibold">
-                                {assignedFE.name.charAt(0)}
-                              </div>
-                              <div className="flex-1">
-                                <p className="font-semibold">{assignedFE.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  Assigned{" "}
-                                  {format(
-                                    new Date(
-                                      currentAssignment.assigned_at ||
-                                        currentAssignment.created_at
-                                    ),
-                                    "PPp"
-                                  )}
-                                </p>
-                              </div>
-                              <Badge>{assignedFE.active ? "Active" : "Inactive"}</Badge>
-                            </CardContent>
-                          </Card>
-                        )}
+            {currentAssignment && assignedFE && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5" />
+                    Assigned Field Executive
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-semibold">
+                    {assignedFE.name.charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold">{assignedFE.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Assigned{" "}
+                      {format(
+                        new Date(
+                          currentAssignment.assigned_at ||
+                            currentAssignment.created_at
+                        ),
+                        "PPp"
+                      )}
+                    </p>
+                  </div>
+                  <Badge>{assignedFE.active ? "Active" : "Inactive"}</Badge>
+                </CardContent>
+              </Card>
+            )}
+
             {ticket.status === "OPEN" && (
-  <Card>
-    <CardHeader>
-      <CardTitle>Assign Field Executive</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <Button
-        className="w-full"
-        onClick={() => setAssignModalOpen(true)}
-      >
-        <User className="mr-2 h-4 w-4" />
-        Assign Field Executive
-      </Button>
-    </CardContent>
-  </Card>
-)}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Assign Field Executive</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    className="w-full"
+                    onClick={() => setAssignModalOpen(true)}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Assign Field Executive
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* ACTIVITY */}
             <Card>
@@ -310,7 +317,10 @@ export default function TicketDetail() {
             )}
 
             {ticket.status === "ON_SITE" && (
-              <Button onClick={() => generateToken("RESOLUTION")} className="w-full">
+              <Button
+                onClick={() => generateToken("RESOLUTION")}
+                className="w-full"
+              >
                 Generate Resolution Token
               </Button>
             )}
@@ -323,7 +333,9 @@ export default function TicketDetail() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
           <div className="bg-white p-6 rounded w-full max-w-md space-y-3">
             <h2 className="font-semibold">
-              {tokenLabel === "ON_SITE" ? "On-Site Token" : "Resolution Token"}
+              {tokenLabel === "ON_SITE"
+                ? "On-Site Token"
+                : "Resolution Token"}
             </h2>
 
             <input
@@ -344,7 +356,6 @@ export default function TicketDetail() {
           </div>
         </div>
       )}
-      
 
       <FEAssignmentModal
         ticket={ticket}
