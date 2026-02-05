@@ -98,7 +98,6 @@ export default App;
  * - Index.tsx remains the main dashboard for both FE and Staff
  * - FEActionPage and FETicketView remain token-based and public
  */
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -111,6 +110,7 @@ import { RequireAuth, RequireStaff } from "@/components/auth/AuthGuards";
 
 // Pages
 import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
 import TicketsList from "./pages/TicketsList";
 import TicketDetail from "./pages/TicketDetail";
 import ReviewQueue from "./pages/ReviewQueue";
@@ -147,13 +147,9 @@ export default function App() {
           <AuthProvider>
             <Routes>
               {/* ========================= */}
-              {/* 🌐 PUBLIC ROUTES */}
+              {/* 🌐 PUBLIC */}
               {/* ========================= */}
-
-              {/* Login / Role Router */}
               <Route path="/" element={<Index />} />
-
-              {/* FE token flows (NO AUTH, NO GUARDS) */}
               <Route path="/fe/ticket/:ticketId" element={<FETicketView />} />
               <Route path="/fe/action/:tokenId" element={<FEActionPage />} />
 
@@ -161,17 +157,19 @@ export default function App() {
               {/* 🔒 AUTHENTICATED APP */}
               {/* ========================= */}
               <Route element={<RequireAuth />}>
+                <Route path="/app" element={<Dashboard />} />
+
                 <Route element={<RequireStaff />}>
-                  <Route path="/tickets" element={<TicketsList />} />
-                  <Route path="/tickets/:ticketId" element={<TicketDetail />} />
-                  <Route path="/review" element={<ReviewQueue />} />
-                  <Route path="/emails" element={<RawEmails />} />
-                  <Route path="/field-executives" element={<FieldExecutives />} />
-                  <Route path="/sla" element={<SLAMonitor />} />
-                  <Route path="/audit" element={<AuditLogs />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/users" element={<Users />} />
-                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/app/tickets" element={<TicketsList />} />
+                  <Route path="/app/tickets/:ticketId" element={<TicketDetail />} />
+                  <Route path="/app/review" element={<ReviewQueue />} />
+                  <Route path="/app/emails" element={<RawEmails />} />
+                  <Route path="/app/field-executives" element={<FieldExecutives />} />
+                  <Route path="/app/sla" element={<SLAMonitor />} />
+                  <Route path="/app/audit" element={<AuditLogs />} />
+                  <Route path="/app/analytics" element={<Analytics />} />
+                  <Route path="/app/users" element={<Users />} />
+                  <Route path="/app/settings" element={<Settings />} />
                 </Route>
               </Route>
 

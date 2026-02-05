@@ -61,19 +61,13 @@ const Index = () => {
 export default Index;
 */
 
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginForm } from "@/components/auth/LoginForm";
-import Dashboard from "./Dashboard";
-import FEMyTickets from "./FEMyTickets";
 
 export default function Index() {
   const { user, loading, isFieldExecutive, userProfile } = useAuth();
 
-  /**
-   * 🔒 HARD RULE:
-   * - Only block while auth is loading
-   * - NEVER block forever waiting for profile
-   */
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -82,16 +76,10 @@ export default function Index() {
     );
   }
 
-  // 🔓 Not logged in → Login
   if (!user) {
     return <LoginForm />;
   }
 
-  /**
-   * ⚠️ Profile may briefly be null in production
-   * (network, RLS, cold start, etc.)
-   * Do NOT infinite-load — fall back safely.
-   */
   if (!userProfile) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -102,11 +90,11 @@ export default function Index() {
     );
   }
 
-  // 👷 Field Executive portal
+  // Redirect ONCE, not render dashboards here
   if (isFieldExecutive) {
-    return <FEMyTickets />;
+    return <Navigate to="/fe/tickets" replace />;
   }
 
-  // 🧑‍💼 Staff / Admin dashboard
-  return <Dashboard />;
+  return <Navigate to="/app" replace />;
 }
+
