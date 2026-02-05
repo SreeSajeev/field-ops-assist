@@ -16,7 +16,6 @@ import { StatusBadge } from "@/components/tickets/StatusBadge";
 import { ConfidenceScore } from "@/components/tickets/ConfidenceScore";
 import { FEAssignmentModal } from "@/components/tickets/FEAssignmentModal";
 import { CloseTicketDialog } from "@/components/tickets/CloseTicketDialog";
-import { generateFEActionToken } from "@/lib/feToken";
 
 import {
   useTicket,
@@ -31,12 +30,17 @@ import { Badge } from "@/components/ui/badge";
 import { TicketStatus } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { generateFEActionToken } from "@/lib/feToken";
+
+/* ================= TYPES ================= */
 
 type FEAttachment = {
   image_base64?: string;
   remarks?: string;
   action_type?: string;
 };
+
+/* ================= COMPONENT ================= */
 
 export default function TicketDetail() {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -51,6 +55,8 @@ export default function TicketDetail() {
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [tokenLabel, setTokenLabel] =
     useState<"ON_SITE" | "RESOLUTION">("ON_SITE");
+
+  /* ================= LOADING / EMPTY ================= */
 
   if (isLoading) {
     return (
@@ -75,15 +81,21 @@ export default function TicketDetail() {
     );
   }
 
-  const currentAssignment = assignments?.[0];
+  /* ================= DERIVED STATE ================= */
+
+  const hasAssignment = Boolean(assignments && assignments.length > 0);
+  const currentAssignment = hasAssignment ? assignments![0] : null;
   const assignedFE = currentAssignment?.field_executives;
+
+  const canAssignFE =
+    !currentAssignment &&
+    (ticket.status === "OPEN" || ticket.status === "ASSIGNED");
 
   const isPendingVerification =
     ticket.status === "RESOLVED_PENDING_VERIFICATION";
-
   const isResolved = ticket.status === "RESOLVED";
 
-  /* ================= ACTION HANDLERS ================= */
+  /* ================= ACTIONS ================= */
 
   const handleApprove = () => {
     if (ticket.needs_review) {
@@ -95,10 +107,24 @@ export default function TicketDetail() {
     updateStatus.mutate(
       { ticketId: ticket.id, status: "RESOLVED" as TicketStatus },
       {
-        onSuccess: () => {
+        onSuccess: () =>
           toast({
             title: "Ticket Closed",
             description: `Ticket ${ticket.ticket_number} verified and closed.`,
+          }),
+      }
+    );
+  };
+
+  const handleCloseTicket = () => {
+    updateStatus.mutate(
+      { ticketId: ticket.id, status: "RESOLVED" as TicketStatus },
+      {
+        onSuccess: () => {
+          setCloseDialogOpen(false);
+          toast({
+            title: "Ticket Closed",
+            description: `Ticket ${ticket.ticket_number} closed successfully.`,
           });
         },
       }
@@ -106,7 +132,7 @@ export default function TicketDetail() {
   };
 
   const generateToken = async (type: "ON_SITE" | "RESOLUTION") => {
-    if (!ticket || !currentAssignment?.fe_id) return;
+    if (!currentAssignment?.fe_id) return;
 
     try {
       const res = await generateFEActionToken({
@@ -115,19 +141,10 @@ export default function TicketDetail() {
         actionType: type,
       });
 
-      if (type === "ON_SITE") {
-        await updateStatus.mutateAsync({
-          ticketId: ticket.id,
-          status: "EN_ROUTE" as TicketStatus,
-        });
-      }
-
-      if (type === "RESOLUTION") {
-        await updateStatus.mutateAsync({
-          ticketId: ticket.id,
-          status: "ON_SITE" as TicketStatus,
-        });
-      }
+      await updateStatus.mutateAsync({
+        ticketId: ticket.id,
+        status: type === "ON_SITE" ? "EN_ROUTE" : "ON_SITE",
+      });
 
       await supabase.from("audit_logs").insert({
         entity_type: "ticket",
@@ -147,21 +164,6 @@ export default function TicketDetail() {
         variant: "destructive",
       });
     }
-  };
-
-  const handleCloseTicket = () => {
-    updateStatus.mutate(
-      { ticketId: ticket.id, status: "RESOLVED" as TicketStatus },
-      {
-        onSuccess: () => {
-          setCloseDialogOpen(false);
-          toast({
-            title: "Ticket Closed",
-            description: `Ticket ${ticket.ticket_number} closed successfully.`,
-          });
-        },
-      }
-    );
   };
 
   /* ================= UI ================= */
@@ -238,16 +240,12 @@ export default function TicketDetail() {
                 <Info label="Category" value={ticket.category} />
                 <Info label="Issue Type" value={ticket.issue_type} />
                 <IconInfo icon={MapPin} label="Location" value={ticket.location} />
-                <IconInfo
-                  icon={Mail}
-                  label="Reported By"
-                  value={ticket.opened_by_email}
-                />
+                <IconInfo icon={Mail} label="Reported By" value={ticket.opened_by_email} />
               </CardContent>
             </Card>
 
-            {/* ASSIGNMENT */}
-            {currentAssignment && assignedFE && (
+            {/* ASSIGNED FE */}
+            {assignedFE && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -265,14 +263,32 @@ export default function TicketDetail() {
                       Assigned{" "}
                       {format(
                         new Date(
-                          currentAssignment.assigned_at ||
-                            currentAssignment.created_at
+                          currentAssignment?.assigned_at ??
+                            currentAssignment?.created_at
                         ),
                         "PPp"
                       )}
                     </p>
                   </div>
                   <Badge>{assignedFE.active ? "Active" : "Inactive"}</Badge>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ASSIGN FE */}
+            {canAssignFE && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Assign Field Executive</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    className="w-full"
+                    onClick={() => setAssignModalOpen(true)}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Assign Field Executive
+                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -285,17 +301,14 @@ export default function TicketDetail() {
               <CardContent className="space-y-4">
                 {comments?.map((c) => {
                   let a: FEAttachment | null = null;
-
-                  if (c.attachments) {
-                    try {
+                  try {
+                    if (c.attachments) {
                       a =
                         typeof c.attachments === "string"
                           ? JSON.parse(c.attachments)
-                          : (c.attachments as FEAttachment);
-                    } catch {
-                      a = null;
+                          : c.attachments;
                     }
-                  }
+                  } catch {}
 
                   return (
                     <div key={c.id} className="border-l-2 pl-4">
@@ -309,7 +322,6 @@ export default function TicketDetail() {
                         <img
                           src={a.image_base64}
                           className="mt-3 max-h-64 rounded border"
-                          alt="Field proof"
                         />
                       )}
 
@@ -337,15 +349,15 @@ export default function TicketDetail() {
             </Card>
 
             {ticket.status === "ASSIGNED" && (
-              <Button onClick={() => generateToken("ON_SITE")} className="w-full">
+              <Button className="w-full" onClick={() => generateToken("ON_SITE")}>
                 Generate On-Site Token
               </Button>
             )}
 
             {ticket.status === "ON_SITE" && (
               <Button
-                onClick={() => generateToken("RESOLUTION")}
                 className="w-full"
+                onClick={() => generateToken("RESOLUTION")}
               >
                 Generate Resolution Token
               </Button>
@@ -354,6 +366,7 @@ export default function TicketDetail() {
         </div>
       </div>
 
+      {/* TOKEN MODAL */}
       {generatedToken && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
           <div className="bg-white p-6 rounded w-full max-w-md space-y-3">
@@ -399,7 +412,8 @@ export default function TicketDetail() {
   );
 }
 
-/* ===== Helpers ===== */
+/* ================= HELPERS ================= */
+
 function Info({ label, value, mono }: any) {
   return (
     <div>

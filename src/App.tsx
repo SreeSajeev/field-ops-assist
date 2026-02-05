@@ -123,11 +123,18 @@ import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
-// FE token pages (public)
+// FE public pages
 import FETicketView from "./pages/FETicketView";
 import FEActionPage from "./pages/FEActionPage";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function App() {
   return (
@@ -140,19 +147,20 @@ export default function App() {
           <AuthProvider>
             <Routes>
               {/* ========================= */}
-              {/* 🔓 PUBLIC FE TOKEN ROUTES */}
+              {/* 🌐 PUBLIC ROUTES */}
               {/* ========================= */}
+
+              {/* Login / Role Router */}
+              <Route path="/" element={<Index />} />
+
+              {/* FE token flows (NO AUTH, NO GUARDS) */}
               <Route path="/fe/ticket/:ticketId" element={<FETicketView />} />
               <Route path="/fe/action/:tokenId" element={<FEActionPage />} />
 
               {/* ========================= */}
-              {/* 🔒 AUTHENTICATED ROUTES */}
+              {/* 🔒 AUTHENTICATED APP */}
               {/* ========================= */}
               <Route element={<RequireAuth />}>
-                {/* Main dashboard (role-aware internally) */}
-                <Route path="/" element={<Index />} />
-
-                {/* -------- STAFF-ONLY ROUTES -------- */}
                 <Route element={<RequireStaff />}>
                   <Route path="/tickets" element={<TicketsList />} />
                   <Route path="/tickets/:ticketId" element={<TicketDetail />} />
@@ -167,7 +175,9 @@ export default function App() {
                 </Route>
               </Route>
 
-              {/* 404 */}
+              {/* ========================= */}
+              {/* ❌ 404 */}
+              {/* ========================= */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
