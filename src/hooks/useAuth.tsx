@@ -182,6 +182,7 @@ export function useUserRole() {
 }
 */
 
+/*
 import {
   useState,
   useEffect,
@@ -244,7 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data as UserProfile;
   };
 
-  /* ================= AUTH BOOTSTRAP ================= */
+  /// ================= AUTH BOOTSTRAP ================= 
   useEffect(() => {
     let cancelled = false;
 
@@ -291,7 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  /* ================= ACTIONS ================= */
+  ///================= ACTIONS ================= 
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -383,4 +384,236 @@ export function useAuth() {
 export function useUserRole() {
   const { userProfile } = useAuth();
   return userProfile?.role ?? null;
+}
+*/
+
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User, Session } from "@supabase/supabase-js";
+import { UserRole } from "@/lib/types";
+import { SignUpSchema, formatZodError } from "@/lib/validation";
+import { z } from "zod";
+
+/* ================= TYPES ================= */
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  active: boolean;
+}
+
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  userProfile: UserProfile | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    name: string,
+    role: UserRole
+  ) => Promise<{ error: Error | null }>;
+  signOut: () => Promise<void>;
+  isFieldExecutive: boolean;
+  isServiceStaff: boolean;
+  isAdmin: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/* ================= HELPERS ================= */
+
+const parseUserRole = (role: string): UserRole | null => {
+  if (
+    role === "STAFF" ||
+    role === "FIELD_EXECUTIVE" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  ) {
+    return role;
+  }
+  return null;
+};
+
+/* ================= PROVIDER ================= */
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  /* ---------- PROFILE RESOLUTION ---------- */
+
+  const resolveUserProfile = async (
+    authUser: User
+  ): Promise<UserProfile | null> => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, name, email, role, active")
+      .eq("auth_id", authUser.id)
+      .maybeSingle();
+
+    if (error || !data) {
+      console.error("User profile missing:", error);
+      return null;
+    }
+
+    const parsedRole = parseUserRole(data.role);
+    if (!parsedRole) {
+      console.error("Invalid role in DB:", data.role);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      role: parsedRole,
+      active: data.active,
+    };
+  };
+
+  /* ---------- BOOTSTRAP ---------- */
+
+  useEffect(() => {
+    let mounted = true;
+
+    const init = async () => {
+      setLoading(true);
+
+      const { data } = await supabase.auth.getSession();
+      const session = data.session ?? null;
+
+      if (!mounted) return;
+
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        const profile = await resolveUserProfile(session.user);
+        if (mounted) setUserProfile(profile);
+      } else {
+        setUserProfile(null);
+      }
+
+      if (mounted) setLoading(false);
+    };
+
+    init();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session ?? null);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        const profile = await resolveUserProfile(session.user);
+        setUserProfile(profile);
+      } else {
+        setUserProfile(null);
+      }
+
+      setLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  /* ---------- ACTIONS ---------- */
+
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    return { error: error as Error | null };
+  };
+
+  const signUp = async (
+    email: string,
+    password: string,
+    name: string,
+    role: UserRole
+  ): Promise<{ error: Error | null }> => {
+    try {
+      SignUpSchema.parse({ email, password, name, role });
+
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            name,
+            role,
+          },
+        },
+      });
+
+      if (error) return { error };
+      return { error: null };
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return { error: new Error(formatZodError(err)) };
+      }
+      return { error: err as Error };
+    }
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setUserProfile(null);
+  };
+
+  /* ---------- DERIVED ROLES ---------- */
+
+  const isFieldExecutive = userProfile?.role === "FIELD_EXECUTIVE";
+  const isServiceStaff = userProfile?.role === "STAFF";
+  const isAdmin =
+    userProfile?.role === "ADMIN" || userProfile?.role === "SUPER_ADMIN";
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        userProfile,
+        loading,
+        signIn,
+        signUp,
+        signOut,
+        isFieldExecutive,
+        isServiceStaff,
+        isAdmin,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+/* ================= HOOK ================= */
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }

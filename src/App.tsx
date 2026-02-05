@@ -1,4 +1,4 @@
-/**
+/*
  * App.tsx - Main Application Router
  * 
  * Route Structure:
@@ -10,7 +10,7 @@
  * 
  * Authentication is handled by AuthProvider wrapping protected routes.
  * Role-based routing is handled by Index.tsx based on user role.
- */
+ 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -45,10 +45,7 @@ const App = () => (
         <Sonner />
 
         <Routes>
-          {/* ========================= */}
-          {/* 🔓 PUBLIC ROUTES (NO AUTH) */}
-          {/* These routes use token-based access for Field Executives */}
-          {/* ========================= */}
+          
           <Route
             path="/fe/ticket/:ticketId"
             element={<FETicketView />}
@@ -58,20 +55,15 @@ const App = () => (
             element={<FEActionPage />}
           />
 
-          {/* ========================= */}
-          {/* 🔒 PROTECTED ROUTES (REQUIRE AUTH) */}
-          {/* AuthProvider wraps all protected routes */}
-          {/* Role-based routing handled by Index.tsx */}
-          {/* ========================= */}
           <Route
             path="/*"
             element={
               <AuthProvider>
                 <Routes>
-                  {/* Main entry point - routes based on role */}
+                
                   <Route path="/" element={<Index />} />
                   
-                  {/* Service Staff routes */}
+              
                   <Route path="/tickets" element={<TicketsList />} />
                   <Route path="/tickets/:ticketId" element={<TicketDetail />} />
                   <Route path="/review" element={<ReviewQueue />} />
@@ -83,7 +75,7 @@ const App = () => (
                   <Route path="/users" element={<Users />} />
                   <Route path="/settings" element={<Settings />} />
                   
-                  {/* Catch-all for 404 */}
+                
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </AuthProvider>
@@ -97,3 +89,90 @@ const App = () => (
 );
 
 export default App;
+
+*/
+/**
+ * App.tsx - Main Application Router
+ *
+ * Preserves existing behavior:
+ * - Index.tsx remains the main dashboard for both FE and Staff
+ * - FEActionPage and FETicketView remain token-based and public
+ */
+
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+
+import { AuthProvider } from "@/hooks/useAuth";
+import { RequireAuth, RequireStaff } from "@/components/auth/AuthGuards";
+
+// Pages
+import Index from "./pages/Index";
+import TicketsList from "./pages/TicketsList";
+import TicketDetail from "./pages/TicketDetail";
+import ReviewQueue from "./pages/ReviewQueue";
+import RawEmails from "./pages/RawEmails";
+import FieldExecutives from "./pages/FieldExecutives";
+import SLAMonitor from "./pages/SLAMonitor";
+import AuditLogs from "./pages/AuditLogs";
+import Analytics from "./pages/Analytics";
+import Users from "./pages/Users";
+import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
+
+// FE token pages (public)
+import FETicketView from "./pages/FETicketView";
+import FEActionPage from "./pages/FEActionPage";
+
+const queryClient = new QueryClient();
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+
+          <AuthProvider>
+            <Routes>
+              {/* ========================= */}
+              {/* 🔓 PUBLIC FE TOKEN ROUTES */}
+              {/* ========================= */}
+              <Route path="/fe/ticket/:ticketId" element={<FETicketView />} />
+              <Route path="/fe/action/:tokenId" element={<FEActionPage />} />
+
+              {/* ========================= */}
+              {/* 🔒 AUTHENTICATED ROUTES */}
+              {/* ========================= */}
+              <Route element={<RequireAuth />}>
+                {/* Main dashboard (role-aware internally) */}
+                <Route path="/" element={<Index />} />
+
+                {/* -------- STAFF-ONLY ROUTES -------- */}
+                <Route element={<RequireStaff />}>
+                  <Route path="/tickets" element={<TicketsList />} />
+                  <Route path="/tickets/:ticketId" element={<TicketDetail />} />
+                  <Route path="/review" element={<ReviewQueue />} />
+                  <Route path="/emails" element={<RawEmails />} />
+                  <Route path="/field-executives" element={<FieldExecutives />} />
+                  <Route path="/sla" element={<SLAMonitor />} />
+                  <Route path="/audit" element={<AuditLogs />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/users" element={<Users />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Route>
+              </Route>
+
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </TooltipProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+}
