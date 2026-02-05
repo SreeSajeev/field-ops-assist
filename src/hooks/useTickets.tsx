@@ -10,6 +10,12 @@ import {
   formatZodError 
 } from "@/lib/validation";
 import { z } from "zod";
+
+/* ===============================
+   NEW IMPORT (REQUIRED)
+=============================== */
+import { generateFEActionToken } from "@/lib/feToken";
+
 /* =====================================================
    Tickets list
 ===================================================== */
@@ -136,10 +142,7 @@ export function useUpdateTicket() {
       ticketId: string;
       updates: Partial<Ticket>;
     }) => {
-      // Validate ticketId is a valid UUID
       const validatedId = UUIDSchema.parse(ticketId);
-      
-      // Validate updates against allowed schema (strip unknown fields)
       const validatedUpdates = TicketUpdateSchema.parse(updates);
       
       const { data, error } = await supabase
@@ -158,8 +161,11 @@ export function useUpdateTicket() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
       queryClient.invalidateQueries({ queryKey: ["ticket", data.id] });
-      toast({ title: "Ticket updated" });
+      queryClient.invalidateQueries({ queryKey: ["ticket-comments", data.id] });
+
+      toast({ title: "Status updated" });
     },
+
     onError: (error) => {
       if (error instanceof z.ZodError) {
         toast({ title: "Validation Error", description: formatZodError(error), variant: "destructive" });
@@ -182,7 +188,6 @@ export function useUpdateTicketStatus() {
       ticketId: string;
       status: TicketStatus;
     }) => {
-      // Validate inputs
       const validatedId = UUIDSchema.parse(ticketId);
       const validatedStatus = z.enum([
         'OPEN', 'NEEDS_REVIEW', 'ASSIGNED', 'EN_ROUTE', 'ON_SITE', 
@@ -238,7 +243,6 @@ export function useAssignTicket() {
       feId: string;
       overrideReason?: string;
     }) => {
-      // Validate inputs
       const validated = AssignmentSchema.parse({ 
         ticketId, 
         feId, 
@@ -276,6 +280,16 @@ export function useAssignTicket() {
         },
       });
 
+      /* ===============================
+         NEW: Generate ON_SITE token
+      ================================ */
+      await generateFEActionToken({
+        ticketId: validated.ticketId,
+        feId: validated.feId,
+        actionType: "ON_SITE",
+      });
+      /* =============================== */
+
       return assignment;
     },
     onSuccess: () => {
@@ -309,7 +323,6 @@ export function useAddComment() {
       source?: "EMAIL" | "FE" | "STAFF" | "SYSTEM";
       attachments?: any[] | null;
     }) => {
-      // Validate inputs
       const validated = CommentSchema.parse({ 
         ticketId, 
         body: body.trim(), 

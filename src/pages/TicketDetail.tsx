@@ -28,9 +28,15 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TicketStatus } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+type FEAttachment = {
+  image_base64?: string;
+  remarks?: string;
+  action_type?: string;
+};
 
 export default function TicketDetail() {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -89,11 +95,12 @@ export default function TicketDetail() {
     updateStatus.mutate(
       { ticketId: ticket.id, status: "RESOLVED" as TicketStatus },
       {
-        onSuccess: () =>
+        onSuccess: () => {
           toast({
             title: "Ticket Closed",
             description: `Ticket ${ticket.ticket_number} verified and closed.`,
-          }),
+          });
+        },
       }
     );
   };
@@ -108,10 +115,33 @@ export default function TicketDetail() {
         actionType: type,
       });
 
+      if (type === "ON_SITE") {
+        await updateStatus.mutateAsync({
+          ticketId: ticket.id,
+          status: "EN_ROUTE" as TicketStatus,
+        });
+      }
+
+      if (type === "RESOLUTION") {
+        await updateStatus.mutateAsync({
+          ticketId: ticket.id,
+          status: "ON_SITE" as TicketStatus,
+        });
+      }
+
+      await supabase.from("audit_logs").insert({
+        entity_type: "ticket",
+        entity_id: ticket.id,
+        action: `token_generated_${type.toLowerCase()}`,
+        metadata: {
+          fe_id: currentAssignment.fe_id,
+          token_type: type,
+        },
+      });
+
       setTokenLabel(type);
       setGeneratedToken(res.tokenId);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast({
         title: "Token generation failed",
         variant: "destructive",
@@ -216,7 +246,7 @@ export default function TicketDetail() {
               </CardContent>
             </Card>
 
-            {/* Assignment */}
+            {/* ASSIGNMENT */}
             {currentAssignment && assignedFE && (
               <Card>
                 <CardHeader>
@@ -247,23 +277,6 @@ export default function TicketDetail() {
               </Card>
             )}
 
-            {ticket.status === "OPEN" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Assign Field Executive</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Button
-                    className="w-full"
-                    onClick={() => setAssignModalOpen(true)}
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    Assign Field Executive
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
             {/* ACTIVITY */}
             <Card>
               <CardHeader>
@@ -271,7 +284,19 @@ export default function TicketDetail() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {comments?.map((c) => {
-                  const a = c.attachments as any;
+                  let a: FEAttachment | null = null;
+
+                  if (c.attachments) {
+                    try {
+                      a =
+                        typeof c.attachments === "string"
+                          ? JSON.parse(c.attachments)
+                          : (c.attachments as FEAttachment);
+                    } catch {
+                      a = null;
+                    }
+                  }
+
                   return (
                     <div key={c.id} className="border-l-2 pl-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -284,6 +309,7 @@ export default function TicketDetail() {
                         <img
                           src={a.image_base64}
                           className="mt-3 max-h-64 rounded border"
+                          alt="Field proof"
                         />
                       )}
 
@@ -328,7 +354,6 @@ export default function TicketDetail() {
         </div>
       </div>
 
-      {/* TOKEN MODAL */}
       {generatedToken && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
           <div className="bg-white p-6 rounded w-full max-w-md space-y-3">
