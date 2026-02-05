@@ -391,6 +391,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   ReactNode,
 } from "react";
@@ -452,6 +453,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const isMounted = useRef(true);
+
   /* ---------- PROFILE RESOLUTION ---------- */
 
   const resolveUserProfile = async (
@@ -483,52 +486,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  /* ---------- BOOTSTRAP ---------- */
+  /* ---------- INITIAL BOOTSTRAP ---------- */
 
   useEffect(() => {
-    let mounted = true;
+    isMounted.current = true;
 
-    const init = async () => {
+    const bootstrap = async () => {
       setLoading(true);
 
       const { data } = await supabase.auth.getSession();
-      const session = data.session ?? null;
+      const activeSession = data.session ?? null;
 
-      if (!mounted) return;
+      if (!isMounted.current) return;
 
-      setSession(session);
-      setUser(session?.user ?? null);
+      setSession(activeSession);
+      setUser(activeSession?.user ?? null);
 
-      if (session?.user) {
-        const profile = await resolveUserProfile(session.user);
-        if (mounted) setUserProfile(profile);
+      if (activeSession?.user) {
+        const profile = await resolveUserProfile(activeSession.user);
+        if (isMounted.current) setUserProfile(profile);
       } else {
         setUserProfile(null);
       }
 
-      if (mounted) setLoading(false);
+      if (isMounted.current) setLoading(false);
     };
 
-    init();
+    bootstrap();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session ?? null);
-      setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (!isMounted.current) return;
 
-      if (session?.user) {
-        const profile = await resolveUserProfile(session.user);
-        setUserProfile(profile);
+      setLoading(true);
+      setSession(newSession ?? null);
+      setUser(newSession?.user ?? null);
+
+      if (newSession?.user) {
+        const profile = await resolveUserProfile(newSession.user);
+        if (isMounted.current) setUserProfile(profile);
       } else {
         setUserProfile(null);
       }
 
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     });
 
     return () => {
-      mounted = false;
+      isMounted.current = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -557,10 +563,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: email.trim(),
         password,
         options: {
-          data: {
-            name,
-            role,
-          },
+          data: { name, role },
         },
       });
 
@@ -574,11 +577,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /**
+   * 🔥 HARD LOGOUT (production safe)
+   */
   const signOut = async () => {
     await supabase.auth.signOut();
+
+    // Clear local state
     setUser(null);
     setSession(null);
     setUserProfile(null);
+
+    // Force full reset (prevents guard loops)
+    window.location.href = "/";
   };
 
   /* ---------- DERIVED ROLES ---------- */
