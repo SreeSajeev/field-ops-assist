@@ -1,0 +1,15 @@
+{
+  "name": "field-ops-assist-backend",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.43.0",
+    "express": "^4.19.2",
+    "postmark": "^3.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
+  }
+}
