@@ -11,6 +11,7 @@
     },
 
     "jsx": "react-jsx",
+    "module": "esnext",          // 👈 ADD THIS LINE
     "moduleResolution": "bundler",
 
     "allowJs": true,
