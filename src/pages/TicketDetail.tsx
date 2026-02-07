@@ -436,6 +436,8 @@ function IconInfo({ icon: Icon, label, value }: any) {
 }
 
 */
+
+// Storage-aligned, backend-driven version
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -467,13 +469,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TicketStatus } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { generateFEActionToken } from "@/lib/feToken";
 
 /* ================= TYPES ================= */
 
 type FEAttachment = {
-  image_base64?: string;
+  image_url?: string;
   remarks?: string;
   action_type?: string;
 };
@@ -490,9 +490,6 @@ export default function TicketDetail() {
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
-  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
-  const [tokenLabel, setTokenLabel] =
-    useState<"ON_SITE" | "RESOLUTION">("ON_SITE");
 
   /* ================= LOADING / EMPTY ================= */
 
@@ -546,21 +543,46 @@ export default function TicketDetail() {
     });
   };
 
-  const handleVerifyAndClose = () => {
-    updateStatus.mutate(
-      {
-        ticketId: ticket.id,
-        status: "RESOLVED" as TicketStatus,
-      },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Ticket Closed",
-            description: `Ticket ${ticket.ticket_number} verified and closed.`,
-          });
-        },
-      }
-    );
+  const handleVerifyOnsite = async () => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_CRM_API_URL}/tickets/${ticket.id}/on-site-token`,
+        { method: "POST" }
+      );
+
+      if (!res.ok) throw new Error();
+
+      toast({
+        title: "On-site proof verified",
+        description: "Resolution link sent to Field Executive.",
+      });
+    } catch {
+      toast({
+        title: "Verification failed",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleVerifyAndClose = async () => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_CRM_API_URL}/tickets/${ticket.id}/verify`,
+        { method: "POST" }
+      );
+
+      if (!res.ok) throw new Error();
+
+      toast({
+        title: "Ticket Closed",
+        description: `Ticket ${ticket.ticket_number} verified and closed.`,
+      });
+    } catch {
+      toast({
+        title: "Close failed",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCloseTicket = () => {
@@ -579,41 +601,6 @@ export default function TicketDetail() {
         },
       }
     );
-  };
-
-  const generateToken = async (type: "ON_SITE" | "RESOLUTION") => {
-    if (!currentAssignment?.fe_id) return;
-
-    try {
-      const res = await generateFEActionToken({
-        ticketId: ticket.id,
-        feId: currentAssignment.fe_id,
-        actionType: type,
-      });
-
-      await updateStatus.mutateAsync({
-        ticketId: ticket.id,
-        status: type === "ON_SITE" ? "EN_ROUTE" : "ON_SITE",
-      });
-
-      await supabase.from("audit_logs").insert({
-        entity_type: "ticket",
-        entity_id: ticket.id,
-        action: `token_generated_${type.toLowerCase()}`,
-        metadata: {
-          fe_id: currentAssignment.fe_id,
-          token_type: type,
-        },
-      });
-
-      setTokenLabel(type);
-      setGeneratedToken(res.tokenId);
-    } catch {
-      toast({
-        title: "Token generation failed",
-        variant: "destructive",
-      });
-    }
   };
 
   /* ================= UI ================= */
@@ -789,9 +776,9 @@ export default function TicketDetail() {
                       </div>
                       <p className="mt-1">{c.body}</p>
 
-                      {a?.image_base64 && (
+                      {a?.image_url && (
                         <img
-                          src={a.image_base64}
+                          src={a.image_url}
                           className="mt-3 max-h-64 rounded border"
                           alt="FE proof"
                         />
@@ -823,58 +810,14 @@ export default function TicketDetail() {
               </CardContent>
             </Card>
 
-            {ticket.status === "ASSIGNED" && (
-              <Button
-                className="w-full"
-                onClick={() => generateToken("ON_SITE")}
-              >
-                Generate On-Site Token
-              </Button>
-            )}
-
             {ticket.status === "ON_SITE" && (
-              <Button
-                className="w-full"
-                onClick={() => generateToken("RESOLUTION")}
-              >
-                Generate Resolution Token
+              <Button className="w-full" onClick={handleVerifyOnsite}>
+                Verify On-Site Proof
               </Button>
             )}
           </div>
         </div>
       </div>
-
-      {/* TOKEN MODAL */}
-      {generatedToken && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded w-full max-w-md space-y-3">
-            <h2 className="font-semibold">
-              {tokenLabel === "ON_SITE"
-                ? "On-Site Token"
-                : "Resolution Token"}
-            </h2>
-
-            <input
-              readOnly
-              value={generatedToken}
-              className="w-full border px-2 py-1 font-mono"
-            />
-
-            <input
-              readOnly
-              value={`${window.location.origin}/fe/action/${generatedToken}`}
-              className="w-full border px-2 py-1 font-mono text-sm"
-            />
-
-            <Button
-              onClick={() => setGeneratedToken(null)}
-              variant="ghost"
-            >
-              Close
-            </Button>
-          </div>
-        </div>
-      )}
 
       <FEAssignmentModal
         ticket={ticket}
