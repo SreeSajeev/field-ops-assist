@@ -1,73 +1,172 @@
-# Welcome to your Lovable project
+# Pariskq CRM – Frontend 
+## Overview
 
-## Project info
+This repository contains the **frontend web application** for the Pariskq CRM and Field Operations platform.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+This repository contains the frontend application for the Pariskq CRM and Field Operations platform.
 
-## How can I edit this code?
+The application is used by internal teams to:
+View and manage incoming complaints and tickets
+Track ticket status and assignments
+Upload and view ticket-related documents (images, proofs, etc.)
+Monitor resolution workflows
+The frontend communicates with a backend API that handles business logic, data storage, and integrations.
 
-There are several ways of editing your application.
+---
+## 2. High Level Description
+At a high level, this application provides a web interface for managing operational tickets that originate from incoming emails or field complaints.
 
-**Use Lovable**
+Users can:
+Log in to the system
+View a list of tickets
+Open individual tickets to see details
+Assign or reassign tickets
+Upload supporting documents
+Track the lifecycle of a ticket from creation to resolution
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+This application does not store data by itself.
+All data is fetched from and sent to the backend service via secure APIs.
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## 3. Technology Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+| Category        | Technology               |
+|-----------------|--------------------------|
+| Framework       | React                    |
+| Language        | TypeScript               |
+| Build Tool      | Vite                     |
+| Styling         | CSS / utility-based CSS  |
+| Routing         | Client-side routing      |
+| API Protocol    | REST (JSON over HTTP)    |
+| Auth Model      | Token-based (via backend)|
+| Deployment      | AWS (company-managed)    |
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+Rules:
+- `.env` files must not be committed
+- Production values are injected via AWS
+- All frontend variables must be prefixed with `VITE_`
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 4. Architecture Overview
 
-# Step 3: Install the necessary dependencies.
-npm i
+This frontend is part of a multi-tier system and does not operate independently.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+High-level architecture:
+
+Browser (User)
+→ React Frontend (this application)
+→ Backend API (Node.js / Express)
+→ PostgreSQL (Application data)
+→ AWS S3 (Ticket attachments)
+
+Key architectural decisions:
+- The frontend is stateless
+- All business logic is enforced in the backend
+- The frontend never directly accesses the database or object storage
+- File uploads are routed through the backend for security and auditing
+
+---
+
+## 5. Repository Structure
+
+High-level structure of the codebase:
+
+src/
+- components/    Reusable UI components (buttons, modals, layouts)
+- pages/         Route-level screens (dashboard, tickets, login)
+- services/      API interaction layer (HTTP requests)
+- utils/         Helper functions and constants
+- assets/        Static assets (icons, images)
+- routes.tsx     Application route definitions
+- App.tsx        Root component
+- main.tsx       Application entry point
+
+The separation between pages, components, and services should be preserved when adding new features.
+
+---
+
+## 6. API Interaction Pattern
+
+All communication with the backend happens through the service layer.
+
+Guidelines:
+- UI components must not call APIs directly
+- All HTTP requests should be implemented in the services folder
+- Services return structured data to pages/components
+- Error handling should be centralized where possible
+
+This pattern ensures:
+- Easier debugging
+- Clear separation of concerns
+- Easier backend API changes
+
+---
+
+## 7. Local Development
+
+### Prerequisites
+- Node.js (LTS recommended)
+- npm or yarn
+
+### Install Dependencies
+```bash
+npm install
+Run Development Server
 npm run dev
+Production Build
+npm run build
 ```
+This generates a static production build suitable for deployment on AWS infrastructure.
 
-**Edit a file directly in GitHub**
+## 8. Screenshots (Documentation)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Login Screen
+<!-- Screenshot: Login Page -->
+Dashboard
+<!-- Screenshot: Dashboard -->
 
-**Use GitHub Codespaces**
+<img width="1919" height="866" alt="image" src="https://github.com/user-attachments/assets/6eeeadb8-8482-40c5-a9d5-7fe2c54709a6" />
+All Ticket 
+<!-- Screenshot: Ticket List -->
+<img width="1912" height="868" alt="image" src="https://github.com/user-attachments/assets/a46132c5-7cc1-42d2-bd76-658a77d0328a" />
+Ticket Detail & Attachments
+<!-- Screenshot: Ticket Detail -->
+<img width="1919" height="860" alt="image" src="https://github.com/user-attachments/assets/049c6122-4a42-449f-9267-a28a543cc454" />
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Field Executive List
+<!-- Screenshot: Field Executive  -->
+<img width="1919" height="863" alt="image" src="https://github.com/user-attachments/assets/dba1b4c8-1f30-43fd-a3ed-6ac02cfbdfbc" />
 
-## What technologies are used for this project?
+Field Executive Assignment
+<!-- Screenshot: Field Executive Assignment -->
+<img width="1919" height="863" alt="image" src="https://github.com/user-attachments/assets/a27178a8-b857-4dd6-aeaa-e54adb82d19c" />
 
-This project is built with:
+Field Executive Dashboard
+<!-- Screenshot: Field Executive View -->
+<img width="960" height="623" alt="image" src="https://github.com/user-attachments/assets/3d6630f2-c99b-4143-939a-8d82e7050da7" />
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
 
-## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 9. Security Considerations
+No secrets stored in frontend code
+No hardcoded credentials or endpoints
+All API calls require authentication
+Authorization is enforced by backend
+File access is controlled and time-bound
 
-## Can I connect a custom domain to my Lovable project?
+## 10. Deployment Notes
+Repository is hosted under the company GitHub organization
+CI/CD and hosting are handled via AWS
+Environment variables are injected at deployment time
+Frontend and backend are deployed independently
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### 11. Development Guidelines
+Keep UI components presentation-focused
+Use service layer for all API communication
+Avoid embedding business logic in components
+Maintain existing folder structure
+Do not bypass backend for data or storage access
