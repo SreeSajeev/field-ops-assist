@@ -461,6 +461,7 @@ import {
   useTicket,
   useTicketComments,
   useTicketAssignments,
+  useCloseTicket,
   useUpdateTicketStatus,
 } from "@/hooks/useTickets";
 
@@ -486,6 +487,7 @@ export default function TicketDetail() {
   const { data: ticket, isLoading } = useTicket(ticketId ?? "");
   const { data: comments } = useTicketComments(ticketId ?? "");
   const { data: assignments } = useTicketAssignments(ticketId ?? "");
+  const closeTicket = useCloseTicket();
   const updateStatus = useUpdateTicketStatus();
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -564,40 +566,16 @@ export default function TicketDetail() {
     }
   };
 
-  const handleVerifyAndClose = async () => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_CRM_API_URL}/tickets/${ticket.id}/verify`,
-        { method: "POST" }
-      );
-
-      if (!res.ok) throw new Error();
-
-      toast({
-        title: "Ticket Closed",
-        description: `Ticket ${ticket.ticket_number} verified and closed.`,
-      });
-    } catch {
-      toast({
-        title: "Close failed",
-        variant: "destructive",
-      });
-    }
+  const handleVerifyAndClose = () => {
+    closeTicket.mutate({ ticketId: ticket.id });
   };
 
   const handleCloseTicket = () => {
-    updateStatus.mutate(
-      {
-        ticketId: ticket.id,
-        status: "RESOLVED" as TicketStatus,
-      },
+    closeTicket.mutate(
+      { ticketId: ticket.id },
       {
         onSuccess: () => {
           setCloseDialogOpen(false);
-          toast({
-            title: "Ticket Closed",
-            description: `Ticket ${ticket.ticket_number} closed successfully.`,
-          });
         },
       }
     );
@@ -830,7 +808,7 @@ export default function TicketDetail() {
         open={closeDialogOpen}
         onOpenChange={setCloseDialogOpen}
         onConfirm={handleCloseTicket}
-        isPending={updateStatus.isPending}
+        isPending={closeTicket.isPending}
       />
     </DashboardLayout>
   );

@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useFEMyTickets, useFEProfile } from '@/hooks/useFEMyTickets';
 import { useFETokenForTicket } from '@/hooks/useFETokenForTicket';
-import { useUpdateTicketStatus } from '@/hooks/useTickets';
+import { useFEConfirmOnsite, useFEMarkComplete } from '@/hooks/useTickets';
 import { TicketStatus } from '@/lib/types';
 import {
   Card,
@@ -229,7 +229,8 @@ export default function FEMyTickets() {
 
   const { tickets, loading: ticketsLoading } = useFEMyTickets();
   const { data: feProfile } = useFEProfile();
-  const updateStatus = useUpdateTicketStatus();
+  const confirmOnsite = useFEConfirmOnsite();
+  const markComplete = useFEMarkComplete();
 
   if (!isFieldExecutive && userProfile) {
     navigate('/');
@@ -237,29 +238,11 @@ export default function FEMyTickets() {
   }
 
   const handleAcknowledge = (ticketId: string) => {
-    updateStatus.mutate(
-      { ticketId, status: 'ON_SITE' as TicketStatus },
-      {
-        onSuccess: () =>
-          toast({
-            title: 'Status Updated',
-            description: 'You are now marked as on-site.',
-          }),
-      }
-    );
+    confirmOnsite.mutate({ ticketId });
   };
 
   const handleMarkComplete = (ticketId: string) => {
-    updateStatus.mutate(
-      { ticketId, status: 'RESOLVED_PENDING_VERIFICATION' as TicketStatus },
-      {
-        onSuccess: () =>
-          toast({
-            title: 'Work Marked Complete',
-            description: 'Awaiting verification from Service Staff.',
-          }),
-      }
-    );
+    markComplete.mutate({ ticketId });
   };
 
   return (
@@ -317,8 +300,8 @@ export default function FEMyTickets() {
         <Alert className="mb-6 border-primary/30 bg-primary/10">
           <AlertTriangle className="h-4 w-4 text-primary" />
           <AlertDescription>
-            <strong>Workflow:</strong> Mark tickets as “On Site” when you arrive,
-            then “Work Complete” when finished.
+            <strong>Workflow:</strong> Mark tickets as "On Site" when you arrive,
+            then "Work Complete" when finished.
           </AlertDescription>
         </Alert>
 
@@ -334,7 +317,7 @@ export default function FEMyTickets() {
                 No Assigned Tickets
               </h3>
               <p className="text-muted-foreground max-w-sm">
-                You don’t have any tickets assigned yet.
+                You don't have any tickets assigned yet.
               </p>
             </CardContent>
           </Card>
@@ -346,7 +329,7 @@ export default function FEMyTickets() {
                 ticket={ticket}
                 onAcknowledge={handleAcknowledge}
                 onMarkComplete={handleMarkComplete}
-                isPending={updateStatus.isPending}
+                isPending={confirmOnsite.isPending || markComplete.isPending}
               />
             ))}
           </div>
