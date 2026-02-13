@@ -59,7 +59,7 @@ const Index = () => {
 };
 
 export default Index;
-*/
+
 
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -98,3 +98,36 @@ export default function Index() {
   return <Navigate to="/app" replace />;
 }
 
+*/
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { LoginForm } from "@/components/auth/LoginForm";
+
+export default function Index() {
+  const { user, loading, userProfile } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading…</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginForm />;
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-muted-foreground">
+          Setting up your workspace…
+        </div>
+      </div>
+    );
+  }
+
+  // Staff always go to /app
+  return <Navigate to="/app" replace />;
+}

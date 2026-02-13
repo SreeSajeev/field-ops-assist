@@ -386,7 +386,6 @@ export function useUserRole() {
   return userProfile?.role ?? null;
 }
 */
-
 import {
   createContext,
   useContext,
@@ -467,13 +466,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (error || !data) {
-      console.error("User profile missing:", error);
+      console.error("User profile missing. Forcing logout.", error);
+      await supabase.auth.signOut();
       return null;
     }
 
     const parsedRole = parseUserRole(data.role);
     if (!parsedRole) {
-      console.error("Invalid role in DB:", data.role);
+      console.error("Invalid role in DB. Forcing logout:", data.role);
+      await supabase.auth.signOut();
       return null;
     }
 
@@ -492,24 +493,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isMounted.current = true;
 
     const bootstrap = async () => {
-      setLoading(true);
+      try {
+        setLoading(true);
 
-      const { data } = await supabase.auth.getSession();
-      const activeSession = data.session ?? null;
+        const { data } = await supabase.auth.getSession();
+        const activeSession = data.session ?? null;
 
-      if (!isMounted.current) return;
+        if (!isMounted.current) return;
 
-      setSession(activeSession);
-      setUser(activeSession?.user ?? null);
+        setSession(activeSession);
+        setUser(activeSession?.user ?? null);
 
-      if (activeSession?.user) {
-        const profile = await resolveUserProfile(activeSession.user);
-        if (isMounted.current) setUserProfile(profile);
-      } else {
-        setUserProfile(null);
+        if (activeSession?.user) {
+          const profile = await resolveUserProfile(activeSession.user);
+
+          if (!profile) {
+            // force terminal unauthenticated state
+            if (!isMounted.current) return;
+            setUser(null);
+            setSession(null);
+            setUserProfile(null);
+            return;
+          }
+
+          if (isMounted.current) setUserProfile(profile);
+        } else {
+          setUserProfile(null);
+        }
+      } catch (err) {
+        console.error("Auth bootstrap failed:", err);
+        if (isMounted.current) {
+          setUser(null);
+          setSession(null);
+          setUserProfile(null);
+        }
+      } finally {
+        if (isMounted.current) setLoading(false);
       }
-
-      if (isMounted.current) setLoading(false);
     };
 
     bootstrap();
@@ -519,18 +539,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       if (!isMounted.current) return;
 
-      setLoading(true);
-      setSession(newSession ?? null);
-      setUser(newSession?.user ?? null);
+      try {
+        setLoading(true);
+        setSession(newSession ?? null);
+        setUser(newSession?.user ?? null);
 
-      if (newSession?.user) {
-        const profile = await resolveUserProfile(newSession.user);
-        if (isMounted.current) setUserProfile(profile);
-      } else {
-        setUserProfile(null);
+        if (newSession?.user) {
+          const profile = await resolveUserProfile(newSession.user);
+
+          if (!profile) {
+            if (!isMounted.current) return;
+            setUser(null);
+            setSession(null);
+            setUserProfile(null);
+            return;
+          }
+
+          if (isMounted.current) setUserProfile(profile);
+        } else {
+          setUserProfile(null);
+        }
+      } catch (err) {
+        console.error("Auth state change failed:", err);
+        if (isMounted.current) {
+          setUser(null);
+          setSession(null);
+          setUserProfile(null);
+        }
+      } finally {
+        if (isMounted.current) setLoading(false);
       }
-
-      if (isMounted.current) setLoading(false);
     });
 
     return () => {
@@ -583,12 +621,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
 
-    // Clear local state
     setUser(null);
     setSession(null);
     setUserProfile(null);
 
-    // Force full reset (prevents guard loops)
     window.location.href = "/";
   };
 
