@@ -98,7 +98,8 @@ export default function Index() {
   return <Navigate to="/app" replace />;
 }
 
-*/import { Navigate } from "react-router-dom";
+*/
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginForm } from "@/components/auth/LoginForm";
 

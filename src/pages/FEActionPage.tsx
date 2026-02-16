@@ -260,6 +260,15 @@ export default function FEActionPage() {
  * - NO direct ticket mutations
  * - Backend owns lifecycle + token usage
  */
+/**
+ * FEActionPage - Field Executive Action Page (TOKEN BASED)
+ *
+ * RULES:
+ * - NO auth required
+ * - NO direct ticket mutations
+ * - Backend owns lifecycle + token usage
+ */
+
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -287,8 +296,12 @@ export default function FEActionPage() {
   const [file, setFile] = useState<File | null>(null);
   const [remarks, setRemarks] = useState("");
 
-  /* ================= LOAD TOKEN + TICKET (READ ONLY) ================= */
+  /* ======================================================
+     LOAD TOKEN + TICKET (READ ONLY)
+  ====================================================== */
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
       try {
         if (!tokenId) {
@@ -296,6 +309,7 @@ export default function FEActionPage() {
           return;
         }
 
+        /* 1️⃣ Load token (read-only) */
         const { data: tokenRow, error: tokenError } = await (supabase as any)
           .from("fe_action_tokens")
           .select("*")
@@ -303,6 +317,8 @@ export default function FEActionPage() {
           .eq("used", false)
           .gt("expires_at", new Date().toISOString())
           .maybeSingle();
+
+        if (cancelled) return;
 
         if (tokenError || !tokenRow) {
           toast({
@@ -315,11 +331,14 @@ export default function FEActionPage() {
 
         setToken(tokenRow);
 
+        /* 2️⃣ Load ticket (read-only) */
         const { data: ticketRow, error: ticketError } = await supabase
           .from("tickets")
           .select("id, ticket_number, status")
           .eq("id", tokenRow.ticket_id)
           .single();
+
+        if (cancelled) return;
 
         if (ticketError || !ticketRow) {
           toast({
@@ -332,43 +351,58 @@ export default function FEActionPage() {
 
         setTicket(ticketRow);
       } catch (err) {
-        console.error(err);
+        console.error("[FEActionPage LOAD ERROR]", err);
         toast({
           title: "Unexpected error",
           variant: "destructive",
         });
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [tokenId]);
 
-  /* ================= SUBMIT PROOF ================= */
+  /* ======================================================
+     SUBMIT PROOF
+  ====================================================== */
   const handleSubmit = async () => {
     if (!file || !token || !ticket) {
-      toast({ title: "Please upload a photo", variant: "destructive" });
+      toast({
+        title: "Please upload a photo",
+        variant: "destructive",
+      });
       return;
     }
 
     setSubmitting(true);
 
     try {
-      /* 1️⃣ Upload to Supabase Storage */
+      /* 1️⃣ Upload image to Supabase Storage */
       const filePath = `tickets/${ticket.id}/${token.action_type}/${Date.now()}-${file.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from("Ticket_Uploads")
         .upload(filePath, file, { upsert: false });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw uploadError;
+      }
 
       const { data: urlData } = supabase.storage
         .from("Ticket_Uploads")
         .getPublicUrl(filePath);
 
-      /* 2️⃣ Send proof to BACKEND */
+      if (!urlData?.publicUrl) {
+        throw new Error("Failed to generate image URL");
+      }
+
+      /* 2️⃣ Send proof to BACKEND (authoritative) */
       const endpoint =
         token.action_type === "ON_SITE"
           ? "/fe-proofs/onsite"
@@ -376,7 +410,9 @@ export default function FEActionPage() {
 
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           tokenId: token.id,
           imageUrl: urlData.publicUrl,
@@ -385,8 +421,8 @@ export default function FEActionPage() {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err?.message || "Submission failed");
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Submission failed");
       }
 
       setSubmitted(true);
@@ -395,10 +431,10 @@ export default function FEActionPage() {
         description: "You may now close this page.",
       });
     } catch (err: any) {
-      console.error(err);
+      console.error("[FEActionPage SUBMIT ERROR]", err);
       toast({
         title: "Submission failed",
-        description: err?.message || "Check console",
+        description: err?.message || "Please try again",
         variant: "destructive",
       });
     } finally {
@@ -406,7 +442,9 @@ export default function FEActionPage() {
     }
   };
 
-  /* ================= UI ================= */
+  /* ======================================================
+     UI STATES
+  ====================================================== */
 
   if (loading) {
     return (
@@ -444,6 +482,10 @@ export default function FEActionPage() {
     );
   }
 
+  /* ======================================================
+     MAIN UI
+  ====================================================== */
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -458,8 +500,12 @@ export default function FEActionPage() {
 
         <CardContent className="space-y-4">
           <div className="text-sm space-y-1">
-            <div><strong>Ticket:</strong> {ticket.ticket_number}</div>
-            <div><strong>Status:</strong> {ticket.status}</div>
+            <div>
+              <strong>Ticket:</strong> {ticket.ticket_number}
+            </div>
+            <div>
+              <strong>Status:</strong> {ticket.status}
+            </div>
           </div>
 
           <input
@@ -470,6 +516,7 @@ export default function FEActionPage() {
           />
 
           <textarea
+            className="w-full rounded border p-2 text-sm"
             placeholder="Remarks (optional)"
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
