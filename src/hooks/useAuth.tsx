@@ -385,7 +385,8 @@ export function useUserRole() {
   const { userProfile } = useAuth();
   return userProfile?.role ?? null;
 }
-*/import {
+*/
+import {
   createContext,
   useContext,
   useEffect,
@@ -450,38 +451,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  /* ---------- SAFE PROFILE RESOLUTION ---------- */
+  /* ---------- PROFILE FETCH (NON-DESTRUCTIVE) ---------- */
 
-  const resolveUserProfile = async (
-    authUser: User
-  ): Promise<UserProfile | null> => {
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, name, email, role, active")
-        .eq("auth_id", authUser.id)
-        .maybeSingle();
+  const resolveUserProfile = async (authUser: User) => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, name, email, role, active")
+      .eq("auth_id", authUser.id)
+      .maybeSingle();
 
-      if (error || !data) {
-        return null;
-      }
-
-      const parsedRole = parseUserRole(data.role);
-      if (!parsedRole) return null;
-
-      return {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        role: parsedRole,
-        active: data.active,
-      };
-    } catch {
+    if (error || !data) {
       return null;
     }
+
+    const role = parseUserRole(data.role);
+    if (!role) return null;
+
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      role,
+      active: data.active,
+    };
   };
 
-  /* ---------- BOOTSTRAP (RUN ONCE) ---------- */
+  /* ---------- BOOTSTRAP ---------- */
 
   useEffect(() => {
     let cancelled = false;
@@ -489,76 +484,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const bootstrap = async () => {
       setLoading(true);
 
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (cancelled) return;
+      const { data } = await supabase.auth.getSession();
+      if (cancelled) return;
 
-        const activeSession = data.session ?? null;
-        setSession(activeSession);
-        setUser(activeSession?.user ?? null);
+      const sess = data.session ?? null;
+      setSession(sess);
+      setUser(sess?.user ?? null);
 
-        if (activeSession?.user) {
-          const profile = await resolveUserProfile(activeSession.user);
-          if (cancelled) return;
-
-          if (profile) {
-            setUserProfile(profile);
-          } else {
-            setUser(null);
-            setSession(null);
-            setUserProfile(null);
-          }
-        } else {
-          setUserProfile(null);
+      if (sess?.user) {
+        const profile = await resolveUserProfile(sess.user);
+        if (!cancelled) {
+          setUserProfile(profile); // 👈 DO NOT NULL AUTH
         }
-      } catch {
-        setUser(null);
-        setSession(null);
+      } else {
         setUserProfile(null);
-      } finally {
-        if (!cancelled) setLoading(false);
       }
+
+      if (!cancelled) setLoading(false);
     };
 
     bootstrap();
 
-    const { data } = supabase.auth.onAuthStateChange(
+    const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        // 🔴 CRITICAL FIX:
-        // Prevent duplicate bootstrap + race condition on refresh
         if (event === "INITIAL_SESSION") return;
 
         setLoading(true);
 
-        try {
-          setSession(newSession ?? null);
-          setUser(newSession?.user ?? null);
+        setSession(newSession ?? null);
+        setUser(newSession?.user ?? null);
 
-          if (newSession?.user) {
-            const profile = await resolveUserProfile(newSession.user);
-            if (profile) {
-              setUserProfile(profile);
-            } else {
-              setUser(null);
-              setSession(null);
-              setUserProfile(null);
-            }
-          } else {
-            setUserProfile(null);
-          }
-        } catch {
-          setUser(null);
-          setSession(null);
+        if (newSession?.user) {
+          const profile = await resolveUserProfile(newSession.user);
+          setUserProfile(profile);
+        } else {
           setUserProfile(null);
-        } finally {
-          setLoading(false);
         }
+
+        setLoading(false);
       }
     );
 
     return () => {
       cancelled = true;
-      data.subscription.unsubscribe();
+      listener.subscription.unsubscribe();
     };
   }, []);
 
@@ -577,7 +546,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     name: string,
     role: UserRole
-  ): Promise<{ error: Error | null }> => {
+  ) => {
     try {
       SignUpSchema.parse({ email, password, name, role });
 
@@ -636,9 +605,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 /* ================= HOOK ================= */
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used within AuthProvider");
   }
-  return context;
+  return ctx;
 }
