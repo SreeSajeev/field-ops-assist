@@ -11,14 +11,20 @@ function FullPageLoader() {
 }
 
 export function RoleRouter() {
-  const { loading, userProfile } = useAuth();
+  const { loading, user, userProfile } = useAuth();
 
-  if (loading) {
+  // Wait for auth session to resolve
+  if (loading && !user) {
     return <FullPageLoader />;
   }
 
-  if (!userProfile) {
-    // authenticated but no profile = invalid state
+  // Authenticated but profile still loading
+  if (user && !userProfile) {
+    return <FullPageLoader />;
+  }
+
+  // Not authenticated
+  if (!user || !userProfile) {
     return <Navigate to="/" replace />;
   }
 

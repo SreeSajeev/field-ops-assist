@@ -10,14 +10,6 @@ import { Shield, Truck, Mail, ArrowRight, User, Briefcase } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { UserRole } from '@/lib/types';
 
-/**
- * LoginForm - a form for signing in or signing up as a user.
- *
- * This component is responsible for rendering a form that allows users to sign in or sign up.
- * The form includes fields for email, password, and role selection.
- * The sign in functionality uses the `signIn` function from the `useAuth` hook, which authenticates the user and returns an error if the authentication fails.
- * The sign up functionality uses the `signUp` function from the `useAuth` hook, which creates a new user account and returns an error if the creation fails.
- */
 export function LoginForm() {
   const { signIn, signUp } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -156,6 +148,7 @@ export function LoginForm() {
                       placeholder="you@company.com"
                       className="h-11"
                       required
+                      autoComplete="email" // ✅ FIX
                     />
                   </div>
                   <div className="space-y-2">
@@ -167,6 +160,7 @@ export function LoginForm() {
                       placeholder="••••••••"
                       className="h-11"
                       required
+                      autoComplete="current-password" // ✅ FIX
                     />
                   </div>
                   <Button 
@@ -195,6 +189,7 @@ export function LoginForm() {
                       placeholder="John Doe"
                       className="h-11"
                       required
+                      autoComplete="name" // ✅ FIX
                     />
                   </div>
                   <div className="space-y-2">
@@ -206,6 +201,7 @@ export function LoginForm() {
                       placeholder="you@company.com"
                       className="h-11"
                       required
+                      autoComplete="email" // ✅ FIX
                     />
                   </div>
                   <div className="space-y-2">
@@ -218,6 +214,7 @@ export function LoginForm() {
                       className="h-11"
                       minLength={6}
                       required
+                      autoComplete="new-password" // ✅ FIX
                     />
                   </div>
                   <div className="space-y-2">

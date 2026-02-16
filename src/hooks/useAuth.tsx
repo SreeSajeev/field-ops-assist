@@ -385,8 +385,7 @@ export function useUserRole() {
   const { userProfile } = useAuth();
   return userProfile?.role ?? null;
 }
-*/
-import {
+*/import {
   createContext,
   useContext,
   useEffect,
@@ -505,7 +504,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (profile) {
             setUserProfile(profile);
           } else {
-            // degrade safely
             setUser(null);
             setSession(null);
             setUserProfile(null);
@@ -514,7 +512,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserProfile(null);
         }
       } catch {
-        // safe unauthenticated fallback
         setUser(null);
         setSession(null);
         setUserProfile(null);
@@ -526,7 +523,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     bootstrap();
 
     const { data } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
+      async (event, newSession) => {
+        // 🔴 CRITICAL FIX:
+        // Prevent duplicate bootstrap + race condition on refresh
+        if (event === "INITIAL_SESSION") return;
+
         setLoading(true);
 
         try {

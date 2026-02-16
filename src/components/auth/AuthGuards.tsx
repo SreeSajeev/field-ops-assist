@@ -23,18 +23,15 @@ interface GuardProps {
 /* ================= BASE AUTH ================= */
 /**
  * Authenticated users only.
- * If auth is unresolved → brief loading.
- * If auth resolves invalid → redirect.
+ * Loading allowed ONLY while user is unresolved.
  */
 export function RequireAuth({ fallback }: GuardProps) {
   const { user, loading } = useAuth();
 
-  // Loading is allowed, but MUST be temporary
-  if (loading) {
+  if (loading && !user) {
     return fallback ?? <AuthLoading />;
   }
 
-  // Auth resolved, user missing → redirect
   if (!user) {
     return <Navigate to="/" replace />;
   }
@@ -50,7 +47,7 @@ export function RequireAuth({ fallback }: GuardProps) {
 export function RequireStaff({ fallback }: GuardProps) {
   const { user, loading, isFieldExecutive } = useAuth();
 
-  if (loading) {
+  if (loading && !user) {
     return fallback ?? <AuthLoading />;
   }
 
@@ -72,7 +69,7 @@ export function RequireStaff({ fallback }: GuardProps) {
 export function RequireFE({ fallback }: GuardProps) {
   const { user, loading, isFieldExecutive } = useAuth();
 
-  if (loading) {
+  if (loading && !user) {
     return fallback ?? <AuthLoading />;
   }
 
@@ -94,7 +91,7 @@ export function RequireFE({ fallback }: GuardProps) {
 export function RequireAdmin({ fallback }: GuardProps) {
   const { user, loading, isAdmin } = useAuth();
 
-  if (loading) {
+  if (loading && !user) {
     return fallback ?? <AuthLoading />;
   }
 
