@@ -125,7 +125,7 @@ export function LoginForm() {
           <p className="text-lg text-white/80">
             Sahaya is a secure, token-driven service workflow
             platform that connects service teams, field
-            executives, and customers — with proof at every
+            executives, and customers - with proof at every
             step.
           </p>
 
