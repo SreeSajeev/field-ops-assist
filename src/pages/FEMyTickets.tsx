@@ -5,7 +5,8 @@
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
-import { useFEMyTickets, useFEProfile } from '@/hooks/useFEMyTickets';
+import { useFEMyTickets } from '@/hooks/useFEMyTickets';
+
 import { useFETokenForTicket } from '@/hooks/useFETokenForTicket';
 import { useFEConfirmOnsite, useFEMarkComplete } from '@/hooks/useTickets';
 import { TicketStatus } from '@/lib/types';
@@ -228,7 +229,7 @@ export default function FEMyTickets() {
   const navigate = useNavigate();
 
   const { tickets, loading: ticketsLoading } = useFEMyTickets();
-  const { data: feProfile } = useFEProfile();
+ 
   const confirmOnsite = useFEConfirmOnsite();
   const markComplete = useFEMarkComplete();
 
@@ -289,12 +290,6 @@ export default function FEMyTickets() {
           <p className="text-muted-foreground">
             View and manage tickets assigned to you.
           </p>
-          {feProfile && (
-            <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              Base Location: {feProfile.base_location || 'Not set'}
-            </div>
-          )}
         </div>
 
         <Alert className="mb-6 border-primary/30 bg-primary/10">

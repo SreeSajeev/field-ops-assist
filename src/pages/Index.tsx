@@ -98,25 +98,38 @@ export default function Index() {
   return <Navigate to="/app" replace />;
 }
 
-*/
-import { Navigate } from "react-router-dom";
+*/import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function Index() {
-  const { user, loading, userProfile } = useAuth();
+  const { user, loading, userProfile, signOut } = useAuth();
+
+  /* =========================
+     AUTH BOOTSTRAP
+  ========================= */
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading…</div>
+        <div className="animate-pulse text-muted-foreground">
+          Loading…
+        </div>
       </div>
     );
   }
 
+  /* =========================
+     NOT AUTHENTICATED
+  ========================= */
+
   if (!user) {
     return <LoginForm />;
   }
+
+  /* =========================
+     PROFILE NOT READY
+  ========================= */
 
   if (!userProfile) {
     return (
@@ -128,6 +141,27 @@ export default function Index() {
     );
   }
 
-  // Staff always go to /app
-  return <Navigate to="/app" replace />;
+  /* =========================
+     ROLE-BASED ROUTING
+  ========================= */
+
+  if (userProfile.role === "FIELD_EXECUTIVE") {
+    return <Navigate to="/fe" replace />;
+  }
+
+  if (
+    userProfile.role === "STAFF" ||
+    userProfile.role === "ADMIN" ||
+    userProfile.role === "SUPER_ADMIN"
+  ) {
+    return <Navigate to="/app" replace />;
+  }
+
+  /* =========================
+     SAFETY FALLBACK (SHOULD NEVER HAPPEN)
+  ========================= */
+
+  console.error("Unknown role detected:", userProfile.role);
+  signOut();
+  return null;
 }

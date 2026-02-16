@@ -1,15 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useFETokenForTicket(ticketId: string) {
-  return useQuery({
-    queryKey: ["fe-token-for-ticket", ticketId || "none"],
-    enabled: !!ticketId,
+/* ======================================================
+   Types
+====================================================== */
+export type FEActionToken = {
+  id: string;
+  ticket_id: string;
+  fe_id: string;
+  action_type: "ON_SITE" | "RESOLUTION";
+  token_hash: string;
+  expires_at: string;
+  used: boolean;
+  created_at: string;
+};
 
-    queryFn: async () => {
-      if (!ticketId) {
-        return null;
-      }
+/* ======================================================
+   useFETokenForTicket
+   Fetch latest valid FE action token for a ticket
+====================================================== */
+export function useFETokenForTicket(ticketId: string) {
+  return useQuery<FEActionToken | null>({
+    queryKey: ["fe-token-for-ticket", ticketId],
+    enabled: Boolean(ticketId),
+
+    queryFn: async (): Promise<FEActionToken | null> => {
+      if (!ticketId) return null;
 
       const { data, error } = await (supabase as any)
         .from("fe_action_tokens")
@@ -21,8 +37,10 @@ export function useFETokenForTicket(ticketId: string) {
         .limit(1)
         .maybeSingle();
 
+      // Treat "no token" as valid state, not error
       if (error) {
-        throw error;
+        console.error("FE token fetch failed:", error);
+        return null;
       }
 
       return data ?? null;

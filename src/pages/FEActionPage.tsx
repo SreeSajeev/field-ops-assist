@@ -252,14 +252,28 @@ export default function FEActionPage() {
  * FEActionPage - Field Executive Action Page for Token-Based Ticket Access
  *
  * Uses fe_action_tokens for authentication (no login required).
+ *//**
+ * FEActionPage - Field Executive Action Page (TOKEN BASED)
+ *
+ * RULES:
+ * - NO auth required
+ * - NO direct ticket mutations
+ * - Backend owns lifecycle + token usage
  */
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Upload, CheckCircle } from "lucide-react";
+
+const API_BASE = import.meta.env.VITE_CRM_API_URL;
 
 export default function FEActionPage() {
   const { tokenId } = useParams<{ tokenId: string }>();
@@ -267,12 +281,13 @@ export default function FEActionPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
   const [token, setToken] = useState<any>(null);
   const [ticket, setTicket] = useState<any>(null);
   const [file, setFile] = useState<File | null>(null);
   const [remarks, setRemarks] = useState("");
 
-  /* ================= LOAD TOKEN + TICKET ================= */
+  /* ================= LOAD TOKEN + TICKET (READ ONLY) ================= */
   useEffect(() => {
     const load = async () => {
       try {
@@ -281,7 +296,6 @@ export default function FEActionPage() {
           return;
         }
 
-        // 1️⃣ Load FE action token
         const { data: tokenRow, error: tokenError } = await (supabase as any)
           .from("fe_action_tokens")
           .select("*")
@@ -293,7 +307,6 @@ export default function FEActionPage() {
         if (tokenError || !tokenRow) {
           toast({
             title: "Invalid or expired link",
-            description: tokenError?.message || "Token not found or expired",
             variant: "destructive",
           });
           setLoading(false);
@@ -302,17 +315,15 @@ export default function FEActionPage() {
 
         setToken(tokenRow);
 
-        // 2️⃣ Load ticket
         const { data: ticketRow, error: ticketError } = await supabase
           .from("tickets")
-          .select("*")
+          .select("id, ticket_number, status")
           .eq("id", tokenRow.ticket_id)
           .single();
 
         if (ticketError || !ticketRow) {
           toast({
             title: "Ticket not found",
-            description: ticketError?.message,
             variant: "destructive",
           });
           setLoading(false);
@@ -320,13 +331,13 @@ export default function FEActionPage() {
         }
 
         setTicket(ticketRow);
-        setLoading(false);
-      } catch {
+      } catch (err) {
+        console.error(err);
         toast({
           title: "Unexpected error",
-          description: "Check console for details",
           variant: "destructive",
         });
+      } finally {
         setLoading(false);
       }
     };
@@ -344,60 +355,39 @@ export default function FEActionPage() {
     setSubmitting(true);
 
     try {
-      /* 1️⃣ Upload image to Supabase Storage */
-      const fileExt = file.name.split(".").pop();
+      /* 1️⃣ Upload to Supabase Storage */
       const filePath = `tickets/${ticket.id}/${token.action_type}/${Date.now()}-${file.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from("Ticket_Uploads")
-        .upload(filePath, file, {
-          upsert: false,
-        });
+        .upload(filePath, file, { upsert: false });
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
-      const { data: publicUrlData } = supabase.storage
+      const { data: urlData } = supabase.storage
         .from("Ticket_Uploads")
         .getPublicUrl(filePath);
 
-      const imageUrl = publicUrlData.publicUrl;
+      /* 2️⃣ Send proof to BACKEND */
+      const endpoint =
+        token.action_type === "ON_SITE"
+          ? "/fe-proofs/onsite"
+          : "/fe-proofs/resolution";
 
-      /* 2️⃣ Insert ticket comment with image URL */
-      await supabase.from("ticket_comments").insert({
-        ticket_id: ticket.id,
-        source: "FE",
-        body:
-          token.action_type === "ON_SITE"
-            ? "Field Executive uploaded on-site proof"
-            : "Field Executive uploaded resolution proof",
-        attachments: {
-          image_url: imageUrl,
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tokenId: token.id,
+          imageUrl: urlData.publicUrl,
           remarks,
-          action_type: token.action_type,
-        },
+        }),
       });
 
-      /* 3️⃣ Update ticket status */
-      const newStatus =
-        token.action_type === "ON_SITE"
-          ? "ON_SITE"
-          : "RESOLVED_PENDING_VERIFICATION";
-
-      await supabase
-        .from("tickets")
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", ticket.id);
-
-      /* 4️⃣ Mark FE action token as used */
-      await (supabase as any)
-        .from("fe_action_tokens")
-        .update({ used: true })
-        .eq("id", token.id);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err?.message || "Submission failed");
+      }
 
       setSubmitted(true);
       toast({
@@ -405,6 +395,7 @@ export default function FEActionPage() {
         description: "You may now close this page.",
       });
     } catch (err: any) {
+      console.error(err);
       toast({
         title: "Submission failed",
         description: err?.message || "Check console",
@@ -416,9 +407,10 @@ export default function FEActionPage() {
   };
 
   /* ================= UI ================= */
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-5 w-5 animate-spin" />
       </div>
     );
@@ -426,10 +418,10 @@ export default function FEActionPage() {
 
   if (!token || !ticket) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <p className="text-destructive">Invalid or expired link</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <Card>
+          <CardContent className="pt-6 text-center text-destructive">
+            Invalid or expired link
           </CardContent>
         </Card>
       </div>
@@ -438,13 +430,13 @@ export default function FEActionPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center">
+        <Card>
           <CardContent className="pt-6 text-center space-y-4">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-            <h2 className="text-xl font-semibold">Proof Submitted</h2>
+            <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+            <h2 className="text-lg font-semibold">Proof Submitted</h2>
             <p className="text-muted-foreground">
-              You may close this page.
+              You may now close this page.
             </p>
           </CardContent>
         </Card>
@@ -453,7 +445,7 @@ export default function FEActionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -488,7 +480,7 @@ export default function FEActionPage() {
             onClick={handleSubmit}
             disabled={submitting || !file}
           >
-            {submitting ? "Submitting..." : "Submit Proof"}
+            {submitting ? "Submitting…" : "Submit Proof"}
           </Button>
         </CardContent>
       </Card>

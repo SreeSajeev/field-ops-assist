@@ -390,7 +390,6 @@ import {
   createContext,
   useContext,
   useEffect,
-  useRef,
   useState,
   ReactNode,
 } from "react";
@@ -452,128 +451,113 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isMounted = useRef(true);
-
-  /* ---------- PROFILE RESOLUTION ---------- */
+  /* ---------- SAFE PROFILE RESOLUTION ---------- */
 
   const resolveUserProfile = async (
     authUser: User
   ): Promise<UserProfile | null> => {
-    const { data, error } = await supabase
-      .from("users")
-      .select("id, name, email, role, active")
-      .eq("auth_id", authUser.id)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, name, email, role, active")
+        .eq("auth_id", authUser.id)
+        .maybeSingle();
 
-    if (error || !data) {
-      console.error("User profile missing. Forcing logout.", error);
-      await supabase.auth.signOut();
+      if (error || !data) {
+        return null;
+      }
+
+      const parsedRole = parseUserRole(data.role);
+      if (!parsedRole) return null;
+
+      return {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: parsedRole,
+        active: data.active,
+      };
+    } catch {
       return null;
     }
-
-    const parsedRole = parseUserRole(data.role);
-    if (!parsedRole) {
-      console.error("Invalid role in DB. Forcing logout:", data.role);
-      await supabase.auth.signOut();
-      return null;
-    }
-
-    return {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      role: parsedRole,
-      active: data.active,
-    };
   };
 
-  /* ---------- INITIAL BOOTSTRAP ---------- */
+  /* ---------- BOOTSTRAP (RUN ONCE) ---------- */
 
   useEffect(() => {
-    isMounted.current = true;
+    let cancelled = false;
 
     const bootstrap = async () => {
+      setLoading(true);
+
       try {
-        setLoading(true);
-
         const { data } = await supabase.auth.getSession();
+        if (cancelled) return;
+
         const activeSession = data.session ?? null;
-
-        if (!isMounted.current) return;
-
         setSession(activeSession);
         setUser(activeSession?.user ?? null);
 
         if (activeSession?.user) {
           const profile = await resolveUserProfile(activeSession.user);
+          if (cancelled) return;
 
-          if (!profile) {
-            // force terminal unauthenticated state
-            if (!isMounted.current) return;
+          if (profile) {
+            setUserProfile(profile);
+          } else {
+            // degrade safely
             setUser(null);
             setSession(null);
             setUserProfile(null);
-            return;
           }
-
-          if (isMounted.current) setUserProfile(profile);
         } else {
           setUserProfile(null);
         }
-      } catch (err) {
-        console.error("Auth bootstrap failed:", err);
-        if (isMounted.current) {
-          setUser(null);
-          setSession(null);
-          setUserProfile(null);
-        }
+      } catch {
+        // safe unauthenticated fallback
+        setUser(null);
+        setSession(null);
+        setUserProfile(null);
       } finally {
-        if (isMounted.current) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     bootstrap();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      if (!isMounted.current) return;
-
-      try {
+    const { data } = supabase.auth.onAuthStateChange(
+      async (_event, newSession) => {
         setLoading(true);
-        setSession(newSession ?? null);
-        setUser(newSession?.user ?? null);
 
-        if (newSession?.user) {
-          const profile = await resolveUserProfile(newSession.user);
+        try {
+          setSession(newSession ?? null);
+          setUser(newSession?.user ?? null);
 
-          if (!profile) {
-            if (!isMounted.current) return;
-            setUser(null);
-            setSession(null);
+          if (newSession?.user) {
+            const profile = await resolveUserProfile(newSession.user);
+            if (profile) {
+              setUserProfile(profile);
+            } else {
+              setUser(null);
+              setSession(null);
+              setUserProfile(null);
+            }
+          } else {
             setUserProfile(null);
-            return;
           }
-
-          if (isMounted.current) setUserProfile(profile);
-        } else {
-          setUserProfile(null);
-        }
-      } catch (err) {
-        console.error("Auth state change failed:", err);
-        if (isMounted.current) {
+        } catch {
           setUser(null);
           setSession(null);
           setUserProfile(null);
+        } finally {
+          setLoading(false);
         }
-      } finally {
-        if (isMounted.current) setLoading(false);
       }
-    });
+    );
 
     return () => {
-      isMounted.current = false;
-      subscription.unsubscribe();
+      cancelled = true;
+      data.subscription.unsubscribe();
     };
   }, []);
 
@@ -584,7 +568,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: email.trim(),
       password,
     });
-
     return { error: error as Error | null };
   };
 
@@ -605,8 +588,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
 
-      if (error) return { error };
-      return { error: null };
+      return { error: error as Error | null };
     } catch (err) {
       if (err instanceof z.ZodError) {
         return { error: new Error(formatZodError(err)) };
@@ -615,16 +597,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  /**
-   * 🔥 HARD LOGOUT (production safe)
-   */
   const signOut = async () => {
     await supabase.auth.signOut();
-
     setUser(null);
     setSession(null);
     setUserProfile(null);
-
     window.location.href = "/";
   };
 

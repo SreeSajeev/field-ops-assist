@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import React from "react";
 
-/* ================= LOADING ================= */
+/* ================= LOADING UI ================= */
 
 function AuthLoading() {
   return (
@@ -22,16 +22,20 @@ interface GuardProps {
 
 /* ================= BASE AUTH ================= */
 /**
- * Blocks unauthenticated users.
- * NEVER decides role routing.
+ * Authenticated users only.
+ * If auth is unresolved → brief loading.
+ * If auth resolves invalid → redirect.
  */
 export function RequireAuth({ fallback }: GuardProps) {
   const { user, loading } = useAuth();
 
-  if (loading) return fallback ?? <AuthLoading />;
+  // Loading is allowed, but MUST be temporary
+  if (loading) {
+    return fallback ?? <AuthLoading />;
+  }
 
+  // Auth resolved, user missing → redirect
   if (!user) {
-    // Always send to public landing
     return <Navigate to="/" replace />;
   }
 
@@ -40,20 +44,21 @@ export function RequireAuth({ fallback }: GuardProps) {
 
 /* ================= STAFF ONLY ================= */
 /**
- * Allows STAFF / ADMIN
- * Blocks FIELD_EXECUTIVE
+ * STAFF / ADMIN only.
+ * FE is explicitly redirected.
  */
 export function RequireStaff({ fallback }: GuardProps) {
   const { user, loading, isFieldExecutive } = useAuth();
 
-  if (loading) return fallback ?? <AuthLoading />;
+  if (loading) {
+    return fallback ?? <AuthLoading />;
+  }
 
   if (!user) {
     return <Navigate to="/" replace />;
   }
 
   if (isFieldExecutive) {
-    // FE should never land here
     return <Navigate to="/" replace />;
   }
 
@@ -62,12 +67,14 @@ export function RequireStaff({ fallback }: GuardProps) {
 
 /* ================= FE ONLY ================= */
 /**
- * Allows only FIELD_EXECUTIVE
+ * FIELD_EXECUTIVE only.
  */
 export function RequireFE({ fallback }: GuardProps) {
   const { user, loading, isFieldExecutive } = useAuth();
 
-  if (loading) return fallback ?? <AuthLoading />;
+  if (loading) {
+    return fallback ?? <AuthLoading />;
+  }
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -82,12 +89,14 @@ export function RequireFE({ fallback }: GuardProps) {
 
 /* ================= ADMIN ONLY ================= */
 /**
- * Allows ADMIN / SUPER_ADMIN
+ * ADMIN / SUPER_ADMIN only.
  */
 export function RequireAdmin({ fallback }: GuardProps) {
   const { user, loading, isAdmin } = useAuth();
 
-  if (loading) return fallback ?? <AuthLoading />;
+  if (loading) {
+    return fallback ?? <AuthLoading />;
+  }
 
   if (!user) {
     return <Navigate to="/" replace />;

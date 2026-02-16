@@ -3,13 +3,13 @@ import { format } from 'date-fns';
 import { Ticket } from '@/lib/types';
 import { StatusBadge } from './StatusBadge';
 import { ConfidenceScore } from './ConfidenceScore';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, ExternalLink, MapPin, ChevronRight } from 'lucide-react';
@@ -51,19 +51,19 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
     return (
       <div className="divide-y divide-border">
         {tickets.map((ticket) => (
-          <Link 
+          <Link
             key={ticket.id}
-            to={`/tickets/${ticket.id}`}
+            to={`/app/tickets/${ticket.id}`}
             className="flex items-center justify-between py-3 px-1 hover:bg-muted/50 rounded-lg transition-colors group"
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-semibold text-foreground">
+                  <span className="font-mono text-sm font-semibold">
                     {ticket.ticket_number}
                   </span>
                   {ticket.needs_review && (
-                    <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />
+                    <AlertTriangle className="h-3.5 w-3.5 text-warning" />
                   )}
                 </div>
                 <span className="text-xs text-muted-foreground truncate">
@@ -73,7 +73,7 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
             </div>
             <div className="flex items-center gap-3">
               <StatusBadge status={ticket.status} />
-              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </div>
           </Link>
         ))}
@@ -85,76 +85,54 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
     <div className="rounded-xl border bg-card overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted/30 hover:bg-muted/30">
-            <TableHead className="w-[140px] font-semibold">Ticket #</TableHead>
-            <TableHead className="w-[130px] font-semibold">Status</TableHead>
-            <TableHead className="w-[100px] font-semibold">Confidence</TableHead>
-            <TableHead className="font-semibold">Vehicle</TableHead>
-            <TableHead className="font-semibold">Issue Type</TableHead>
-            <TableHead className="font-semibold">Location</TableHead>
-            <TableHead className="w-[150px] font-semibold">Opened</TableHead>
-            <TableHead className="w-[50px]"></TableHead>
+          <TableRow>
+            <TableHead>Ticket #</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Confidence</TableHead>
+            <TableHead>Vehicle</TableHead>
+            <TableHead>Issue Type</TableHead>
+            <TableHead>Location</TableHead>
+            <TableHead>Opened</TableHead>
+            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {tickets.map((ticket, idx) => (
-            <TableRow 
-              key={ticket.id} 
-              className={cn(
-                "data-table-row",
-                idx % 2 === 0 ? "bg-background" : "bg-muted/20"
-              )}
+            <TableRow
+              key={ticket.id}
+              className={cn(idx % 2 === 0 ? 'bg-background' : 'bg-muted/20')}
             >
               <TableCell>
-                <div className="flex items-center gap-2">
-                  <Link 
-                    to={`/tickets/${ticket.id}`}
-                    className="font-mono text-sm font-semibold text-primary hover:underline"
-                  >
-                    {ticket.ticket_number}
-                  </Link>
-                  {ticket.needs_review && (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-warning/15">
-                      <AlertTriangle className="h-3 w-3 text-warning" />
-                    </span>
-                  )}
-                </div>
+                <Link
+                  to={`/app/tickets/${ticket.id}`}
+                  className="font-mono text-sm font-semibold text-primary hover:underline"
+                >
+                  {ticket.ticket_number}
+                </Link>
               </TableCell>
               <TableCell>
                 <StatusBadge status={ticket.status} />
               </TableCell>
               <TableCell>
-                <ConfidenceScore score={ticket.confidence_score} showLabel={false} size="sm" />
+                <ConfidenceScore score={ticket.confidence_score} size="sm" />
               </TableCell>
               <TableCell>
                 {ticket.vehicle_number ? (
-                  <Badge variant="outline" className="font-mono text-xs">
-                    {ticket.vehicle_number}
-                  </Badge>
-                ) : (
-                  <span className="text-muted-foreground text-sm">—</span>
-                )}
+                  <Badge variant="outline">{ticket.vehicle_number}</Badge>
+                ) : '—'}
+              </TableCell>
+              <TableCell>{ticket.issue_type || '—'}</TableCell>
+              <TableCell>
+                <MapPin className="inline h-3 w-3 mr-1" />
+                {ticket.location || '—'}
               </TableCell>
               <TableCell>
-                <span className="text-sm font-medium">
-                  {ticket.issue_type || <span className="text-muted-foreground">—</span>}
-                </span>
+                {format(new Date(ticket.opened_at), 'MMM d, HH:mm')}
               </TableCell>
               <TableCell>
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {ticket.location || '—'}
-                </div>
-              </TableCell>
-              <TableCell>
-                <span className="text-sm text-muted-foreground">
-                  {format(new Date(ticket.opened_at), 'MMM d, HH:mm')}
-                </span>
-              </TableCell>
-              <TableCell>
-                <Link 
-                  to={`/tickets/${ticket.id}`}
-                  className="inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                <Link
+                  to={`/app/tickets/${ticket.id}`}
+                  className="p-2 hover:text-primary"
                 >
                   <ExternalLink className="h-4 w-4" />
                 </Link>

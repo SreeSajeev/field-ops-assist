@@ -89,15 +89,7 @@ const App = () => (
 );
 
 export default App;
-
 */
-/**
- * App.tsx - Main Application Router
- *
- * Preserves existing behavior:
- * - Index.tsx remains the main dashboard for both FE and Staff
- * - FEActionPage and FETicketView remain token-based and public
- */
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -106,26 +98,31 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 
 import { AuthProvider } from "@/hooks/useAuth";
-import { RequireAuth, RequireStaff } from "@/components/auth/AuthGuards";
+import {
+  RequireAuth,
+  RequireStaff,
+  RequireFE,
+} from "@/components/auth/AuthGuards";
 
 // Pages
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import TicketsList from "./pages/TicketsList";
-import TicketDetail from "./pages/TicketDetail";
-import ReviewQueue from "./pages/ReviewQueue";
-import RawEmails from "./pages/RawEmails";
-import FieldExecutives from "./pages/FieldExecutives";
-import SLAMonitor from "./pages/SLAMonitor";
-import AuditLogs from "./pages/AuditLogs";
-import Analytics from "./pages/Analytics";
-import Users from "./pages/Users";
-import Settings from "./pages/Settings";
-import NotFound from "./pages/NotFound";
+import Index from "@/pages/Index";
+import Dashboard from "@/pages/Dashboard";
+import TicketsList from "@/pages/TicketsList";
+import TicketDetail from "@/pages/TicketDetail";
+import ReviewQueue from "@/pages/ReviewQueue";
+import RawEmails from "@/pages/RawEmails";
+import FieldExecutives from "@/pages/FieldExecutives";
+import SLAMonitor from "@/pages/SLAMonitor";
+import AuditLogs from "@/pages/AuditLogs";
+import Analytics from "@/pages/Analytics";
+import Users from "@/pages/Users";
+import Settings from "@/pages/Settings";
+import NotFound from "@/pages/NotFound";
 
-// FE public pages
-import FETicketView from "./pages/FETicketView";
-import FEActionPage from "./pages/FEActionPage";
+// FE pages
+import FEMyTickets from "@/pages/FEMyTickets";
+import FETicketView from "@/pages/FETicketView";
+import FEActionPage from "@/pages/FEActionPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -150,27 +147,45 @@ export default function App() {
               {/* 🌐 PUBLIC */}
               {/* ========================= */}
               <Route path="/" element={<Index />} />
-              <Route path="/fe/ticket/:ticketId" element={<FETicketView />} />
-              <Route path="/fe/action/:tokenId" element={<FEActionPage />} />
+
+              {/* Token-based FE action (NO LOGIN REQUIRED) */}
+              <Route
+                path="/fe/action/:tokenId"
+                element={<FEActionPage />}
+              />
 
               {/* ========================= */}
-              {/* 🔒 AUTHENTICATED APP */}
+              {/* 🚚 FIELD EXECUTIVE */}
               {/* ========================= */}
-              <Route element={<RequireAuth />}>
+              <Route element={<RequireFE />}>
+                <Route path="/fe" element={<FEMyTickets />} />
+                <Route
+                  path="/fe/ticket/:ticketId"
+                  element={<FETicketView />}
+                />
+              </Route>
+
+              {/* ========================= */}
+              {/* 🧑‍💼 STAFF / ADMIN */}
+              {/* ========================= */}
+              <Route element={<RequireStaff />}>
                 <Route path="/app" element={<Dashboard />} />
-
-                <Route element={<RequireStaff />}>
-                  <Route path="/app/tickets" element={<TicketsList />} />
-                  <Route path="/app/tickets/:ticketId" element={<TicketDetail />} />
-                  <Route path="/app/review" element={<ReviewQueue />} />
-                  <Route path="/app/emails" element={<RawEmails />} />
-                  <Route path="/app/field-executives" element={<FieldExecutives />} />
-                  <Route path="/app/sla" element={<SLAMonitor />} />
-                  <Route path="/app/audit" element={<AuditLogs />} />
-                  <Route path="/app/analytics" element={<Analytics />} />
-                  <Route path="/app/users" element={<Users />} />
-                  <Route path="/app/settings" element={<Settings />} />
-                </Route>
+                <Route path="/app/tickets" element={<TicketsList />} />
+                <Route
+                  path="/app/tickets/:ticketId"
+                  element={<TicketDetail />}
+                />
+                <Route path="/app/review" element={<ReviewQueue />} />
+                <Route path="/app/emails" element={<RawEmails />} />
+                <Route
+                  path="/app/field-executives"
+                  element={<FieldExecutives />}
+                />
+                <Route path="/app/sla" element={<SLAMonitor />} />
+                <Route path="/app/audit" element={<AuditLogs />} />
+                <Route path="/app/analytics" element={<Analytics />} />
+                <Route path="/app/users" element={<Users />} />
+                <Route path="/app/settings" element={<Settings />} />
               </Route>
 
               {/* ========================= */}
