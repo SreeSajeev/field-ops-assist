@@ -4,6 +4,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { useFEMyTickets } from '@/hooks/useFEMyTickets';
 
@@ -38,7 +39,7 @@ import {
 } from 'lucide-react';
 
 /* ======================================================
-   FE Ticket Shape (ACTUAL DATA SHAPE)
+   FE Ticket Shape
 ====================================================== */
 type FETwitter = {
   id: string;
@@ -52,7 +53,7 @@ type FETwitter = {
 };
 
 /* ======================================================
-   Ticket Card (OLD UI, SAFE TYPES)
+   Ticket Card (UNCHANGED)
 ====================================================== */
 function FETicketCard({
   ticket,
@@ -137,7 +138,6 @@ function FETicketCard({
             </p>
           </div>
 
-          {/* Safe boundary cast */}
           <StatusBadge status={ticket.status as TicketStatus} />
         </div>
       </CardHeader>
@@ -164,15 +164,6 @@ function FETicketCard({
             </div>
           </div>
         </div>
-
-        {ticket.vehicle_number && (
-          <div className="rounded-lg bg-muted/50 p-3">
-            <p className="text-sm text-muted-foreground">Vehicle Number</p>
-            <p className="font-mono font-semibold">
-              {ticket.vehicle_number}
-            </p>
-          </div>
-        )}
 
         {accessToken && (
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
@@ -222,14 +213,15 @@ function FETicketCard({
 }
 
 /* ======================================================
-   Page (OLD UI RESTORED)
+   Page
 ====================================================== */
 export default function FEMyTickets() {
   const { user, userProfile, signOut, isFieldExecutive } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { tickets, loading: ticketsLoading } = useFEMyTickets();
- 
+
   const confirmOnsite = useFEConfirmOnsite();
   const markComplete = useFEMarkComplete();
 
@@ -239,11 +231,35 @@ export default function FEMyTickets() {
   }
 
   const handleAcknowledge = (ticketId: string) => {
-    confirmOnsite.mutate({ ticketId });
+    confirmOnsite.mutate(
+      { ticketId },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: ['fe-token-for-ticket', ticketId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ['fe-my-tickets'],
+          });
+        },
+      }
+    );
   };
 
   const handleMarkComplete = (ticketId: string) => {
-    markComplete.mutate({ ticketId });
+    markComplete.mutate(
+      { ticketId },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: ['fe-token-for-ticket', ticketId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ['fe-my-tickets'],
+          });
+        },
+      }
+    );
   };
 
   return (
@@ -285,21 +301,6 @@ export default function FEMyTickets() {
 
       {/* Main */}
       <main className="max-w-4xl mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-2">My Assigned Tickets</h2>
-          <p className="text-muted-foreground">
-            View and manage tickets assigned to you.
-          </p>
-        </div>
-
-        <Alert className="mb-6 border-primary/30 bg-primary/10">
-          <AlertTriangle className="h-4 w-4 text-primary" />
-          <AlertDescription>
-            <strong>Workflow:</strong> Mark tickets as "On Site" when you arrive,
-            then "Work Complete" when finished.
-          </AlertDescription>
-        </Alert>
-
         {ticketsLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -324,7 +325,9 @@ export default function FEMyTickets() {
                 ticket={ticket}
                 onAcknowledge={handleAcknowledge}
                 onMarkComplete={handleMarkComplete}
-                isPending={confirmOnsite.isPending || markComplete.isPending}
+                isPending={
+                  confirmOnsite.isPending || markComplete.isPending
+                }
               />
             ))}
           </div>

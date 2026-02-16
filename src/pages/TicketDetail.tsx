@@ -330,47 +330,67 @@ export default function TicketDetail() {
               <CardHeader>
                 <CardTitle>Activity Timeline</CardTitle>
               </CardHeader>
+
               <CardContent className="space-y-4">
-                {comments?.map((c) => {
-                  let a: FEAttachment | null = null;
+                {comments?.length ? (
+                  comments.map((c) => {
+                    let attachment: FEAttachment | null = null;
 
-                  try {
-                    if (c.attachments) {
-                      a =
-                        typeof c.attachments === "string"
-                          ? JSON.parse(c.attachments)
-                          : c.attachments;
+                    try {
+                      if (c.attachments) {
+                        attachment =
+                          typeof c.attachments === "string"
+                            ? JSON.parse(c.attachments)
+                            : c.attachments;
+                      }
+                    } catch {
+                      attachment = null;
                     }
-                  } catch {
-                    a = null;
-                  }
 
-                  return (
-                    <div key={c.id} className="border-l-2 pl-4">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Badge variant="outline">{c.source}</Badge>
-                        {format(new Date(c.created_at), "PPp")}
+                    // 🔐 SAFE DISPLAY MESSAGE
+                    const message =
+                      c.body ||
+                      (attachment?.action_type === "ON_SITE"
+                        ? "Field Executive submitted on-site proof"
+                        : attachment?.action_type === "RESOLUTION"
+                        ? "Field Executive submitted resolution proof"
+                        : c.source === "SYSTEM"
+                        ? "System updated ticket status"
+                        : "Activity recorded");
+
+                    return (
+                      <div key={c.id} className="relative pl-4 border-l-2">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                          <Badge variant="outline">{c.source}</Badge>
+                          <span>{format(new Date(c.created_at), "PPp")}</span>
+                        </div>
+
+                        <p className="text-sm">{message}</p>
+
+                        {attachment?.image_url && (
+                          <img
+                            src={attachment.image_url}
+                            alt="FE proof"
+                            className="mt-3 max-h-64 rounded border"
+                          />
+                        )}
+
+                        {attachment?.remarks && (
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            <strong>Remarks:</strong> {attachment.remarks}
+                          </p>
+                        )}
                       </div>
-                      <p className="mt-1">{c.body}</p>
-
-                      {a?.image_url && (
-                        <img
-                          src={a.image_url}
-                          className="mt-3 max-h-64 rounded border"
-                          alt="FE proof"
-                        />
-                      )}
-
-                      {a?.remarks && (
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          <strong>Remarks:</strong> {a.remarks}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No activity recorded yet.
+                  </p>
+                )}
               </CardContent>
             </Card>
+
           </div>
 
           {/* RIGHT */}
