@@ -385,8 +385,7 @@ export function useUserRole() {
   const { userProfile } = useAuth();
   return userProfile?.role ?? null;
 }
-*/
-import {
+*/import {
   createContext,
   useContext,
   useEffect,
@@ -451,7 +450,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  /* ---------- PROFILE FETCH (NON-DESTRUCTIVE) ---------- */
+  /* ---------- PROFILE FETCH ---------- */
 
   const resolveUserProfile = async (authUser: User) => {
     const { data, error } = await supabase
@@ -460,9 +459,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq("auth_id", authUser.id)
       .maybeSingle();
 
-    if (error || !data) {
-      return null;
-    }
+    if (error || !data) return null;
 
     const role = parseUserRole(data.role);
     if (!role) return null;
@@ -476,26 +473,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  /* ---------- BOOTSTRAP ---------- */
+  /* ---------- HYDRATION ---------- */
 
   useEffect(() => {
     let cancelled = false;
 
-    const bootstrap = async () => {
-      setLoading(true);
-
-      const { data } = await supabase.auth.getSession();
+    const hydrate = async (sess: Session | null) => {
       if (cancelled) return;
 
-      const sess = data.session ?? null;
       setSession(sess);
       setUser(sess?.user ?? null);
 
       if (sess?.user) {
         const profile = await resolveUserProfile(sess.user);
-        if (!cancelled) {
-          setUserProfile(profile); // 👈 DO NOT NULL AUTH
-        }
+        if (!cancelled) setUserProfile(profile);
       } else {
         setUserProfile(null);
       }
@@ -503,25 +494,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!cancelled) setLoading(false);
     };
 
-    bootstrap();
+    // ✅ INITIAL SESSION (CRITICAL FIX)
+    supabase.auth.getSession().then(({ data }) => {
+      hydrate(data.session ?? null);
+    });
 
+    // ✅ ALL FUTURE AUTH CHANGES (INCLUDING REFRESH)
     const { data: listener } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        if (event === "INITIAL_SESSION") return;
-
-        setLoading(true);
-
-        setSession(newSession ?? null);
-        setUser(newSession?.user ?? null);
-
-        if (newSession?.user) {
-          const profile = await resolveUserProfile(newSession.user);
-          setUserProfile(profile);
-        } else {
-          setUserProfile(null);
-        }
-
-        setLoading(false);
+      async (_event, newSession) => {
+        hydrate(newSession ?? null);
       }
     );
 
@@ -553,9 +534,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: {
-          data: { name, role },
-        },
+        options: { data: { name, role } },
       });
 
       return { error: error as Error | null };

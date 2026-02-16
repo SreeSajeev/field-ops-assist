@@ -649,19 +649,15 @@ export function useAddComment() {
 */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Ticket, TicketFilters, TicketStatus } from "@/lib/types";
+import { Ticket, TicketFilters } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
-import { 
-  TicketUpdateSchema, 
-  CommentSchema, 
-  AssignmentSchema, 
+import {
+  AssignmentSchema,
   UUIDSchema,
-  formatZodError 
 } from "@/lib/validation";
-import { z } from "zod";
 
 /* =====================================================
-   Tickets list
+   Tickets list (READ-ONLY, SUPABASE AUTHORITY)
 ===================================================== */
 export function useTickets(filters?: TicketFilters) {
   return useQuery({
@@ -681,16 +677,14 @@ export function useTickets(filters?: TicketFilters) {
       }
 
       if (filters?.confidenceRange && filters.confidenceRange !== "all") {
-        switch (filters.confidenceRange) {
-          case "high":
-            query = query.gte("confidence_score", 95);
-            break;
-          case "medium":
-            query = query.gte("confidence_score", 80).lt("confidence_score", 95);
-            break;
-          case "low":
-            query = query.lt("confidence_score", 80);
-            break;
+        if (filters.confidenceRange === "high") {
+          query = query.gte("confidence_score", 95);
+        }
+        if (filters.confidenceRange === "medium") {
+          query = query.gte("confidence_score", 80).lt("confidence_score", 95);
+        }
+        if (filters.confidenceRange === "low") {
+          query = query.lt("confidence_score", 80);
         }
       }
 
@@ -713,7 +707,7 @@ export function useTickets(filters?: TicketFilters) {
 }
 
 /* =====================================================
-   Single ticket
+   Single ticket (READ-ONLY)
 ===================================================== */
 export function useTicket(ticketId: string) {
   return useQuery({
@@ -733,7 +727,7 @@ export function useTicket(ticketId: string) {
 }
 
 /* =====================================================
-   Ticket comments
+   Ticket comments (READ-ONLY)
 ===================================================== */
 export function useTicketComments(ticketId: string) {
   return useQuery({
@@ -753,7 +747,7 @@ export function useTicketComments(ticketId: string) {
 }
 
 /* =====================================================
-   Ticket assignments
+   Ticket assignments (READ-ONLY)
 ===================================================== */
 export function useTicketAssignments(ticketId: string) {
   return useQuery({
@@ -771,227 +765,8 @@ export function useTicketAssignments(ticketId: string) {
     },
   });
 }
-
 /* =====================================================
-   Update ticket (generic)
-===================================================== */
-export function useUpdateTicket() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      ticketId,
-      updates,
-    }: {
-      ticketId: string;
-      updates: Partial<Ticket>;
-    }) => {
-      const validatedId = UUIDSchema.parse(ticketId);
-      const validatedUpdates = TicketUpdateSchema.parse(updates);
-      
-      const { data, error } = await supabase
-        .from("tickets")
-        .update({
-          ...validatedUpdates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", validatedId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["tickets"] });
-      queryClient.invalidateQueries({ queryKey: ["ticket", data.id] });
-      queryClient.invalidateQueries({ queryKey: ["ticket-comments", data.id] });
-
-      toast({ title: "Status updated" });
-    },
-
-    onError: (error) => {
-      if (error instanceof z.ZodError) {
-        toast({ 
-          title: "Validation Error", 
-          description: formatZodError(error), 
-          variant: "destructive" 
-        });
-      }
-    },
-  });
-}
-
-/* =====================================================
-   FE Confirm On-Site (BACKEND-DRIVEN)
-===================================================== */
-export function useFEConfirmOnsite() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ ticketId }: { ticketId: string }) => {
-      const validated = UUIDSchema.parse(ticketId);
-
-      const res = await fetch(
-        `${import.meta.env.VITE_CRM_API_URL}/tickets/${validated}/fe-confirm-onsite`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text);
-      }
-
-      return true;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tickets"] });
-      toast({ title: "Status updated to ON_SITE" });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Update failed",
-        description: error?.message,
-        variant: "destructive",
-      });
-    },
-  });
-}
-
-/* =====================================================
-   FE Mark Complete (BACKEND-DRIVEN)
-===================================================== */
-export function useFEMarkComplete() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ ticketId }: { ticketId: string }) => {
-      const validated = UUIDSchema.parse(ticketId);
-
-      const res = await fetch(
-        `${import.meta.env.VITE_CRM_API_URL}/tickets/${validated}/fe-mark-complete`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text);
-      }
-
-      return true;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tickets"] });
-      toast({ title: "Work marked complete" });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Update failed",
-        description: error?.message,
-        variant: "destructive",
-      });
-    },
-  });
-}
-
-/* =====================================================
-   Close Ticket (BACKEND-DRIVEN)
-===================================================== */
-export function useCloseTicket() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ ticketId }: { ticketId: string }) => {
-      const validated = UUIDSchema.parse(ticketId);
-
-      const res = await fetch(
-        `${import.meta.env.VITE_CRM_API_URL}/tickets/${validated}/verify-resolution`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text);
-      }
-
-      return true;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tickets"] });
-      toast({ title: "Ticket closed successfully" });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Close failed",
-        description: error?.message,
-        variant: "destructive",
-      });
-    },
-  });
-}
-
-/* =====================================================
-   Update ticket status
-   @deprecated DO NOT USE - Directly updates Supabase, bypasses backend
-   Use useFEConfirmOnsite(), useFEMarkComplete(), or useCloseTicket() instead
-===================================================== */
-export function useUpdateTicketStatus() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      ticketId,
-      status,
-    }: {
-      ticketId: string;
-      status: TicketStatus;
-    }) => {
-      const validatedId = UUIDSchema.parse(ticketId);
-      const validatedStatus = z.enum([
-        'OPEN', 'NEEDS_REVIEW', 'ASSIGNED', 'EN_ROUTE', 'ON_SITE', 
-        'RESOLVED_PENDING_VERIFICATION', 'RESOLVED', 'REOPENED'
-      ]).parse(status);
-      
-      const { data, error } = await supabase
-        .from("tickets")
-        .update({
-          status: validatedStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", validatedId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tickets"] });
-      toast({ title: "Status updated" });
-    },
-    onError: (error) => {
-      if (error instanceof z.ZodError) {
-        toast({ 
-          title: "Validation Error", 
-          description: formatZodError(error), 
-          variant: "destructive" 
-        });
-      }
-    },
-  });
-}
-
-/* =====================================================
-   Assign ticket (BACKEND-DRIVEN)
+   Assign ticket (BACKEND-DRIVEN, RECONCILED, DEMO-SAFE)
 ===================================================== */
 export function useAssignTicket() {
   const queryClient = useQueryClient();
@@ -1006,30 +781,110 @@ export function useAssignTicket() {
     }) => {
       const validated = AssignmentSchema.parse({ ticketId, feId });
 
-      const res = await fetch(
-        `${import.meta.env.VITE_CRM_API_URL}/tickets/${validated.ticketId}/assign`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ feId: validated.feId }),
-        }
-      );
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_CRM_API_URL}/tickets/${validated.ticketId}/assign`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ feId: validated.feId }),
+          }
+        );
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        return { reconciled: false };
+      } catch {
+        // 🚑 NETWORK / CORS / TIMEOUT PATH
+        // We do NOT assume failure. We reconcile.
+        return { reconciled: true };
+      }
+    },
+
+    onSuccess: async (_data, vars) => {
+      // 🔄 ALWAYS re-fetch authoritative state
+      const assignments = await queryClient.fetchQuery({
+        queryKey: ["ticket-assignments", vars.ticketId],
+        queryFn: async () => {
+          const { data, error } = await supabase
+            .from("ticket_assignments")
+            .select("id")
+            .eq("ticket_id", vars.ticketId)
+            .limit(1);
+
+          if (error) throw error;
+          return data;
+        },
+      });
+
+      const assigned = assignments && assignments.length > 0;
+
+      // 🔁 Sync UI regardless
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tickets"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["ticket", vars.ticketId],
+        }),
+      ]);
+
+      if (assigned) {
+        toast({
+          title: "Ticket assigned successfully",
+          description: "Assignment confirmed from system state.",
+        });
+      } else {
+        toast({
+          title: "Assignment pending",
+          description:
+            "Unable to confirm assignment. Please retry if needed.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+}
+
+
+/* =====================================================
+   FE Confirm On-Site (RECONCILED)
+===================================================== */
+export function useFEConfirmOnsite() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ticketId }: { ticketId: string }) => {
+      const validated = UUIDSchema.parse(ticketId);
+
+      try {
+        await fetch(
+          `${import.meta.env.VITE_CRM_API_URL}/tickets/${validated}/fe-confirm-onsite`,
+          { method: "POST" }
+        );
+      } catch {}
+
+      const { data } = await supabase
+        .from("tickets")
+        .select("status")
+        .eq("id", validated)
+        .single();
+
+      if (data?.status !== "ON_SITE") {
+        throw new Error("Status not updated");
       }
 
       return true;
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
-      queryClient.invalidateQueries({ queryKey: ["ticket-assignments"] });
-      toast({ title: "Ticket assigned & on-site link sent to FE" });
+      toast({ title: "Status updated to ON_SITE" });
     },
+
     onError: (error: any) => {
       toast({
-        title: "Assignment failed",
+        title: "Update failed",
         description: error?.message,
         variant: "destructive",
       });
@@ -1038,58 +893,100 @@ export function useAssignTicket() {
 }
 
 /* =====================================================
-   Add comment (FE + STAFF)
+   FE Mark Complete (RECONCILED)
 ===================================================== */
-export function useAddComment() {
+export function useFEMarkComplete() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      ticketId,
-      body,
-      source = "STAFF",
-      attachments = null,
-    }: {
-      ticketId: string;
-      body: string;
-      source?: "EMAIL" | "FE" | "STAFF" | "SYSTEM";
-      attachments?: any[] | null;
-    }) => {
-      const validated = CommentSchema.parse({ 
-        ticketId, 
-        body: body.trim(), 
-        source, 
-        attachments 
-      });
-      
-      const { data, error } = await supabase
-        .from("ticket_comments")
-        .insert({
-          ticket_id: validated.ticketId,
-          body: validated.body,
-          source: validated.source,
-          attachments: validated.attachments,
-        })
-        .select()
+    mutationFn: async ({ ticketId }: { ticketId: string }) => {
+      const validated = UUIDSchema.parse(ticketId);
+
+      try {
+        await fetch(
+          `${import.meta.env.VITE_CRM_API_URL}/tickets/${validated}/fe-mark-complete`,
+          { method: "POST" }
+        );
+      } catch {}
+
+      const { data } = await supabase
+        .from("tickets")
+        .select("status")
+        .eq("id", validated)
         .single();
 
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: ["ticket-comments", vars.ticketId],
-      });
-      toast({ title: "Comment added" });
-    },
-    onError: (error) => {
-      if (error instanceof z.ZodError) {
-        toast({ 
-          title: "Validation Error", 
-          description: formatZodError(error), 
-          variant: "destructive" 
-        });
+      if (data?.status !== "RESOLVED_PENDING_VERIFICATION") {
+        throw new Error("Completion not verified");
       }
+
+      return true;
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      toast({ title: "Work marked complete" });
+    },
+
+    onError: (error: any) => {
+      toast({
+        title: "Update failed",
+        description: error?.message,
+        variant: "destructive",
+      });
     },
   });
+}
+
+/* =====================================================
+   Close Ticket (RECONCILED)
+===================================================== */
+export function useCloseTicket() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ticketId }: { ticketId: string }) => {
+      const validated = UUIDSchema.parse(ticketId);
+
+      try {
+        await fetch(
+          `${import.meta.env.VITE_CRM_API_URL}/tickets/${validated}/verify-resolution`,
+          { method: "POST" }
+        );
+      } catch {}
+
+      const { data } = await supabase
+        .from("tickets")
+        .select("status")
+        .eq("id", validated)
+        .single();
+
+      if (data?.status !== "RESOLVED") {
+        throw new Error("Closure not verified");
+      }
+
+      return true;
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      toast({ title: "Ticket closed successfully" });
+    },
+
+    onError: (error: any) => {
+      toast({
+        title: "Close failed",
+        description: error?.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+/* =====================================================
+   @deprecated — HARD BLOCK
+===================================================== */
+export function useUpdateTicketStatus(): never {
+  throw new Error(
+    "useUpdateTicketStatus is forbidden. Use backend-driven hooks only."
+  );
 }
