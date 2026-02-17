@@ -26,7 +26,7 @@ import { Badge } from '@/components/ui/badge';
 const navigation = [
   { name: 'Dashboard', href: '/app', icon: LayoutDashboard },
   { name: 'All Tickets', href: '/app/tickets', icon: Ticket },
-  { name: 'Review Queue', href: '/app/review', icon: AlertTriangle },
+  { name: 'Review Queue', href: '/app/review', icon: AlertTriangle, badge: true },
   { name: 'Field Executives', href: '/app/field-executives', icon: Truck },
   { name: 'Raw Emails', href: '/app/emails', icon: Mail },
 ];
@@ -46,6 +46,9 @@ export function Sidebar() {
   const location = useLocation();
   const { signOut, user, userProfile, isAdmin } = useAuth();
 
+  /* =========================
+     Role Display
+  ========================= */
   const getRoleDisplay = () => {
     switch (userProfile?.role) {
       case 'ADMIN':
@@ -59,6 +62,9 @@ export function Sidebar() {
     }
   };
 
+  /* =========================
+     Navigation Section
+  ========================= */
   const NavSection = ({
     title,
     items,
@@ -91,12 +97,15 @@ export function Sidebar() {
     </>
   );
 
+  /* =========================
+     Render
+  ========================= */
   return (
     <div
       className="flex h-screen w-64 flex-col"
       style={{ background: 'hsl(285 45% 18%)' }}
     >
-      {/* Logo Section (UNCHANGED STYLE) */}
+      {/* Logo */}
       <div
         className="flex h-16 items-center gap-3 border-b px-5"
         style={{ borderColor: 'hsl(285 35% 25%)' }}
@@ -110,17 +119,15 @@ export function Sidebar() {
         >
           <Shield className="h-5 w-5 text-white" />
         </div>
-
         <div>
           <h1 className="text-base font-bold text-white tracking-tight">
             Sahaya
           </h1>
-
           <p
             className="text-[10px] font-medium uppercase tracking-wider"
             style={{ color: 'hsl(32 95% 60%)' }}
           >
-            Powered by Pariskq
+            by Pariskq
           </p>
         </div>
       </div>
@@ -164,7 +171,6 @@ export function Sidebar() {
               user?.email?.charAt(0).toUpperCase() ||
               'U'}
           </div>
-
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-medium text-white">
               {userProfile?.name || user?.email || 'User'}
