@@ -129,20 +129,38 @@ export default function TicketDetail() {
 };
 
 
-  const handleCloseTicket = () => {
-    updateStatus.mutate(
-      { ticketId: ticket.id, status: "RESOLVED" as TicketStatus },
-      {
-        onSuccess: () => {
-          setCloseDialogOpen(false);
-          toast({
-            title: "Ticket Closed",
-            description: `Ticket ${ticket.ticket_number} closed successfully.`,
-          });
-        },
+const handleClose = async () => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_CRM_API_URL}/tickets/${ticket.id}/close`,
+        { method: "POST" }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Close failed");
       }
-    );
+
+      await updateStatus.mutateAsync({
+        ticketId: ticket.id,
+        status: "RESOLVED" as TicketStatus,
+      });
+
+      toast({
+        title: "Ticket Closed",
+        description: `Ticket ${ticket.ticket_number} verified and closed.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Close failed",
+        description:
+          err instanceof Error ? err.message : "Something went wrong",
+        variant: "destructive",
+      });
+    }
   };
+
 
   /* ================= UI ================= */
 
@@ -367,7 +385,7 @@ export default function TicketDetail() {
         ticket={ticket}
         open={closeDialogOpen}
         onOpenChange={setCloseDialogOpen}
-        onConfirm={handleCloseTicket}
+        onConfirm={handleClose}
         isPending={updateStatus.isPending}
       />
     </DashboardLayout>
