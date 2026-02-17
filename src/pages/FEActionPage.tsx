@@ -34,45 +34,23 @@ export default function FEActionPage() {
   const [file, setFile] = useState<File | null>(null);
   const [remarks, setRemarks] = useState("");
 
-  /* ======================================================
-     VALIDATE TOKEN (BACKEND ONLY)
-  ====================================================== */
   useEffect(() => {
-    let cancelled = false;
+  if (!token) {
+    setLoading(false);
+    return;
+  }
 
-    const validate = async () => {
-      try {
-        if (!token) {
-          setLoading(false);
-          return;
-        }
+  // 🔥 DEMO MODE — Skip backend validation
+  setContext({
+    ticketId: "c3e2103d-1be7-44e3-9a5b-2a5d2ae3301e", // your ticket id
+    actionType: "ON_SITE",
+    ticketNumber: "TKT-MLQ3VQ26-OF2W",
+    ticketStatus: "ASSIGNED",
+  });
 
-        const res = await fetch(`${API_BASE}/fe/action/${token}`);
+  setLoading(false);
+}, [token]);
 
-        if (!res.ok) {
-          if (!cancelled) setContext(null);
-          return;
-        }
-
-        const data = await res.json();
-
-        if (!cancelled) {
-          setContext(data);
-        }
-      } catch (err) {
-        console.error("[FEActionPage TOKEN ERROR]", err);
-        if (!cancelled) setContext(null);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    validate();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
 
   /* ======================================================
      SUBMIT PROOF

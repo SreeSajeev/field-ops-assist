@@ -70,7 +70,8 @@ function FETicketCard({
 
   const copyTokenLink = () => {
     if (!accessToken) return;
-    const link = `${window.location.origin}/fe/action/${accessToken.token_hash}`;
+  const link = `${window.location.origin}/fe/action/${accessToken.id}`;
+
     navigator.clipboard.writeText(link);
     toast({ title: 'Link copied to clipboard' });
   };
@@ -174,7 +175,7 @@ function FETicketCard({
 
             <div className="flex items-center gap-2">
               <code className="flex-1 text-xs bg-muted rounded px-2 py-1 truncate">
-                {accessToken.token_hash}
+                {accessToken.id}
               </code>
               <Button
                 variant="ghost"
@@ -190,7 +191,7 @@ function FETicketCard({
                 className="h-7 w-7"
                 onClick={() =>
                   window.open(
-                    `/fe/action/${accessToken.token_hash}`,
+                    `/fe/action/${accessToken.id}`,
                     '_blank'
                   )
                 }

@@ -52,7 +52,8 @@ export default function FETicketView() {
 
           <Button
             onClick={() =>
-              navigate(`/fe/action/${token.token_hash}`)
+              navigate(`/fe/action/${token.id}`)
+
             }
           >
             {token.action_type === "ON_SITE"

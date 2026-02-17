@@ -5,15 +5,15 @@ import { supabase } from "@/integrations/supabase/client";
    Types
 ====================================================== */
 export type FEActionToken = {
-  id: string;
+  id: string;  // THIS IS THE TOKEN
   ticket_id: string;
   fe_id: string;
   action_type: "ON_SITE" | "RESOLUTION";
-  token_hash: string;
   expires_at: string;
   used: boolean;
   created_at: string;
 };
+
 
 /* ======================================================
    useFETokenForTicket
