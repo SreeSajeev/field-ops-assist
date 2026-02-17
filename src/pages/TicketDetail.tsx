@@ -110,15 +110,6 @@ export default function TicketDetail() {
       actionType: type,
     });
 
-    // 🔥 Restore lifecycle transitions (THIS WAS MISSING)
-
-    if (type === "ON_SITE") {
-      await updateStatus.mutateAsync({
-        ticketId: ticket.id,
-        status: "EN_ROUTE" as TicketStatus,
-      });
-    }
-
     if (type === "RESOLUTION") {
       await updateStatus.mutateAsync({
         ticketId: ticket.id,

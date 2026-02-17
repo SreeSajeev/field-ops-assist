@@ -331,5 +331,3 @@ const { data: feTokens } = useQuery({
     </div>
   );
 }
-
-
