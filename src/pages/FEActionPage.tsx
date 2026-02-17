@@ -15,7 +15,9 @@ import { Upload, CheckCircle } from "lucide-react";
 const API_BASE = "https://pariskq-crm-backend.onrender.com";
 
 export default function FEActionPage() {
-  const { token } = useParams<{ token: string }>();
+  const { tokenId } = useParams<{ tokenId: string }>();
+  const token = tokenId;
+
 
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
