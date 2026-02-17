@@ -130,36 +130,32 @@ export default function TicketDetail() {
 
 
 const handleClose = async () => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_CRM_API_URL}/tickets/${ticket.id}/close`,
-        { method: "POST" }
-      );
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_CRM_API_URL}/tickets/${ticket.id}/close`,
+      { method: "POST" }
+    );
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data?.error || "Close failed");
-      }
-
-      await updateStatus.mutateAsync({
-        ticketId: ticket.id,
-        status: "RESOLVED" as TicketStatus,
-      });
-
-      toast({
-        title: "Ticket Closed",
-        description: `Ticket ${ticket.ticket_number} verified and closed.`,
-      });
-    } catch (err) {
-      toast({
-        title: "Close failed",
-        description:
-          err instanceof Error ? err.message : "Something went wrong",
-        variant: "destructive",
-      });
+    if (!res.ok) {
+      throw new Error(data?.error || "Close failed");
     }
-  };
+
+    // 🔥 IMPORTANT: refetch ticket instead of manually mutating
+    updateStatus.reset(); // optional
+    window.location.reload(); // simple and stable fix
+
+  } catch (err) {
+    toast({
+      title: "Close failed",
+      description:
+        err instanceof Error ? err.message : "Something went wrong",
+      variant: "destructive",
+    });
+  }
+};
+
 
 
   /* ================= UI ================= */
