@@ -2,12 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 
 export default function FEActionPage() {
@@ -28,9 +23,11 @@ export default function FEActionPage() {
           return;
         }
 
-        // 1️⃣ Load FE action token
-        const { data: tokenRow, error: tokenError } = await (supabase as any)
-          .from("fe_action_tokens")
+        console.log("🔍 Loading FE token:", tokenId);
+
+        // 1️⃣ Load token
+        const { data: tokenRow, error: tokenError } = await supabase
+          .from("fe_action_tokens" as any)
           .select("*")
           .eq("id", tokenId)
           .eq("used", false)
@@ -38,14 +35,17 @@ export default function FEActionPage() {
           .single();
 
         if (tokenError || !tokenRow) {
+          console.error("❌ TOKEN ERROR:", tokenError);
           toast({
             title: "Invalid or expired link",
+            description: tokenError?.message,
             variant: "destructive",
           });
           setLoading(false);
           return;
         }
 
+        console.log("✅ Token loaded:", tokenRow);
         setToken(tokenRow);
 
         // 2️⃣ Load ticket
@@ -56,19 +56,24 @@ export default function FEActionPage() {
           .single();
 
         if (ticketError || !ticketRow) {
+          console.error("❌ TICKET ERROR:", ticketError);
           toast({
             title: "Ticket not found",
+            description: ticketError?.message,
             variant: "destructive",
           });
           setLoading(false);
           return;
         }
 
+        console.log("✅ Ticket loaded:", ticketRow);
         setTicket(ticketRow);
         setLoading(false);
       } catch (err) {
+        console.error("🔥 LOAD FAILED:", err);
         toast({
           title: "Unexpected error",
+          description: "Check console for details",
           variant: "destructive",
         });
         setLoading(false);
@@ -78,17 +83,16 @@ export default function FEActionPage() {
     load();
   }, [tokenId]);
 
-  /* ================= SUBMIT PROOF ================= */
+  /* ================= SUBMIT PROOF (BASE64) ================= */
   const handleSubmit = async () => {
     if (!file || !token || !ticket) {
-      toast({
-        title: "Please upload a photo",
-        variant: "destructive",
-      });
+      toast({ title: "Please upload a photo" });
       return;
     }
 
     try {
+      console.log("🚀 Submitting proof (BASE64)");
+
       // Convert image to base64
       const toBase64 = (file: File) =>
         new Promise<string>((resolve, reject) => {
@@ -100,7 +104,7 @@ export default function FEActionPage() {
 
       const base64Image = await toBase64(file);
 
-      // Insert comment
+      // Insert ticket comment
       const { error: commentError } = await supabase
         .from("ticket_comments")
         .insert({
@@ -108,8 +112,8 @@ export default function FEActionPage() {
           source: "FE",
           body:
             token.action_type === "ON_SITE"
-              ? "On-site proof submitted"
-              : "Resolution proof submitted",
+              ? "Field Executive uploaded on-site proof"
+              : "Field Executive uploaded resolution proof",
           attachments: {
             image_base64: base64Image,
             remarks,
@@ -118,52 +122,62 @@ export default function FEActionPage() {
         });
 
       if (commentError) {
-        throw commentError;
+        console.error("❌ COMMENT ERROR:", commentError);
+        throw new Error(commentError.message);
       }
 
       // Update ticket status
-      const newStatus =
-        token.action_type === "ON_SITE"
-          ? "ON_SITE"
-          : "RESOLVED_PENDING_VERIFICATION";
-
       const { error: statusError } = await supabase
         .from("tickets")
-        .update({ status: newStatus })
+        .update({
+          status:
+            token.action_type === "ON_SITE"
+              ? "ON_SITE"
+              : "RESOLVED_PENDING_VERIFICATION",
+        })
         .eq("id", ticket.id);
 
       if (statusError) {
-        throw statusError;
+        console.error("❌ STATUS ERROR:", statusError);
+        throw new Error(statusError.message);
       }
 
       // Mark token as used
-      await (supabase as any)
-        .from("fe_action_tokens")
+      const { error: tokenUpdateError } = await supabase
+        .from("fe_action_tokens" as any)
         .update({ used: true })
         .eq("id", token.id);
 
+      if (tokenUpdateError) {
+        console.error("❌ TOKEN UPDATE ERROR:", tokenUpdateError);
+        throw new Error(tokenUpdateError.message);
+      }
+
       toast({
         title: "Proof submitted successfully",
+        description: "You may now close this page.",
       });
-
-      window.location.reload();
     } catch (err: any) {
+      console.error("🔥 SUBMISSION FAILED:", err);
       toast({
         title: "Submission failed",
-        description: err.message,
+        description: err?.message || "Check console",
         variant: "destructive",
       });
     }
   };
 
   /* ================= UI ================= */
-  if (loading) return <div className="p-6">Loading…</div>;
+  if (loading) {
+    return <div className="p-8 text-center">Loading…</div>;
+  }
 
-  if (!token || !ticket)
-    return <div className="p-6">Invalid or expired link</div>;
+  if (!token || !ticket) {
+    return <div className="p-8 text-center">Invalid or expired link</div>;
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>
@@ -174,8 +188,8 @@ export default function FEActionPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="text-sm font-medium">
-            Ticket: {ticket.ticket_number}
+          <div className="text-sm">
+            <strong>Ticket:</strong> {ticket.ticket_number}
           </div>
 
           <input
@@ -185,7 +199,7 @@ export default function FEActionPage() {
           />
 
           <textarea
-            className="w-full rounded border p-2 text-sm"
+            className="w-full border rounded p-2 text-sm"
             placeholder="Optional remarks"
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}

@@ -1,91 +1,140 @@
-/**
- * FEMyTickets - Field Executive Dashboard
- */
-
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { useFEMyTickets } from '@/hooks/useFEMyTickets';
-
-import { useFETokenForTicket } from '@/hooks/useFETokenForTicket';
-import { useFEConfirmOnsite, useFEMarkComplete } from '@/hooks/useTickets';
-import { TicketStatus } from '@/lib/types';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Ticket, TicketStatus } from '@/lib/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { StatusBadge } from '@/components/tickets/StatusBadge';
 import { toast } from '@/hooks/use-toast';
-import {
-  Truck,
-  MapPin,
-  Clock,
+import { 
+  Truck, 
+  MapPin, 
+  Clock, 
   AlertTriangle,
   CheckCircle,
   LogOut,
   Shield,
   PlayCircle,
   Loader2,
-  Ticket as TicketIcon,
-  Link as LinkIcon,
-  Copy,
-  ExternalLink,
+  Ticket as TicketIcon
 } from 'lucide-react';
 
-/* ======================================================
-   FE Ticket Shape
-====================================================== */
-type FETwitter = {
-  id: string;
-  ticket_number: string;
-  status: string;
-  location?: string | null;
-  issue_type?: string | null;
-  category?: string | null;
-  vehicle_number?: string | null;
-  opened_at?: string | null;
-};
+export default function FEMyTickets() {
+  const { user, userProfile, signOut, isFieldExecutive } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-/* ======================================================
-   Ticket Card (UNCHANGED)
-====================================================== */
-function FETicketCard({
-  ticket,
-  onAcknowledge,
-  onMarkComplete,
-  isPending,
-}: {
-  ticket: FETwitter;
-  onAcknowledge: (id: string) => void;
-  onMarkComplete: (id: string) => void;
-  isPending: boolean;
-}) {
-  const { data: accessToken } = useFETokenForTicket(ticket.id);
+  // Redirect non-FE users
+  if (!isFieldExecutive && userProfile) {
+    navigate('/');
+    return null;
+  }
 
-  const copyTokenLink = () => {
-    if (!accessToken) return;
-  const link = `${window.location.origin}/fe/action/${accessToken.id}`;
+  // Fetch FE's assigned tickets using email match to field_executives
+  const { data: tickets, isLoading: ticketsLoading } = useQuery({
+    queryKey: ['fe-my-tickets', user?.email],
+    queryFn: async () => {
+      // First, find the field_executive record for this user
+      // We match by name from the users table since FE record was created on signup
+      const { data: feRecord, error: feError } = await supabase
+        .from('field_executives')
+        .select('id')
+        .eq('name', userProfile?.name || '')
+        .maybeSingle();
 
-    navigator.clipboard.writeText(link);
-    toast({ title: 'Link copied to clipboard' });
+      if (feError) throw feError;
+      if (!feRecord) return [];
+
+      // Now fetch tickets assigned to this FE
+      const { data: assignments, error: assignError } = await supabase
+        .from('ticket_assignments')
+        .select(`
+          id,
+          fe_id,
+          ticket_id,
+          tickets!ticket_assignments_ticket_id_fkey (*)
+        `)
+        .eq('fe_id', feRecord.id);
+
+      if (assignError) throw assignError;
+
+      // Extract tickets that have current_assignment_id matching
+      const assignedTickets = (assignments || [])
+        .map(a => a.tickets)
+        .filter((t): t is Ticket => {
+          if (!t) return false;
+          const ticket = t as Ticket;
+          // Only show tickets that are currently assigned to this FE
+          return ['ASSIGNED', 'ON_SITE', 'RESOLVED_PENDING_VERIFICATION'].includes(ticket.status);
+        })
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      return assignedTickets as Ticket[];
+    },
+    enabled: !!userProfile?.name
+  });
+
+  // Mutation to update ticket status
+  const updateStatus = useMutation({
+    mutationFn: async ({ ticketId, status }: { ticketId: string; status: TicketStatus }) => {
+      const { data, error } = await supabase
+        .from('tickets')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', ticketId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add audit log
+      await supabase.from('audit_logs').insert({
+        entity_type: 'ticket',
+        entity_id: ticketId,
+        action: `fe_status_changed_to_${status}`,
+        metadata: { new_status: status, fe_name: userProfile?.name }
+      });
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fe-my-tickets'] });
+      toast({
+        title: 'Status updated',
+        description: 'The ticket status has been updated.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update status. Please try again.',
+        variant: 'destructive',
+      });
+      console.error('Update status error:', error);
+    },
+  });
+
+  const handleAcknowledge = (ticketId: string) => {
+    updateStatus.mutate({ ticketId, status: 'ON_SITE' });
   };
 
-  const getActionButton = () => {
+  const handleMarkComplete = (ticketId: string) => {
+    updateStatus.mutate({ ticketId, status: 'RESOLVED_PENDING_VERIFICATION' as TicketStatus });
+  };
+
+  const getActionButton = (ticket: Ticket) => {
     switch (ticket.status) {
       case 'ASSIGNED':
         return (
-          <Button
-            onClick={() => onAcknowledge(ticket.id)}
-            disabled={isPending}
+          <Button 
+            onClick={() => handleAcknowledge(ticket.id)}
+            disabled={updateStatus.isPending}
             className="w-full"
           >
-            {isPending ? (
+            {updateStatus.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <PlayCircle className="mr-2 h-4 w-4" />
@@ -95,12 +144,12 @@ function FETicketCard({
         );
       case 'ON_SITE':
         return (
-          <Button
-            onClick={() => onMarkComplete(ticket.id)}
-            disabled={isPending}
+          <Button 
+            onClick={() => handleMarkComplete(ticket.id)}
+            disabled={updateStatus.isPending}
             className="w-full bg-green-600 hover:bg-green-700"
           >
-            {isPending ? (
+            {updateStatus.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <CheckCircle className="mr-2 h-4 w-4" />
@@ -110,10 +159,7 @@ function FETicketCard({
         );
       case 'RESOLVED_PENDING_VERIFICATION':
         return (
-          <Badge
-            variant="outline"
-            className="w-full justify-center py-2 border-amber-500 text-amber-600"
-          >
+          <Badge variant="outline" className="w-full justify-center py-2 border-amber-500 text-amber-600">
             <Clock className="mr-2 h-4 w-4" />
             Awaiting Staff Verification
           </Badge>
@@ -124,212 +170,115 @@ function FETicketCard({
   };
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="font-mono text-lg">
-              {ticket.ticket_number}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Created{' '}
-              {ticket.opened_at
-                ? format(new Date(ticket.opened_at), 'PPp')
-                : '—'}
-            </p>
-          </div>
-
-          <StatusBadge status={ticket.status as TicketStatus} />
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex items-start gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-            <div>
-              <p className="text-muted-foreground">Location</p>
-              <p className="font-medium">
-                {ticket.location || 'Not specified'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2">
-            <Truck className="h-4 w-4 text-muted-foreground mt-0.5" />
-            <div>
-              <p className="text-muted-foreground">Issue Type</p>
-              <p className="font-medium">
-                {ticket.issue_type || ticket.category || 'Not specified'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {accessToken && (
-          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <LinkIcon className="h-4 w-4 text-primary" />
-              <span>Access Token Available</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs bg-muted rounded px-2 py-1 truncate">
-                {accessToken.id}
-              </code>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={copyTokenLink}
-              >
-                <Copy className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() =>
-                  window.open(
-                    `/fe/action/${accessToken.id}`,
-                    '_blank'
-                  )
-                }
-              >
-                <ExternalLink className="h-3 w-3" />
-              </Button>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              Expires:{' '}
-              {format(new Date(accessToken.expires_at), 'PPp')}
-            </p>
-          </div>
-        )}
-
-        <div className="pt-2">{getActionButton()}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
-/* ======================================================
-   Page
-====================================================== */
-export default function FEMyTickets() {
-  const { user, userProfile, signOut, isFieldExecutive } = useAuth();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  const { tickets, loading: ticketsLoading } = useFEMyTickets();
-
-  const confirmOnsite = useFEConfirmOnsite();
-  const markComplete = useFEMarkComplete();
-
-  if (!isFieldExecutive && userProfile) {
-    navigate('/');
-    return null;
-  }
-
-  const handleAcknowledge = (ticketId: string) => {
-    confirmOnsite.mutate(
-      { ticketId },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: ['fe-token-for-ticket', ticketId],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ['fe-my-tickets'],
-          });
-        },
-      }
-    );
-  };
-
-  const handleMarkComplete = (ticketId: string) => {
-    markComplete.mutate(
-      { ticketId },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: ['fe-token-for-ticket', ticketId],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ['fe-my-tickets'],
-          });
-        },
-      }
-    );
-  };
-
-  return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ background: 'hsl(285 45% 12%)' }}>
       {/* Header */}
-      <header className="border-b px-6 py-4 bg-card">
+      <header className="border-b px-6 py-4" style={{ borderColor: 'hsl(285 35% 20%)', background: 'hsl(285 45% 16%)' }}>
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-              <Shield className="h-5 w-5 text-primary-foreground" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl logo-glow"
+                 style={{ background: 'linear-gradient(135deg, hsl(32 95% 48%), hsl(32 95% 55%))' }}>
+              <Shield className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold">LogiCRM</h1>
-              <p className="text-xs text-muted-foreground">
-                Field Executive Portal
-              </p>
+              <h1 className="text-lg font-bold text-white">LogiCRM</h1>
+              <p className="text-xs text-white/60">Field Executive Portal</p>
             </div>
           </div>
-
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm font-medium">
-                {userProfile?.name || user?.email}
-              </p>
-              <Badge
-                variant="outline"
-                className="text-xs border-primary/50 text-primary"
-              >
+              <p className="text-sm font-medium text-white">{userProfile?.name || user?.email}</p>
+              <Badge variant="outline" className="text-xs border-primary/50 text-primary">
                 <Truck className="mr-1 h-3 w-3" />
                 Field Executive
               </Badge>
             </div>
-            <Button variant="ghost" size="icon" onClick={signOut}>
+            <Button variant="ghost" size="icon" onClick={signOut} className="text-white/70 hover:text-white hover:bg-white/10">
               <LogOut className="h-5 w-5" />
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Main */}
+      {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-white mb-2">My Assigned Tickets</h2>
+          <p className="text-white/60">
+            View and manage tickets assigned to you. Update status as you progress through each job.
+          </p>
+        </div>
+
+        {/* Info Alert */}
+        <Alert className="mb-6 border-primary/30 bg-primary/10">
+          <AlertTriangle className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-white/80">
+            <strong>Workflow:</strong> Mark tickets as "On Site" when you arrive, then "Work Complete" when finished. 
+            Service Staff will verify and close the ticket.
+          </AlertDescription>
+        </Alert>
+
+        {/* Tickets Grid */}
         {ticketsLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : !tickets.length ? (
+        ) : !tickets?.length ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <TicketIcon className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                No Assigned Tickets
-              </h3>
+              <h3 className="text-lg font-semibold mb-2">No Assigned Tickets</h3>
               <p className="text-muted-foreground max-w-sm">
-                You don't have any tickets assigned yet.
+                You don't have any tickets assigned to you yet. Check back later or contact your supervisor.
               </p>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-4">
             {tickets.map((ticket) => (
-              <FETicketCard
-                key={ticket.id}
-                ticket={ticket}
-                onAcknowledge={handleAcknowledge}
-                onMarkComplete={handleMarkComplete}
-                isPending={
-                  confirmOnsite.isPending || markComplete.isPending
-                }
-              />
+              <Card key={ticket.id} className="overflow-hidden">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="font-mono text-lg">{ticket.ticket_number}</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Created {format(new Date(ticket.created_at), 'PPp')}
+                      </p>
+                    </div>
+                    <StatusBadge status={ticket.status} />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Ticket Details */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-muted-foreground">Location</p>
+                        <p className="font-medium">{ticket.location || 'Not specified'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Truck className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-muted-foreground">Issue Type</p>
+                        <p className="font-medium">{ticket.issue_type || ticket.category || 'Not specified'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {ticket.vehicle_number && (
+                    <div className="rounded-lg bg-muted/50 p-3">
+                      <p className="text-sm text-muted-foreground">Vehicle Number</p>
+                      <p className="font-mono font-semibold">{ticket.vehicle_number}</p>
+                    </div>
+                  )}
+
+                  {/* Action Button */}
+                  <div className="pt-2">
+                    {getActionButton(ticket)}
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
