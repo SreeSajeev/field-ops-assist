@@ -9,6 +9,7 @@ export default function FEActionPage() {
   const { tokenId } = useParams<{ tokenId: string }>();
 
   const [loading, setLoading] = useState(true);
+  const [submitted, setSubmitted] = useState(false);
   const [token, setToken] = useState<any>(null);
   const [ticket, setTicket] = useState<any>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -17,17 +18,15 @@ export default function FEActionPage() {
   /* ================= LOAD TOKEN + TICKET ================= */
   useEffect(() => {
     const load = async () => {
+      if (!tokenId) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        if (!tokenId) {
-          setLoading(false);
-          return;
-        }
-
-        console.log("🔍 Loading FE token:", tokenId);
-
-        // 1️⃣ Load token
-        const { data: tokenRow, error: tokenError } = await supabase
-          .from("fe_action_tokens" as any)
+        // 🔥 Force ANY to avoid TS relational inference crash
+        const { data: tokenRow, error: tokenError } = await (supabase as any)
+          .from("fe_action_tokens")
           .select("*")
           .eq("id", tokenId)
           .eq("used", false)
@@ -35,47 +34,29 @@ export default function FEActionPage() {
           .single();
 
         if (tokenError || !tokenRow) {
-          console.error("❌ TOKEN ERROR:", tokenError);
-          toast({
-            title: "Invalid or expired link",
-            description: tokenError?.message,
-            variant: "destructive",
-          });
+          console.error("TOKEN ERROR:", tokenError);
           setLoading(false);
           return;
         }
 
-        console.log("✅ Token loaded:", tokenRow);
         setToken(tokenRow);
 
-        // 2️⃣ Load ticket
-        const { data: ticketRow, error: ticketError } = await supabase
+        const { data: ticketRow, error: ticketError } = await (supabase as any)
           .from("tickets")
           .select("*")
           .eq("id", tokenRow.ticket_id)
           .single();
 
         if (ticketError || !ticketRow) {
-          console.error("❌ TICKET ERROR:", ticketError);
-          toast({
-            title: "Ticket not found",
-            description: ticketError?.message,
-            variant: "destructive",
-          });
+          console.error("TICKET ERROR:", ticketError);
           setLoading(false);
           return;
         }
 
-        console.log("✅ Ticket loaded:", ticketRow);
         setTicket(ticketRow);
-        setLoading(false);
       } catch (err) {
-        console.error("🔥 LOAD FAILED:", err);
-        toast({
-          title: "Unexpected error",
-          description: "Check console for details",
-          variant: "destructive",
-        });
+        console.error("LOAD FAILED:", err);
+      } finally {
         setLoading(false);
       }
     };
@@ -91,9 +72,7 @@ export default function FEActionPage() {
     }
 
     try {
-      console.log("🚀 Submitting proof (BASE64)");
-
-      // Convert image to base64
+      // Convert file to base64
       const toBase64 = (file: File) =>
         new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -104,8 +83,8 @@ export default function FEActionPage() {
 
       const base64Image = await toBase64(file);
 
-      // Insert ticket comment
-      const { error: commentError } = await supabase
+      // 1️⃣ Insert comment
+      const { error: commentError } = await (supabase as any)
         .from("ticket_comments")
         .insert({
           ticket_id: ticket.id,
@@ -121,59 +100,66 @@ export default function FEActionPage() {
           },
         });
 
-      if (commentError) {
-        console.error("❌ COMMENT ERROR:", commentError);
-        throw new Error(commentError.message);
-      }
+      if (commentError) throw commentError;
 
-      // Update ticket status
-      const { error: statusError } = await supabase
+      // 2️⃣ Update status
+      const newStatus =
+        token.action_type === "ON_SITE"
+          ? "ON_SITE"
+          : "RESOLVED_PENDING_VERIFICATION";
+
+      const { error: statusError } = await (supabase as any)
         .from("tickets")
-        .update({
-          status:
-            token.action_type === "ON_SITE"
-              ? "ON_SITE"
-              : "RESOLVED_PENDING_VERIFICATION",
-        })
+        .update({ status: newStatus })
         .eq("id", ticket.id);
 
-      if (statusError) {
-        console.error("❌ STATUS ERROR:", statusError);
-        throw new Error(statusError.message);
-      }
+      if (statusError) throw statusError;
 
-      // Mark token as used
-      const { error: tokenUpdateError } = await supabase
-        .from("fe_action_tokens" as any)
+      // 3️⃣ Mark token used
+      await (supabase as any)
+        .from("fe_action_tokens")
         .update({ used: true })
         .eq("id", token.id);
 
-      if (tokenUpdateError) {
-        console.error("❌ TOKEN UPDATE ERROR:", tokenUpdateError);
-        throw new Error(tokenUpdateError.message);
-      }
+      setSubmitted(true);
 
       toast({
         title: "Proof submitted successfully",
         description: "You may now close this page.",
       });
     } catch (err: any) {
-      console.error("🔥 SUBMISSION FAILED:", err);
+      console.error("SUBMIT FAILED:", err);
       toast({
         title: "Submission failed",
-        description: err?.message || "Check console",
+        description: err?.message,
         variant: "destructive",
       });
     }
   };
 
   /* ================= UI ================= */
+
   if (loading) {
     return <div className="p-8 text-center">Loading…</div>;
   }
 
   if (!token || !ticket) {
     return <div className="p-8 text-center">Invalid or expired link</div>;
+  }
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="p-6 text-center">
+          <h2 className="text-lg font-semibold text-green-600">
+            Proof Submitted
+          </h2>
+          <p className="text-sm text-muted-foreground mt-2">
+            You may close this page.
+          </p>
+        </Card>
+      </div>
+    );
   }
 
   return (

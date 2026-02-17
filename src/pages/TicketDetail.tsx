@@ -18,7 +18,8 @@ import { StatusBadge } from "@/components/tickets/StatusBadge";
 import { ConfidenceScore } from "@/components/tickets/ConfidenceScore";
 import { FEAssignmentModal } from "@/components/tickets/FEAssignmentModal";
 import { CloseTicketDialog } from "@/components/tickets/CloseTicketDialog";
-import { generateFEToken } from "@/lib/feToken";
+import { generateFEActionToken } from "@/lib/feToken";
+
 
 import {
   useTicket,
@@ -103,18 +104,17 @@ export default function TicketDetail() {
     if (!ticket || !currentAssignment) return;
 
     try {
-      const token = await generateFEToken(
-        ticket.id,
-        currentAssignment.fe_id,
-        type
-      );
-      setTokenLabel(type);
-      setGeneratedToken(token.id);
-    } catch {
-      toast({
-        title: "Token generation failed",
-        variant: "destructive",
-      });
+      const result = await generateFEActionToken({
+  ticketId: ticket.id,
+  feId: currentAssignment.fe_id,
+  actionType: type,
+});
+
+setTokenLabel(type);
+setGeneratedToken(result.tokenId);
+
+    } catch (error) {
+      
     }
   };
 
