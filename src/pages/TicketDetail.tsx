@@ -205,7 +205,7 @@ const handleClose = async () => {
 
             {isPendingVerification && (
               <Button
-                onClick={handleVerifyAndClose}
+                onClick={handleClose}
                 className="bg-green-600 hover:bg-green-700"
               >
                 Verify & Close
