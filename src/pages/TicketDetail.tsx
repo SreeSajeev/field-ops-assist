@@ -1,5 +1,5 @@
 // src/pages/TicketDetail.tsx
-// Backend-authoritative, reconciliation-safe version
+// 🔥 DEMO MODE – Proof ALWAYS visible, Close ALWAYS allowed
 
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -33,14 +33,6 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
-/* ================= TYPES ================= */
-
-type FEAttachment = {
-  image_url?: string;
-  remarks?: string;
-  action_type?: string;
-};
-
 /* ================= COMPONENT ================= */
 
 export default function TicketDetail() {
@@ -54,15 +46,12 @@ export default function TicketDetail() {
   const closeTicket = useCloseTicket();
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
-
-  /* ================= LOADING / EMPTY ================= */
 
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="flex h-64 items-center justify-center text-muted-foreground">
+        <div className="flex h-64 items-center justify-center">
           Loading ticket…
         </div>
       </DashboardLayout>
@@ -72,69 +61,29 @@ export default function TicketDetail() {
   if (!ticket) {
     return (
       <DashboardLayout>
-        <div className="text-center space-y-2">
-          <h2 className="text-xl font-semibold">Ticket not found</h2>
-          <Button variant="link" onClick={() => navigate("/app/tickets")}>
-            Back to tickets
-          </Button>
+        <div className="text-center">
+          Ticket not found
         </div>
       </DashboardLayout>
     );
   }
-
-  /* ================= DERIVED STATE ================= */
 
   const currentAssignment =
     assignments && assignments.length > 0 ? assignments[0] : null;
 
   const assignedFE = currentAssignment?.field_executives ?? null;
 
-  const canAssignFE =
-    !currentAssignment &&
-    (ticket.status === "OPEN" || ticket.status === "ASSIGNED");
+  /* =====================================================
+     🔥 FORCE CLOSE (NO STATUS BLOCKERS)
+  ===================================================== */
 
-  const isPendingVerification =
-    ticket.status === "RESOLVED_PENDING_VERIFICATION";
-
-  const isResolved = ticket.status === "RESOLVED";
-
-  /* ================= ACTIONS (RECONCILED) ================= */
-
-  const handleApprove = async () => {
-    if (!ticket.needs_review || actionBusy) return;
-    setActionBusy(true);
-
-    try {
-      await fetch(
-        `${import.meta.env.VITE_CRM_API_URL}/tickets/${ticket.id}/approve-review`,
-        { method: "POST" }
-      );
-
-      await queryClient.invalidateQueries({
-        queryKey: ["ticket", ticket.id],
-      });
-
-      toast({
-        title: "Ticket approved",
-        description: "Ticket reopened and ready for assignment.",
-      });
-    } catch {
-      toast({
-        title: "Approval failed",
-        variant: "destructive",
-      });
-    } finally {
-      setActionBusy(false);
-    }
-  };
-
-  const handleVerifyOnsite = async () => {
+  const handleForceClose = async () => {
     if (actionBusy) return;
     setActionBusy(true);
 
     try {
       await fetch(
-        `${import.meta.env.VITE_CRM_API_URL}/tickets/${ticket.id}/on-site-token`,
+        `${import.meta.env.VITE_CRM_API_URL}/tickets/${ticket.id}/close`,
         { method: "POST" }
       );
 
@@ -142,13 +91,16 @@ export default function TicketDetail() {
         queryKey: ["ticket", ticket.id],
       });
 
+      await queryClient.invalidateQueries({
+        queryKey: ["ticket-comments", ticket.id],
+      });
+
       toast({
-        title: "On-site proof verified",
-        description: "Resolution link sent to Field Executive.",
+        title: "Ticket Closed",
       });
     } catch {
       toast({
-        title: "Verification failed",
+        title: "Close failed",
         variant: "destructive",
       });
     } finally {
@@ -156,29 +108,10 @@ export default function TicketDetail() {
     }
   };
 
-  const handleVerifyAndClose = () => {
-    closeTicket.mutate({ ticketId: ticket.id });
-  };
-
-  const handleCloseTicket = () => {
-    closeTicket.mutate(
-      { ticketId: ticket.id },
-      {
-        onSuccess: async () => {
-          await queryClient.invalidateQueries({
-            queryKey: ["ticket", ticket.id],
-          });
-          setCloseDialogOpen(false);
-        },
-      }
-    );
-  };
-
-  /* ================= UI ================= */
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
+
         {/* HEADER */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
@@ -196,15 +129,6 @@ export default function TicketDetail() {
                   {ticket.ticket_number}
                 </h1>
                 <StatusBadge status={ticket.status} />
-                {ticket.needs_review && (
-                  <Badge
-                    variant="outline"
-                    className="border-warning text-warning"
-                  >
-                    <AlertTriangle className="mr-1 h-3 w-3" />
-                    Needs Review
-                  </Badge>
-                )}
               </div>
               <p className="text-muted-foreground">
                 Opened {format(new Date(ticket.opened_at), "PPpp")}
@@ -212,40 +136,23 @@ export default function TicketDetail() {
             </div>
           </div>
 
-          <div className="flex gap-2">
-            {ticket.needs_review && (
-              <Button disabled={actionBusy} onClick={handleApprove}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Approve & Open
-              </Button>
-            )}
-
-            {isPendingVerification && (
-              <Button
-                disabled={actionBusy}
-                onClick={handleVerifyAndClose}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Verify & Close
-              </Button>
-            )}
-
-            {isResolved && (
-              <Badge className="bg-green-100 text-green-800">
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Resolved
-              </Badge>
-            )}
-          </div>
+          {/* 🔥 ALWAYS SHOW CLOSE BUTTON */}
+          <Button
+            onClick={handleForceClose}
+            disabled={actionBusy}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle className="mr-2 h-4 w-4" />
+            Close Ticket
+          </Button>
         </div>
-
-        {/* REST OF FILE UNCHANGED */}
-
 
         {/* MAIN GRID */}
         <div className="grid gap-6 lg:grid-cols-3">
+
           {/* LEFT */}
           <div className="lg:col-span-2 space-y-6">
+
             {/* DETAILS */}
             <Card>
               <CardHeader>
@@ -253,23 +160,11 @@ export default function TicketDetail() {
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 <Info label="Complaint ID" value={ticket.complaint_id} />
-                <Info
-                  label="Vehicle Number"
-                  value={ticket.vehicle_number}
-                  mono
-                />
+                <Info label="Vehicle Number" value={ticket.vehicle_number} />
                 <Info label="Category" value={ticket.category} />
                 <Info label="Issue Type" value={ticket.issue_type} />
-                <IconInfo
-                  icon={MapPin}
-                  label="Location"
-                  value={ticket.location}
-                />
-                <IconInfo
-                  icon={Mail}
-                  label="Reported By"
-                  value={ticket.opened_by_email}
-                />
+                <IconInfo icon={MapPin} label="Location" value={ticket.location} />
+                <IconInfo icon={Mail} label="Reported By" value={ticket.opened_by_email} />
               </CardContent>
             </Card>
 
@@ -277,115 +172,75 @@ export default function TicketDetail() {
             {assignedFE && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Truck className="h-5 w-5" />
-                    Assigned Field Executive
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-semibold">
-                    {assignedFE.name?.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold">{assignedFE.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Assigned{" "}
-                      {format(
-                        new Date(
-                          currentAssignment?.assigned_at ??
-                            currentAssignment?.created_at ??
-                            ticket.opened_at
-                        ),
-                        "PPp"
-                      )}
-                    </p>
-                  </div>
-                  <Badge>
-                    {assignedFE.active ? "Active" : "Inactive"}
-                  </Badge>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ASSIGN FE */}
-            {canAssignFE && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Assign Field Executive</CardTitle>
+                  <CardTitle>Assigned Field Executive</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Button
-                    className="w-full"
-                    onClick={() => setAssignModalOpen(true)}
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    Assign Field Executive
-                  </Button>
+                  <p className="font-semibold">{assignedFE.name}</p>
                 </CardContent>
               </Card>
             )}
 
-            {/* ACTIVITY */}
+            {/* 🔥 ACTIVITY — PROOF ALWAYS RENDERS */}
             <Card>
               <CardHeader>
                 <CardTitle>Activity Timeline</CardTitle>
               </CardHeader>
 
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 {comments?.length ? (
-                  comments.map((c) => {
-                    let attachment: FEAttachment | null = null;
+                  comments.map((c: any) => {
+                    let attachments: any[] = [];
 
                     try {
                       if (c.attachments) {
-                        attachment =
+                        attachments =
                           typeof c.attachments === "string"
                             ? JSON.parse(c.attachments)
                             : c.attachments;
                       }
+
+                      if (!Array.isArray(attachments)) {
+                        attachments = [attachments];
+                      }
                     } catch {
-                      attachment = null;
+                      attachments = [];
                     }
 
-                    // 🔐 SAFE DISPLAY MESSAGE
-                    const message =
-                      c.body ||
-                      (attachment?.action_type === "ON_SITE"
-                        ? "Field Executive submitted on-site proof"
-                        : attachment?.action_type === "RESOLUTION"
-                        ? "Field Executive submitted resolution proof"
-                        : c.source === "SYSTEM"
-                        ? "System updated ticket status"
-                        : "Activity recorded");
-
                     return (
-                      <div key={c.id} className="relative pl-4 border-l-2">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                          <Badge variant="outline">{c.source}</Badge>
-                          <span>{format(new Date(c.created_at), "PPp")}</span>
+                      <div key={c.id} className="border-l-2 pl-4 space-y-2">
+                        <div className="text-xs text-muted-foreground">
+                          {c.source} •{" "}
+                          {format(new Date(c.created_at), "PPp")}
                         </div>
 
-                        <p className="text-sm">{message}</p>
+                        <p className="text-sm">
+                          {c.body || "Proof uploaded"}
+                        </p>
 
-                        {attachment?.image_url && (
-                          <img
-                            src={attachment.image_url}
-                            alt="FE proof"
-                            className="mt-3 max-h-64 rounded border"
-                          />
-                        )}
+                        {/* 🔥 FORCE RENDER ALL ATTACHMENTS */}
+                        {attachments.map((a, i) => (
+                          <div key={i} className="space-y-2">
+                            {a?.image_url && (
+                              <img
+                                src={a.image_url}
+                                alt="proof"
+                                className="max-h-72 rounded border"
+                              />
+                            )}
 
-                        {attachment?.remarks && (
-                          <p className="mt-2 text-sm text-muted-foreground">
-                            <strong>Remarks:</strong> {attachment.remarks}
-                          </p>
-                        )}
+                            {a?.remarks && (
+                              <p className="text-sm text-muted-foreground">
+                                <strong>Remarks:</strong> {a.remarks}
+                              </p>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     );
                   })
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No activity recorded yet.
+                    No activity yet.
                   </p>
                 )}
               </CardContent>
@@ -394,7 +249,7 @@ export default function TicketDetail() {
           </div>
 
           {/* RIGHT */}
-          <div className="space-y-6">
+          <div>
             <Card>
               <CardHeader>
                 <CardTitle>Parsing Confidence</CardTitle>
@@ -406,16 +261,6 @@ export default function TicketDetail() {
                 />
               </CardContent>
             </Card>
-
-            {ticket.status === "ON_SITE" && (
-              <Button
-                disabled={actionBusy}
-                className="w-full"
-                onClick={handleVerifyOnsite}
-              >
-                Verify On-Site Proof
-              </Button>
-            )}
           </div>
         </div>
       </div>
@@ -425,27 +270,17 @@ export default function TicketDetail() {
         open={assignModalOpen}
         onOpenChange={setAssignModalOpen}
       />
-
-      <CloseTicketDialog
-        ticket={ticket}
-        open={closeDialogOpen}
-        onOpenChange={setCloseDialogOpen}
-        onConfirm={handleCloseTicket}
-        isPending={closeTicket.isPending}
-      />
     </DashboardLayout>
   );
 }
 
 /* ================= HELPERS ================= */
 
-function Info({ label, value, mono }: any) {
+function Info({ label, value }: any) {
   return (
     <div>
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={mono ? "font-mono font-medium" : "font-medium"}>
-        {value || "—"}
-      </p>
+      <p className="font-medium">{value || "—"}</p>
     </div>
   );
 }

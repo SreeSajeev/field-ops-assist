@@ -105,7 +105,7 @@ export default function FEActionPage() {
       setSubmitted(true);
 
       toast({
-        title: "Proof submitted (demo mode)",
+        title: "Proof submitted successfully",
       });
     } finally {
       setSubmitting(false);
@@ -140,7 +140,7 @@ export default function FEActionPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Upload Proof
+            Field Executive Upload Proof
           </CardTitle>
         </CardHeader>
 
