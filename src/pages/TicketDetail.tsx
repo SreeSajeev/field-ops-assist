@@ -101,22 +101,42 @@ export default function TicketDetail() {
   };
 
   const generateToken = async (type: "ON_SITE" | "RESOLUTION") => {
-    if (!ticket || !currentAssignment) return;
+  if (!ticket || !currentAssignment?.fe_id) return;
 
-    try {
-      const result = await generateFEActionToken({
-  ticketId: ticket.id,
-  feId: currentAssignment.fe_id,
-  actionType: type,
-});
+  try {
+    const result = await generateFEActionToken({
+      ticketId: ticket.id,
+      feId: currentAssignment.fe_id,
+      actionType: type,
+    });
 
-setTokenLabel(type);
-setGeneratedToken(result.tokenId);
+    // 🔥 Restore lifecycle transitions (THIS WAS MISSING)
 
-    } catch (error) {
-      
+    if (type === "ON_SITE") {
+      await updateStatus.mutateAsync({
+        ticketId: ticket.id,
+        status: "EN_ROUTE" as TicketStatus,
+      });
     }
-  };
+
+    if (type === "RESOLUTION") {
+      await updateStatus.mutateAsync({
+        ticketId: ticket.id,
+        status: "ON_SITE" as TicketStatus,
+      });
+    }
+
+    setTokenLabel(type);
+    setGeneratedToken(result.tokenId);
+
+  } catch {
+    toast({
+      title: "Token generation failed",
+      variant: "destructive",
+    });
+  }
+};
+
 
   const handleCloseTicket = () => {
     updateStatus.mutate(
