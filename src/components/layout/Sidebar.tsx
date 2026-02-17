@@ -11,6 +11,7 @@ import {
   Clock,
   FileText,
   BarChart3,
+  Shield,
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -66,7 +67,7 @@ export function Sidebar() {
     items: typeof navigation;
   }) => (
     <>
-      <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
+      <div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/40">
         {title}
       </div>
 
@@ -79,18 +80,11 @@ export function Sidebar() {
           <Link
             key={item.name}
             to={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200",
-              isActive
-                ? "bg-white/10 text-white"
-                : "text-white/70 hover:bg-white/5 hover:text-white"
-            )}
+            className={cn('nav-item group', isActive && 'active')}
           >
-            <item.icon className="h-4 w-4" />
+            <item.icon className="h-4.5 w-4.5" />
             <span className="flex-1">{item.name}</span>
-            {isActive && (
-              <ChevronRight className="h-4 w-4 opacity-60" />
-            )}
+            {isActive && <ChevronRight className="h-4 w-4 opacity-70" />}
           </Link>
         );
       })}
@@ -98,70 +92,74 @@ export function Sidebar() {
   );
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-[#1E1B2E] border-r border-white/10">
-
-      {/* =====================================================
-         SAHAYA BRAND HEADER
-      ====================================================== */}
-      <div className="flex flex-col gap-1 border-b border-white/10 px-6 py-5">
-
-        {/* Sahaya Logo */}
-        <div className="flex items-center gap-3">
-          <img
-            src="/sahaya-logo.png"
-            alt="Sahaya"
-            className="h-10 w-auto"
-          />
-          <div>
-            <h1 className="text-lg font-bold text-white tracking-tight">
-              Sahaya
-            </h1>
-            <p className="text-[10px] uppercase tracking-wider text-orange-400">
-              Service Operations Platform
-            </p>
-          </div>
+    <div
+      className="flex h-screen w-64 flex-col"
+      style={{ background: 'hsl(285 45% 18%)' }}
+    >
+      {/* Logo Section (UNCHANGED STYLE) */}
+      <div
+        className="flex h-16 items-center gap-3 border-b px-5"
+        style={{ borderColor: 'hsl(285 35% 25%)' }}
+      >
+        <div
+          className="flex h-10 w-10 items-center justify-center rounded-xl logo-glow"
+          style={{
+            background:
+              'linear-gradient(135deg, hsl(32 95% 48%), hsl(32 95% 55%))',
+          }}
+        >
+          <Shield className="h-5 w-5 text-white" />
         </div>
 
-        {/* Powered by Pariskq */}
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-[10px] uppercase tracking-wider text-white/40">
-            Powered by
-          </span>
-          <img
-            src="/pariskq-logo.png"
-            alt="Pariskq"
-            className="h-4 w-auto opacity-80"
-          />
+        <div>
+          <h1 className="text-base font-bold text-white tracking-tight">
+            Sahaya
+          </h1>
+
+          <p
+            className="text-[10px] font-medium uppercase tracking-wider"
+            style={{ color: 'hsl(32 95% 60%)' }}
+          >
+            Powered by Pariskq
+          </p>
         </div>
       </div>
 
-      {/* =====================================================
-         NAVIGATION
-      ====================================================== */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-6">
+      {/* Navigation */}
+      <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-thin px-3 py-5">
         <NavSection title="Operations" items={navigation} />
 
-        <div className="my-5 border-t border-white/10" />
+        <div
+          className="my-4 border-t"
+          style={{ borderColor: 'hsl(285 35% 25%)' }}
+        />
 
         <NavSection title="Monitoring" items={monitoringNav} />
 
         {isAdmin && (
           <>
-            <div className="my-5 border-t border-white/10" />
-            <NavSection
-              title="Administration"
-              items={adminNavigation}
+            <div
+              className="my-4 border-t"
+              style={{ borderColor: 'hsl(285 35% 25%)' }}
             />
+            <NavSection title="Administration" items={adminNavigation} />
           </>
         )}
       </nav>
 
-      {/* =====================================================
-         USER FOOTER
-      ====================================================== */}
-      <div className="border-t border-white/10 p-4">
+      {/* User Section */}
+      <div
+        className="border-t p-4"
+        style={{ borderColor: 'hsl(285 35% 25%)' }}
+      >
         <div className="mb-3 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 font-semibold text-orange-400">
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-full font-semibold"
+            style={{
+              background: 'hsl(285 40% 28%)',
+              color: 'hsl(32 95% 60%)',
+            }}
+          >
             {userProfile?.name?.charAt(0).toUpperCase() ||
               user?.email?.charAt(0).toUpperCase() ||
               'U'}
@@ -173,7 +171,8 @@ export function Sidebar() {
             </p>
             <Badge
               variant="outline"
-              className="text-[10px] px-1.5 py-0 border-orange-400 text-orange-400"
+              className="text-[10px] px-1.5 py-0 border-primary/50"
+              style={{ color: 'hsl(32 95% 60%)' }}
             >
               {getRoleDisplay()}
             </Badge>
@@ -183,7 +182,8 @@ export function Sidebar() {
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start text-sm text-white/70 hover:bg-white/5 hover:text-white"
+          className="w-full justify-start text-sm hover:bg-[hsl(285_40%_25%)]"
+          style={{ color: 'hsl(270 10% 70%)' }}
           onClick={signOut}
         >
           <LogOut className="mr-2 h-4 w-4" />
