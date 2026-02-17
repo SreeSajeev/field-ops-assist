@@ -12,6 +12,7 @@ import {
   Clock,
   Image as ImageIcon,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatusBadge } from "@/components/tickets/StatusBadge";
@@ -37,6 +38,7 @@ import { toast } from "@/hooks/use-toast";
 
 export default function TicketDetail() {
   const { ticketId } = useParams<{ ticketId: string }>();
+  const navigate = useNavigate();
 
   const { data: ticket, isLoading } = useTicket(ticketId ?? "");
   const { data: comments } = useTicketComments(ticketId ?? "");
@@ -182,11 +184,14 @@ export default function TicketDetail() {
         {/* HEADER */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/tickets">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+
 
             <div>
               <div className="flex items-center gap-3">
