@@ -1,10 +1,5 @@
 /**
- * FEActionPage - TOKEN BASED (Backend Authoritative)
- *
- * RULES:
- * - NO direct Supabase lifecycle reads
- * - Backend validates token
- * - Backend controls state transitions
+ * FEActionPage - Backend Validated
  */
 
 import { useEffect, useState } from "react";
@@ -20,10 +15,10 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Upload, CheckCircle } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_CRM_API_URL;
+/* 🔥 HARD CODE FOR DEMO (NO ENV ISSUES) */
+const API_BASE = "https://pariskq-crm-backend.onrender.com";
 
 export default function FEActionPage() {
-  // 🔥 FIX: param name must match router definition
   const { token } = useParams<{ token: string }>();
 
   const [loading, setLoading] = useState(true);
@@ -34,26 +29,38 @@ export default function FEActionPage() {
   const [file, setFile] = useState<File | null>(null);
   const [remarks, setRemarks] = useState("");
 
+  /* ======================================================
+     1️⃣ VALIDATE TOKEN WITH BACKEND
+  ====================================================== */
   useEffect(() => {
-  if (!token) {
-    setLoading(false);
-    return;
-  }
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
-  // 🔥 DEMO MODE — Skip backend validation
-  setContext({
-    ticketId: "c3e2103d-1be7-44e3-9a5b-2a5d2ae3301e", // your ticket id
-    actionType: "ON_SITE",
-    ticketNumber: "TKT-MLQ3VQ26-OF2W",
-    ticketStatus: "ASSIGNED",
-  });
+    const validate = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/fe/action/${token}`);
 
-  setLoading(false);
-}, [token]);
+        if (!res.ok) {
+          throw new Error("Invalid token");
+        }
 
+        const data = await res.json();
+        setContext(data);
+      } catch (err) {
+        console.error("[FEActionPage] token validation failed:", err);
+        setContext(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    validate();
+  }, [token]);
 
   /* ======================================================
-     SUBMIT PROOF
+     2️⃣ SUBMIT PROOF
   ====================================================== */
   const handleSubmit = async () => {
     if (!file || !context || !token) {
@@ -89,7 +96,7 @@ export default function FEActionPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          token: token,
+          token,
           attachments: [
             {
               image_url: urlData.publicUrl,
@@ -109,7 +116,6 @@ export default function FEActionPage() {
 
       toast({
         title: "Proof submitted successfully",
-        description: "You may now close this page.",
       });
     } catch (err: any) {
       console.error("[FEActionPage SUBMIT ERROR]", err);
