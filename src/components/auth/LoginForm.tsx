@@ -24,7 +24,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Shield,
   Truck,
   Mail,
   ArrowRight,
@@ -39,6 +38,10 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] =
     useState<UserRole>('STAFF');
+
+  /* =========================
+     HANDLERS
+  ========================= */
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -95,19 +98,21 @@ export function LoginForm() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      {/* ================= LEFT: BRAND / SALES ================= */}
+
+      {/* ================= LEFT PANEL ================= */}
       <div className="hidden lg:flex flex-col justify-between p-12 bg-gradient-to-br from-[#3b124d] to-[#5a1a6d] text-white">
-        {/* Logo */}
+
+        {/* Top Branding */}
         <div className="flex items-center gap-4">
           <img
-            src="/pariskq-logo.png"
-            alt="Pariskq Logo"
+            src="/sahaya-logo.png"
+            alt="Sahaya Logo"
             className="h-12 w-auto"
           />
           <div>
             <h1 className="text-2xl font-bold">Sahaya</h1>
             <p className="text-sm tracking-wide text-orange-300">
-              by Pariskq
+              Service Operations Platform
             </p>
           </div>
         </div>
@@ -115,33 +120,32 @@ export function LoginForm() {
         {/* Pitch */}
         <div className="space-y-8 max-w-lg">
           <h2 className="text-4xl font-bold leading-tight">
-            End-to-End Complaint Resolution,
+            Structured Field Operations,
             <br />
             <span className="text-orange-300">
-              Built for Real Operations
+              Powered by Proof & Accountability
             </span>
           </h2>
 
           <p className="text-lg text-white/80">
-            Sahaya is a secure, token-driven service workflow
-            platform that connects service teams, field
-            executives, and customers - with proof at every
-            step.
+            Sahaya connects service teams, field executives,
+            and customers through a secure, token-driven workflow
+            with verified proof at every stage.
           </p>
 
           <div className="space-y-4">
             {[
               {
                 icon: Mail,
-                text: 'Automatic ticket creation from emails',
+                text: 'Automatic ticket creation from inbound emails',
               },
               {
                 icon: Truck,
-                text: 'Field Executive coordination with action tokens',
+                text: 'Token-based field executive coordination',
               },
               {
                 icon: CheckCircle,
-                text: 'Verified on-site and resolution proofs',
+                text: 'Verified on-site & resolution proof workflow',
               },
             ].map((item, i) => (
               <div
@@ -155,22 +159,39 @@ export function LoginForm() {
           </div>
         </div>
 
-        <p className="text-xs text-white/40">
-          © 2025 Pariskq. All rights reserved.
-        </p>
+        {/* Powered by Pariskq (BOTTOM LEFT) */}
+        <div className="flex flex-col items-start gap-2">
+          <p className="text-xs text-white/50 uppercase tracking-wider">
+            Powered by
+          </p>
+          <img
+            src="/pariskq-logo.png"
+            alt="Pariskq"
+            className="h-8 w-auto opacity-90"
+          />
+        </div>
       </div>
 
-      {/* ================= RIGHT: AUTH ================= */}
+      {/* ================= RIGHT PANEL ================= */}
       <div className="flex items-center justify-center p-6 bg-background">
         <Card className="w-full max-w-md shadow-xl border-0">
           <CardHeader className="text-center">
-            <div className="lg:hidden flex justify-center mb-4">
+            <div className="lg:hidden flex flex-col items-center mb-4">
               <img
-                src="/pariskq-logo.png"
-                alt="Pariskq Logo"
+                src="/sahaya-logo.png"
+                alt="Sahaya"
                 className="h-12"
               />
+              <p className="text-xs text-muted-foreground mt-2">
+                Powered by
+              </p>
+              <img
+                src="/pariskq-logo.png"
+                alt="Pariskq"
+                className="h-6 mt-1"
+              />
             </div>
+
             <CardTitle className="text-2xl">
               Welcome to Sahaya
             </CardTitle>
