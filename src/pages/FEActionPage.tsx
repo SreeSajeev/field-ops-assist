@@ -23,7 +23,8 @@ import { Loader2, Upload, CheckCircle } from "lucide-react";
 const API_BASE = import.meta.env.VITE_CRM_API_URL;
 
 export default function FEActionPage() {
-  const { tokenId } = useParams<{ tokenId: string }>();
+  // 🔥 FIX: param name must match router definition
+  const { token } = useParams<{ token: string }>();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -41,19 +42,15 @@ export default function FEActionPage() {
 
     const validate = async () => {
       try {
-        if (!tokenId) {
+        if (!token) {
           setLoading(false);
           return;
         }
 
-        const res = await fetch(`${API_BASE}/fe/action/${tokenId}`);
+        const res = await fetch(`${API_BASE}/fe/action/${token}`);
 
         if (!res.ok) {
-          toast({
-            title: "Invalid or expired link",
-            variant: "destructive",
-          });
-          setLoading(false);
+          if (!cancelled) setContext(null);
           return;
         }
 
@@ -64,10 +61,7 @@ export default function FEActionPage() {
         }
       } catch (err) {
         console.error("[FEActionPage TOKEN ERROR]", err);
-        toast({
-          title: "Unable to validate link",
-          variant: "destructive",
-        });
+        if (!cancelled) setContext(null);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -78,13 +72,13 @@ export default function FEActionPage() {
     return () => {
       cancelled = true;
     };
-  }, [tokenId]);
+  }, [token]);
 
   /* ======================================================
      SUBMIT PROOF
   ====================================================== */
   const handleSubmit = async () => {
-    if (!file || !context) {
+    if (!file || !context || !token) {
       toast({
         title: "Please upload a photo",
         variant: "destructive",
@@ -95,7 +89,6 @@ export default function FEActionPage() {
     setSubmitting(true);
 
     try {
-      /* 1️⃣ Upload image to Supabase Storage */
       const filePath = `tickets/${context.ticketId}/${context.actionType}/${Date.now()}-${file.name}`;
 
       const { error: uploadError } = await supabase.storage
@@ -112,18 +105,18 @@ export default function FEActionPage() {
         throw new Error("Failed to generate image URL");
       }
 
-      /* 2️⃣ Submit proof to backend */
       const res = await fetch(`${API_BASE}/fe/proof`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          token: tokenId,
+          token: token,
           attachments: [
             {
-              url: urlData.publicUrl,
+              image_url: urlData.publicUrl,
               remarks,
+              action_type: context.actionType,
             },
           ],
         }),
@@ -192,10 +185,6 @@ export default function FEActionPage() {
       </div>
     );
   }
-
-  /* ======================================================
-     MAIN UI
-  ====================================================== */
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
