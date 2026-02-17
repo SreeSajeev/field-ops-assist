@@ -65,14 +65,9 @@ export default function FEMyTickets() {
 
       // Extract tickets that have current_assignment_id matching
       const assignedTickets = (assignments || [])
-        .map(a => a.tickets)
-        .filter((t): t is Ticket => {
-          if (!t) return false;
-          const ticket = t as Ticket;
-          // Only show tickets that are currently assigned to this FE
-          return ['ASSIGNED', 'ON_SITE', 'RESOLVED_PENDING_VERIFICATION'].includes(ticket.status);
-        })
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  .map(a => a.tickets)
+  .filter((t): t is Ticket => !!t) // 🔥 show ALL statuses
+  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       return assignedTickets as Ticket[];
     },
