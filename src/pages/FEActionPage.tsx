@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,43 +9,78 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Upload, CheckCircle } from "lucide-react";
-
-/* 🔥 HARD CODE BACKEND FOR DEMO STABILITY */
-const API_BASE = "https://pariskq-crm-backend.onrender.com";
 
 export default function FEActionPage() {
   const { tokenId } = useParams<{ tokenId: string }>();
-  const token = tokenId;
 
-
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<any>(null);
+  const [ticket, setTicket] = useState<any>(null);
   const [file, setFile] = useState<File | null>(null);
   const [remarks, setRemarks] = useState("");
 
-  /* ======================================================
-     🚀 DEMO RULE:
-     If URL has a token, ALWAYS allow page.
-     Never show invalid state.
-  ====================================================== */
-  if (!token) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card>
-          <CardContent className="pt-6 text-center text-destructive">
-            Invalid link
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  /* ================= LOAD TOKEN + TICKET ================= */
+  useEffect(() => {
+    const load = async () => {
+      try {
+        if (!tokenId) {
+          setLoading(false);
+          return;
+        }
 
-  /* ======================================================
-     SUBMIT PROOF (REAL BACKEND CALL)
-  ====================================================== */
+        // 1️⃣ Load FE action token
+        const { data: tokenRow, error: tokenError } = await (supabase as any)
+          .from("fe_action_tokens")
+          .select("*")
+          .eq("id", tokenId)
+          .eq("used", false)
+          .gt("expires_at", new Date().toISOString())
+          .single();
+
+        if (tokenError || !tokenRow) {
+          toast({
+            title: "Invalid or expired link",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
+        setToken(tokenRow);
+
+        // 2️⃣ Load ticket
+        const { data: ticketRow, error: ticketError } = await supabase
+          .from("tickets")
+          .select("*")
+          .eq("id", tokenRow.ticket_id)
+          .single();
+
+        if (ticketError || !ticketRow) {
+          toast({
+            title: "Ticket not found",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
+        setTicket(ticketRow);
+        setLoading(false);
+      } catch (err) {
+        toast({
+          title: "Unexpected error",
+          variant: "destructive",
+        });
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [tokenId]);
+
+  /* ================= SUBMIT PROOF ================= */
   const handleSubmit = async () => {
-    if (!file) {
+    if (!file || !token || !ticket) {
       toast({
         title: "Please upload a photo",
         variant: "destructive",
@@ -53,98 +88,96 @@ export default function FEActionPage() {
       return;
     }
 
-    setSubmitting(true);
-
     try {
-      // 1️⃣ Upload image to Supabase
-      const filePath = `tickets/${token}/${Date.now()}-${file.name}`;
+      // Convert image to base64
+      const toBase64 = (file: File) =>
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+        });
 
-      const { error: uploadError } = await supabase.storage
-        .from("Ticket_Uploads")
-        .upload(filePath, file);
+      const base64Image = await toBase64(file);
 
-      if (uploadError) throw uploadError;
+      // Insert comment
+      const { error: commentError } = await supabase
+        .from("ticket_comments")
+        .insert({
+          ticket_id: ticket.id,
+          source: "FE",
+          body:
+            token.action_type === "ON_SITE"
+              ? "On-site proof submitted"
+              : "Resolution proof submitted",
+          attachments: {
+            image_base64: base64Image,
+            remarks,
+            action_type: token.action_type,
+          },
+        });
 
-      const { data: urlData } = supabase.storage
-        .from("Ticket_Uploads")
-        .getPublicUrl(filePath);
-
-      if (!urlData?.publicUrl) {
-        throw new Error("Image upload failed");
+      if (commentError) {
+        throw commentError;
       }
 
-      // 2️⃣ Send to backend (even if backend rejects,
-      //     demo UI still succeeds visually)
-      await fetch(`${API_BASE}/fe/proof`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          token,
-          attachments: [
-            {
-              image_url: urlData.publicUrl,
-              remarks,
-            },
-          ],
-        }),
-      });
+      // Update ticket status
+      const newStatus =
+        token.action_type === "ON_SITE"
+          ? "ON_SITE"
+          : "RESOLVED_PENDING_VERIFICATION";
 
-      setSubmitted(true);
+      const { error: statusError } = await supabase
+        .from("tickets")
+        .update({ status: newStatus })
+        .eq("id", ticket.id);
+
+      if (statusError) {
+        throw statusError;
+      }
+
+      // Mark token as used
+      await (supabase as any)
+        .from("fe_action_tokens")
+        .update({ used: true })
+        .eq("id", token.id);
 
       toast({
         title: "Proof submitted successfully",
       });
 
+      window.location.reload();
     } catch (err: any) {
-      console.error("Demo proof error:", err);
-
-      // 🔥 DEMO MODE:
-      // Even if backend fails, show success visually
-      setSubmitted(true);
-
       toast({
-        title: "Proof submitted successfully",
+        title: "Submission failed",
+        description: err.message,
+        variant: "destructive",
       });
-    } finally {
-      setSubmitting(false);
     }
   };
 
-  /* ======================================================
-     SUCCESS SCREEN
-  ====================================================== */
-  if (submitted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card>
-          <CardContent className="pt-6 text-center space-y-4">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-            <h2 className="text-lg font-semibold">Proof Submitted</h2>
-            <p className="text-muted-foreground">
-              You may now close this page.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  /* ================= UI ================= */
+  if (loading) return <div className="p-6">Loading…</div>;
 
-  /* ======================================================
-     UPLOAD UI
-  ====================================================== */
+  if (!token || !ticket)
+    return <div className="p-6">Invalid or expired link</div>;
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Field Executive Upload Proof
+          <CardTitle>
+            {token.action_type === "ON_SITE"
+              ? "On-Site Proof Upload"
+              : "Resolution Proof Upload"}
           </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-4">
+          <div className="text-sm font-medium">
+            Ticket: {ticket.ticket_number}
+          </div>
+
           <input
             type="file"
             accept="image/*"
@@ -153,17 +186,13 @@ export default function FEActionPage() {
 
           <textarea
             className="w-full rounded border p-2 text-sm"
-            placeholder="Remarks (optional)"
+            placeholder="Optional remarks"
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
           />
 
-          <Button
-            className="w-full"
-            onClick={handleSubmit}
-            disabled={submitting || !file}
-          >
-            {submitting ? "Submitting…" : "Submit Proof"}
+          <Button className="w-full" onClick={handleSubmit}>
+            Submit Proof
           </Button>
         </CardContent>
       </Card>
