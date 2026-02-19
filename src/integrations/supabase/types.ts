@@ -379,6 +379,7 @@ export type Database = {
           needs_review: boolean | null
           opened_at: string | null
           opened_by_email: string | null
+          priority: boolean
           source: string | null
           status: string
           ticket_number: string
@@ -397,6 +398,7 @@ export type Database = {
           needs_review?: boolean | null
           opened_at?: string | null
           opened_by_email?: string | null
+          priority?: boolean
           source?: string | null
           status?: string
           ticket_number: string
@@ -415,6 +417,7 @@ export type Database = {
           needs_review?: boolean | null
           opened_at?: string | null
           opened_by_email?: string | null
+          priority?: boolean
           source?: string | null
           status?: string
           ticket_number?: string

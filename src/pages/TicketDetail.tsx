@@ -12,6 +12,7 @@ import {
   User,
   Clock,
   Image as ImageIcon,
+  Star,
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -27,11 +28,13 @@ import {
   useTicketComments,
   useTicketAssignments,
   useUpdateTicketStatus,
+  useUpdateTicket,
 } from "@/hooks/useTickets";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TicketStatus } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
@@ -43,6 +46,7 @@ export default function TicketDetail() {
   const { data: comments } = useTicketComments(ticketId ?? "");
   const { data: assignments } = useTicketAssignments(ticketId ?? "");
   const updateStatus = useUpdateTicketStatus();
+  const updateTicket = useUpdateTicket();
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
@@ -179,6 +183,12 @@ const handleClose = async () => {
                   {ticket.ticket_number}
                 </h1>
                 <StatusBadge status={ticket.status} />
+                {ticket.priority === true && (
+                  <Badge variant="outline" className="border-amber-500 text-amber-600">
+                    <Star className="mr-1 h-3 w-3 fill-current" />
+                    Priority
+                  </Badge>
+                )}
                 {ticket.needs_review && (
                   <Badge variant="outline" className="border-warning text-warning">
                     <AlertTriangle className="mr-1 h-3 w-3" />
@@ -320,6 +330,37 @@ const handleClose = async () => {
 
           {/* RIGHT */}
           <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-amber-500" />
+                  Priority
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  {ticket.priority === true ? "Marked as priority" : "Normal"}
+                </span>
+                <Switch
+                  checked={ticket.priority === true}
+                  onCheckedChange={(checked) => {
+                    updateTicket.mutate(
+                      { ticketId: ticket.id, updates: { priority: checked } },
+                      {
+                        onError: (err) =>
+                          toast({
+                            title: "Failed to update priority",
+                            description: err.message,
+                            variant: "destructive",
+                          }),
+                      }
+                    );
+                  }}
+                  disabled={updateTicket.isPending}
+                  aria-label="Toggle priority"
+                />
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader>
                 <CardTitle>Parsing Confidence</CardTitle>

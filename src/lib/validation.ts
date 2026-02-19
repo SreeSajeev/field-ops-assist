@@ -65,6 +65,7 @@ export const CreateTicketSchema = z.object({
   source: z.enum(['EMAIL', 'MANUAL', 'SYSTEM']).default('MANUAL'),
   needs_review: z.boolean().default(false),
   confidence_score: z.number().min(0).max(100).nullable().optional(),
+  priority: z.boolean().default(false),
 });
 
 export type CreateTicketInput = z.infer<typeof CreateTicketSchema>;

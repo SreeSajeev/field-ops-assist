@@ -12,7 +12,7 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, ExternalLink, MapPin, ChevronRight } from 'lucide-react';
+import { AlertTriangle, ExternalLink, MapPin, ChevronRight, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TicketsTableProps {
@@ -62,6 +62,9 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
                   <span className="font-mono text-sm font-semibold">
                     {ticket.ticket_number}
                   </span>
+                  {ticket.priority === true && (
+                    <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" aria-label="Priority" />
+                  )}
                   {ticket.needs_review && (
                     <AlertTriangle className="h-3.5 w-3.5 text-warning" />
                   )}
@@ -86,6 +89,7 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-10">Priority</TableHead>
             <TableHead>Ticket #</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Confidence</TableHead>
@@ -102,6 +106,13 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
               key={ticket.id}
               className={cn(idx % 2 === 0 ? 'bg-background' : 'bg-muted/20')}
             >
+              <TableCell className="text-center">
+                {ticket.priority === true ? (
+                  <Star className="h-4 w-4 fill-amber-500 text-amber-500 inline" aria-label="Priority" />
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </TableCell>
               <TableCell>
                 <Link
                   to={`/app/tickets/${ticket.id}`}

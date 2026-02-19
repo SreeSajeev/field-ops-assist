@@ -29,9 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Plus, Ticket } from 'lucide-react';
+import { Loader2, Plus, Ticket, Star } from 'lucide-react';
 import { CreateTicketSchema, CommentSchema, formatZodError } from '@/lib/validation';
 import { z } from 'zod';
 
@@ -77,6 +78,7 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [complaintId, setComplaintId] = useState('');
+  const [priority, setPriority] = useState(false);
 
   // Generate a unique ticket number
   const generateTicketNumber = () => {
@@ -101,8 +103,9 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
         source: 'MANUAL',
         needs_review: false,
         confidence_score: 100,
+        priority,
       });
-      
+
       const { data, error } = await supabase
         .from('tickets')
         .insert({
@@ -115,6 +118,7 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
           source: validatedTicket.source,
           needs_review: validatedTicket.needs_review,
           confidence_score: validatedTicket.confidence_score,
+          priority: validatedTicket.priority,
           status: 'OPEN',
           opened_at: new Date().toISOString(),
         })
@@ -191,6 +195,7 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
     setLocation('');
     setDescription('');
     setComplaintId('');
+    setPriority(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -290,6 +295,23 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
               value={location}
               onChange={(e) => setLocation(e.target.value)}
             />
+          </div>
+
+          {/* Priority */}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="priority"
+              checked={priority}
+              onCheckedChange={(checked) => setPriority(checked === true)}
+              aria-label="Mark as priority"
+            />
+            <Label
+              htmlFor="priority"
+              className="flex items-center gap-1.5 text-sm font-normal cursor-pointer"
+            >
+              <Star className="h-4 w-4 text-amber-500" />
+              Mark as priority
+            </Label>
           </div>
 
           {/* Description */}

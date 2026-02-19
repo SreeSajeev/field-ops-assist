@@ -105,6 +105,8 @@ export interface Ticket {
   current_assignment_id: string | null;
   created_at: string;
   updated_at: string;
+  /** Informational highlight flag; defaults to false if column not yet present. */
+  priority?: boolean;
 }
 
 // Ticket with assignment info
