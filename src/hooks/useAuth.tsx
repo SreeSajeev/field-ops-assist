@@ -485,7 +485,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(sess?.user ?? null);
 
       if (sess?.user) {
-        const profile = await resolveUserProfile(sess.user);
+        let profile = await resolveUserProfile(sess.user);
+
+        // Auto-create profile for newly confirmed users (no row in public.users yet)
+        if (!profile && sess.user.email) {
+          const role =
+            parseUserRole(sess.user.user_metadata?.role as string) || "STAFF";
+          const { error: insertError } = await supabase.from("users").insert({
+            auth_id: sess.user.id,
+            email: sess.user.email,
+            name: (sess.user.user_metadata?.name as string)?.trim() || sess.user.email,
+            role,
+            active: true,
+          });
+          if (!insertError) {
+            profile = await resolveUserProfile(sess.user);
+          }
+          // If duplicate (e.g. race), ignore and re-fetch once
+          if (insertError?.code === "23505") {
+            profile = await resolveUserProfile(sess.user);
+          }
+        }
+
         if (!cancelled) setUserProfile(profile);
       } else {
         setUserProfile(null);
@@ -534,7 +555,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { name, role } },
+        options: {
+          data: { name, role },
+          emailRedirectTo: window.location.origin,
+        },
       });
 
       return { error: error as Error | null };

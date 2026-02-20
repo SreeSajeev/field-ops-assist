@@ -4,7 +4,7 @@ import { useTickets } from '@/hooks/useTickets';
 import { AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
-
+//works
 export default function ReviewQueue() {
   const { data: tickets, isLoading } = useTickets({ status: 'NEEDS_REVIEW' });
   // Display only tickets whose current status is NEEDS_REVIEW (single source of truth)
