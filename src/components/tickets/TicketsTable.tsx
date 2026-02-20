@@ -12,7 +12,7 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, ExternalLink, MapPin, ChevronRight, Star } from 'lucide-react';
+import { ExternalLink, MapPin, ChevronRight, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TicketsTableProps {
@@ -64,9 +64,6 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
                   </span>
                   {ticket.priority === true && (
                     <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" aria-label="Priority" />
-                  )}
-                  {ticket.needs_review && (
-                    <AlertTriangle className="h-3.5 w-3.5 text-warning" />
                   )}
                 </div>
                 <span className="text-xs text-muted-foreground truncate">

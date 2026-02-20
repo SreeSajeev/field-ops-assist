@@ -9,7 +9,7 @@ export function useDashboardStats() {
       // Get all tickets
       const { data: tickets, error: ticketsError } = await supabase
         .from('tickets')
-        .select('status, confidence_score, needs_review, created_at');
+        .select('status, confidence_score, created_at');
 
       if (ticketsError) throw ticketsError;
 
@@ -25,7 +25,7 @@ export function useDashboardStats() {
 
       const totalTickets = tickets?.length || 0;
       const openTickets = tickets?.filter(t => t.status === 'OPEN').length || 0;
-      const needsReviewCount = tickets?.filter(t => t.needs_review).length || 0;
+      const needsReviewCount = tickets?.filter(t => t.status === 'NEEDS_REVIEW').length || 0;
       const assignedTickets = tickets?.filter(t => t.status === 'ASSIGNED').length || 0;
       
       const resolvedToday = tickets?.filter(t => {

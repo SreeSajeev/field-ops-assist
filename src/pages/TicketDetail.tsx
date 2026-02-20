@@ -1,13 +1,12 @@
 //works
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
   ArrowLeft,
   MapPin,
   Truck,
   Mail,
-  AlertTriangle,
   CheckCircle,
   User,
   Clock,
@@ -35,12 +34,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TicketStatus } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
 
 export default function TicketDetail() {
   const { ticketId } = useParams<{ ticketId: string }>();
+  const navigate = useNavigate();
 
   const { data: ticket, isLoading } = useTicket(ticketId ?? "");
   const { data: comments } = useTicketComments(ticketId ?? "");
@@ -68,7 +67,7 @@ export default function TicketDetail() {
       <DashboardLayout>
         <div className="text-center space-y-2">
           <h2 className="text-xl font-semibold">Ticket not found</h2>
-          <Link to="/tickets" className="text-primary hover:underline">
+          <Link to="/app/tickets" className="text-primary hover:underline">
             Back to tickets
           </Link>
         </div>
@@ -87,7 +86,7 @@ export default function TicketDetail() {
   /* ================= ACTION HANDLERS ================= */
 
   const handleApprove = () => {
-    if (ticket.needs_review) {
+    if (ticket.status === "NEEDS_REVIEW") {
       updateStatus.mutate({ ticketId: ticket.id, status: "OPEN" });
     }
   };
@@ -171,11 +170,9 @@ const handleClose = async () => {
         {/* HEADER */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/tickets">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/app")} aria-label="Back to dashboard">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
 
             <div>
               <div className="flex items-center gap-3">
@@ -189,12 +186,6 @@ const handleClose = async () => {
                     Priority
                   </Badge>
                 )}
-                {ticket.needs_review && (
-                  <Badge variant="outline" className="border-warning text-warning">
-                    <AlertTriangle className="mr-1 h-3 w-3" />
-                    Needs Review
-                  </Badge>
-                )}
               </div>
               <p className="text-muted-foreground">
                 Opened {format(new Date(ticket.opened_at), "PPpp")}
@@ -203,7 +194,7 @@ const handleClose = async () => {
           </div>
 
           <div className="flex gap-2">
-            {ticket.needs_review && (
+            {ticket.status === "NEEDS_REVIEW" && (
               <Button onClick={handleApprove}>
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Approve & Open

@@ -6,12 +6,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 
 export default function ReviewQueue() {
-  // Filter: needs_review = true, status = OPEN, unassigned only
-  const { data: tickets, isLoading } = useTickets({ 
-    needsReview: true, 
-    status: 'OPEN',
-    unassignedOnly: true 
-  });
+  const { data: tickets, isLoading } = useTickets({ status: 'NEEDS_REVIEW' });
+  // Display only tickets whose current status is NEEDS_REVIEW (single source of truth)
+  const displayTickets = (tickets || []).filter((t) => t.status === 'NEEDS_REVIEW');
 
   return (
     <DashboardLayout>
@@ -23,7 +20,7 @@ export default function ReviewQueue() {
           <div>
             <h1 className="text-2xl font-bold">Review Queue</h1>
             <p className="text-muted-foreground">
-              Tickets with low confidence scores requiring manual review
+              Tickets awaiting additional details or staff approval
             </p>
           </div>
         </div>
@@ -31,12 +28,11 @@ export default function ReviewQueue() {
         <Alert className="bg-amber-50 border-amber-200">
           <Info className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-sm text-amber-800">
-            Only showing <strong>unassigned OPEN tickets</strong> with needs_review = true. 
-            Assigned tickets are excluded from this queue.
+            Showing tickets with status <strong>NEEDS_REVIEW</strong>. Approve to move to OPEN or wait for client reply with missing details.
           </AlertDescription>
         </Alert>
 
-        <TicketsTable tickets={tickets || []} loading={isLoading} />
+        <TicketsTable tickets={displayTickets} loading={isLoading} />
       </div>
     </DashboardLayout>
   );

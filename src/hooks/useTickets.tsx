@@ -19,10 +19,6 @@ export function useTickets(filters?: TicketFilters) {
         query = query.eq("status", filters.status);
       }
 
-      if (filters?.needsReview !== undefined) {
-        query = query.eq("needs_review", filters.needsReview);
-      }
-
       if (filters?.confidenceRange && filters.confidenceRange !== "all") {
         switch (filters.confidenceRange) {
           case "high":
@@ -185,8 +181,9 @@ export function useUpdateTicketStatus() {
 
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket", data.id] });
       toast({ title: "Status updated" });
     },
   });
