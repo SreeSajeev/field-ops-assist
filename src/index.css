@@ -356,6 +356,26 @@
   .logo-glow {
     filter: drop-shadow(0 0 10px hsl(32 95% 52% / 0.4));
   }
+
+  /* Logo container - orange gradient from design token */
+  .logo-bg-accent {
+    background: var(--gradient-accent);
+  }
+
+  /* Landing hero background (design token) */
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  /* Landing hero radial accent overlay */
+  .hero-radial-glow {
+    background-image: radial-gradient(
+      ellipse 80% 50% at 50% -20%,
+      hsl(var(--accent) / 0.15),
+      transparent
+    );
+    pointer-events: none;
+  }
 }
 
 @layer utilities {
