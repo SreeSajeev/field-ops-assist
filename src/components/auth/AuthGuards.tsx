@@ -105,3 +105,25 @@ export function RequireAdmin({ fallback }: GuardProps) {
 
   return <Outlet />;
 }
+
+/* ================= SUPER ADMIN ONLY ================= */
+/**
+ * SUPER_ADMIN only. Used for SaaS super-admin dashboard.
+ */
+export function RequireSuperAdmin({ fallback }: GuardProps) {
+  const { user, loading, userProfile } = useAuth();
+
+  if (loading && !user) {
+    return fallback ?? <AuthLoading />;
+  }
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (userProfile?.role !== "SUPER_ADMIN") {
+    return <Navigate to="/app" replace />;
+  }
+
+  return <Outlet />;
+}

@@ -13,6 +13,8 @@ import {
   BarChart3,
   Shield,
   ChevronRight,
+  Building2,
+  Crown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,9 +44,16 @@ const adminNavigation = [
   { name: 'Settings', href: '/app/settings', icon: Settings },
 ];
 
+const superAdminNavigation = [
+  { name: 'Overview', href: '/super-admin', icon: Crown },
+  { name: 'Organizations', href: '/super-admin', icon: Building2 },
+  { name: 'Global Users', href: '/app/users', icon: Users },
+];
+
 export function Sidebar() {
   const location = useLocation();
   const { signOut, user, userProfile, isAdmin } = useAuth();
+  const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
 
   /* =========================
      Role Display
@@ -142,6 +151,16 @@ export function Sidebar() {
         />
 
         <NavSection title="Monitoring" items={monitoringNav} />
+
+        {isSuperAdmin && (
+          <>
+            <div
+              className="my-4 border-t"
+              style={{ borderColor: 'hsl(285 35% 25%)' }}
+            />
+            <NavSection title="Super Admin" items={superAdminNavigation} />
+          </>
+        )}
 
         {isAdmin && (
           <>

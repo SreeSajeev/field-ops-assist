@@ -99,14 +99,16 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 
 import { AuthProvider } from "@/hooks/useAuth";
 import {
-  RequireAuth,
   RequireStaff,
   RequireFE,
+  RequireSuperAdmin,
 } from "@/components/auth/AuthGuards";
 
 // Pages
+import SahayaLanding from "@/pages/SahayaLanding";
 import Index from "@/pages/Index";
 import Dashboard from "@/pages/Dashboard";
+import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
 import TicketsList from "@/pages/TicketsList";
 import TicketDetail from "@/pages/TicketDetail";
 import ReviewQueue from "@/pages/ReviewQueue";
@@ -144,9 +146,12 @@ export default function App() {
           <AuthProvider>
             <Routes>
               {/* ========================= */}
-              {/* 🌐 PUBLIC */}
+              {/* 🌐 PUBLIC — LANDING */}
               {/* ========================= */}
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<SahayaLanding />} />
+
+              {/* Login + role-based redirect */}
+              <Route path="/login" element={<Index />} />
 
               {/* Token-based FE action (NO LOGIN REQUIRED) */}
               <Route
@@ -163,6 +168,13 @@ export default function App() {
                   path="/fe/ticket/:ticketId"
                   element={<FETicketView />}
                 />
+              </Route>
+
+              {/* ========================= */}
+              {/* 👑 SUPER ADMIN (SaaS layer) */}
+              {/* ========================= */}
+              <Route element={<RequireSuperAdmin />}>
+                <Route path="/super-admin" element={<SuperAdminDashboard />} />
               </Route>
 
               {/* ========================= */}
