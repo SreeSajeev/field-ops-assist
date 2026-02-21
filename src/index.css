@@ -93,6 +93,8 @@
     --shadow-lg: 0 10px 15px -3px hsl(285 25% 10% / 0.10), 0 4px 6px -4px hsl(285 25% 10% / 0.07);
     --shadow-card: 0 1px 3px 0 hsl(285 25% 10% / 0.07), 0 1px 2px -1px hsl(285 25% 10% / 0.07);
     --shadow-glow: 0 0 20px hsl(32 95% 52% / 0.3);
+    --gradient-hero-radial: radial-gradient(ellipse at 70% 50%, hsl(32 95% 52% / 0.12) 0%, transparent 60%);
+    --shadow-glow-purple: 0 0 30px hsl(285 45% 45% / 0.25);
   }
 
   .dark {
@@ -376,6 +378,22 @@
     );
     pointer-events: none;
   }
+
+  /* Step connector line (Lovable) */
+  .step-line::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 8px);
+    width: calc(100% - 16px);
+    height: 1px;
+    background: linear-gradient(90deg, hsl(285 45% 45% / 0.5), hsl(32 95% 52% / 0.3));
+  }
+
+  /* Glow border (Lovable) */
+  .glow-border {
+    box-shadow: 0 0 0 1px hsl(32 95% 52% / 0.3), 0 0 20px hsl(32 95% 52% / 0.15);
+  }
 }
 
 @layer utilities {
@@ -421,6 +439,15 @@
       opacity: 1;
       transform: translateX(0);
     }
+  }
+
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 20px hsl(32 95% 52% / 0.2); }
+    50% { box-shadow: 0 0 40px hsl(32 95% 52% / 0.4); }
+  }
+
+  .animate-glow-pulse {
+    animation: glowPulse 3s ease-in-out infinite;
   }
 
   /* Custom scrollbar */
