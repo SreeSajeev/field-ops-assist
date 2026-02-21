@@ -1,4 +1,5 @@
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -137,7 +138,8 @@ export default function Settings() {
   };
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -329,6 +331,7 @@ export default function Settings() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </PageContainer>
+    </AppLayoutNew>
   );
 }

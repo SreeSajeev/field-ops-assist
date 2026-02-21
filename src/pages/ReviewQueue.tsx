@@ -1,4 +1,5 @@
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { TicketsTable } from '@/components/tickets/TicketsTable';
 import { useTickets } from '@/hooks/useTickets';
 import { AlertTriangle } from 'lucide-react';
@@ -11,7 +12,8 @@ export default function ReviewQueue() {
   const displayTickets = (tickets || []).filter((t) => t.status === 'NEEDS_REVIEW');
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/20">
@@ -34,6 +36,7 @@ export default function ReviewQueue() {
 
         <TicketsTable tickets={displayTickets} loading={isLoading} />
       </div>
-    </DashboardLayout>
+    </PageContainer>
+    </AppLayoutNew>
   );
 }

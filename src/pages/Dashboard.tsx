@@ -206,21 +206,21 @@ export default function Dashboard() {
 // src/pages/Dashboard.tsx
 
 import { Link } from 'react-router-dom';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
+import { HeroSection } from '@/components/layout/HeroSection';
+import { SectionWrapper } from '@/components/layout/SectionWrapper';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { TicketsTable } from '@/components/tickets/TicketsTable';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useTickets } from '@/hooks/useTickets';
-import { 
-  Ticket, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  TrendingUp, 
+import {
+  Ticket,
+  AlertTriangle,
+  Clock,
+  TrendingUp,
   AlertCircle,
   ArrowRight,
-  Zap,
-  Users
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -231,24 +231,28 @@ export default function Dashboard() {
   const { data: recentTickets, isLoading: ticketsLoading } = useTickets({ status: 'all' });
 
   return (
-    <DashboardLayout>
-      <div className="space-y-8 animate-fade-in">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <AppLayoutNew>
+      <HeroSection>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Welcome back. Here's your operations overview.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Dashboard
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Welcome back. Here&apos;s your operations overview.
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
+            <Badge variant="outline" className="gap-1.5 px-3 py-1.5">
               <span className="sla-indicator sla-safe" />
               System Healthy
             </Badge>
           </div>
         </div>
+      </HeroSection>
 
-        {/* Stats Grid */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <SectionWrapper title="Service Overview" elevated>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Tickets"
             value={statsLoading ? '—' : stats?.totalTickets || 0}
@@ -278,9 +282,10 @@ export default function Dashboard() {
             description={stats?.slaBreaches ? 'Action required' : 'All on track'}
           />
         </div>
+      </SectionWrapper>
 
-        {/* Quick Actions */}
-        {stats?.needsReviewCount ? (
+      {stats?.needsReviewCount ? (
+        <SectionWrapper elevated={false}>
           <div className="info-box info-box-warning animate-slide-up">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -304,17 +309,17 @@ export default function Dashboard() {
               </Link>
             </div>
           </div>
-        ) : null}
+        </SectionWrapper>
+      ) : null}
 
-        {/* Two Column Layout */}
+      <SectionWrapper elevated={false}>
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Recent Tickets */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-4">
                 <div>
                   <CardTitle className="text-lg font-semibold">Recent Tickets</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-0.5">Latest service requests</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">Latest service requests</p>
                 </div>
                 <Link to="/app/tickets">
                   <Button variant="outline" size="sm" className="gap-1.5">
@@ -324,32 +329,29 @@ export default function Dashboard() {
                 </Link>
               </CardHeader>
               <CardContent className="pt-0">
-                <TicketsTable 
-                  tickets={(recentTickets || []).slice(0, 8)} 
+                <TicketsTable
+                  tickets={(recentTickets || []).slice(0, 8)}
                   loading={ticketsLoading}
                   compact
                 />
               </CardContent>
             </Card>
           </div>
-
-          {/* Quick Stats Sidebar */}
           <div className="space-y-5">
-            {/* Field Executive Stats */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <Users className="h-4 w-4 text-accent" />
                   Field Team
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-4">
+                <div className="py-4 text-center">
                   <p className="text-3xl font-bold text-foreground">0</p>
-                  <p className="text-sm text-muted-foreground mt-1">Active Executives</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Active Executives</p>
                 </div>
                 <Link to="/app/field-executives">
-                  <Button variant="outline" size="sm" className="w-full mt-2">
+                  <Button variant="outline" size="sm" className="mt-2 w-full">
                     Manage Team
                   </Button>
                 </Link>
@@ -357,7 +359,7 @@ export default function Dashboard() {
             </Card>
           </div>
         </div>
-      </div>
-    </DashboardLayout>
+      </SectionWrapper>
+    </AppLayoutNew>
   );
 }

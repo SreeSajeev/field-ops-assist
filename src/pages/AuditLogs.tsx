@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { format, startOfDay, endOfDay } from 'date-fns';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -313,7 +314,8 @@ export default function AuditLogs() {
   }, [aggregations]);
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
@@ -493,6 +495,7 @@ export default function AuditLogs() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </PageContainer>
+    </AppLayoutNew>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { AppLayoutNew } from "@/components/layout/AppLayoutNew";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,7 +65,8 @@ export default function SuperAdminDashboard() {
   const activeUsers = users?.filter((u) => u.active).length ?? 0;
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -284,6 +286,7 @@ export default function SuperAdminDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
+      </PageContainer>
+    </AppLayoutNew>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { TicketsTable } from '@/components/tickets/TicketsTable';
 import { TicketFiltersBar } from '@/components/tickets/TicketFiltersBar';
 import { CreateTicketModal } from '@/components/tickets/CreateTicketModal';
@@ -18,7 +19,8 @@ export default function TicketsList() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -39,6 +41,7 @@ export default function TicketsList() {
 
       {/* Manual Ticket Creation Modal */}
       <CreateTicketModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
-    </DashboardLayout>
+    </PageContainer>
+    </AppLayoutNew>
   );
 }

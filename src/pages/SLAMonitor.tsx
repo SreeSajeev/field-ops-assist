@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { format, differenceInMinutes, differenceInHours, isPast, startOfDay, endOfDay, subDays } from 'date-fns';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -404,7 +405,8 @@ export default function SLAMonitor() {
   useEffect(() => setPage(1), [statusFilter, breachTypeFilter, feFilter, startDate, endDate, filter]);
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
@@ -726,6 +728,7 @@ export default function SLAMonitor() {
           </>
         )}
       </div>
-    </DashboardLayout>
+    </PageContainer>
+    </AppLayoutNew>
   );
 }

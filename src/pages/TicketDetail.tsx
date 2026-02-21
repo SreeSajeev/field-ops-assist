@@ -14,7 +14,8 @@ import {
   Star,
 } from "lucide-react";
 
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { AppLayoutNew } from "@/components/layout/AppLayoutNew";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { StatusBadge } from "@/components/tickets/StatusBadge";
 import { ConfidenceScore } from "@/components/tickets/ConfidenceScore";
 import { FEAssignmentModal } from "@/components/tickets/FEAssignmentModal";
@@ -54,24 +55,28 @@ export default function TicketDetail() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex h-64 items-center justify-center text-muted-foreground">
-          Loading ticket…
-        </div>
-      </DashboardLayout>
+      <AppLayoutNew>
+        <PageContainer>
+          <div className="flex h-64 items-center justify-center text-muted-foreground">
+            Loading ticket…
+          </div>
+        </PageContainer>
+      </AppLayoutNew>
     );
   }
 
   if (!ticket) {
     return (
-      <DashboardLayout>
-        <div className="text-center space-y-2">
-          <h2 className="text-xl font-semibold">Ticket not found</h2>
-          <Link to="/app/tickets" className="text-primary hover:underline">
-            Back to tickets
-          </Link>
-        </div>
-      </DashboardLayout>
+      <AppLayoutNew>
+        <PageContainer>
+          <div className="space-y-2 text-center">
+            <h2 className="text-xl font-semibold">Ticket not found</h2>
+            <Link to="/app/tickets" className="text-primary hover:underline">
+              Back to tickets
+            </Link>
+          </div>
+        </PageContainer>
+      </AppLayoutNew>
     );
   }
 
@@ -165,7 +170,8 @@ const handleClose = async () => {
   /* ================= UI ================= */
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-6">
         {/* HEADER */}
         <div className="flex items-start justify-between">
@@ -417,7 +423,8 @@ const handleClose = async () => {
         onConfirm={handleClose}
         isPending={updateStatus.isPending}
       />
-    </DashboardLayout>
+    </PageContainer>
+    </AppLayoutNew>
   );
 }
 

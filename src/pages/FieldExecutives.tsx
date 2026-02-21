@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { FECard, FECardSkeleton } from '@/components/field-executives/FECard';
 import { FEDetailSheet } from '@/components/field-executives/FEDetailSheet';
 import { CreateFEModal } from '@/components/field-executives/CreateFEModal';
@@ -79,7 +80,8 @@ export default function FieldExecutives() {
   const highWorkload = (executives || []).filter(fe => fe.active_tickets > 4).length;
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -260,6 +262,7 @@ export default function FieldExecutives() {
         {/* Create FE Modal - Requirement 4 */}
         <CreateFEModal open={createFEModalOpen} onOpenChange={setCreateFEModalOpen} />
       </div>
-    </DashboardLayout>
+    </PageContainer>
+    </AppLayoutNew>
   );
 }

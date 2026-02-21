@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,7 +85,8 @@ export default function Users() {
   };
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -317,6 +319,7 @@ export default function Users() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </PageContainer>
+    </AppLayoutNew>
   );
 }
