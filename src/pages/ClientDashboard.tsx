@@ -17,6 +17,7 @@ import {
   CalendarDays,
   ImageIcon,
   Mail,
+  LogOut,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
@@ -76,7 +77,7 @@ const LogoMark = ({ size = 32 }: { size?: number }) => (
 // ─── Client Header ───────────────────────────────────────────────────────────
 
 const ClientHeader = () => {
-  const { userProfile } = useAuth();
+  const { userProfile, signOut } = useAuth();
   const initials = userProfile?.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "?";
 
   return (
@@ -114,8 +115,18 @@ const ClientHeader = () => {
             </Link>
           ))}
         </nav>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: "linear-gradient(135deg, hsl(285 45% 28%), hsl(285 45% 38%))", boxShadow: "0 2px 8px hsl(285 45% 30% / 0.3)" }}>
-          {initials}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={signOut}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground transition-all duration-200 hover:bg-muted/40 hover:text-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Log out</span>
+          </button>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: "linear-gradient(135deg, hsl(285 45% 28%), hsl(285 45% 38%))", boxShadow: "0 2px 8px hsl(285 45% 30% / 0.3)" }}>
+            {initials}
+          </div>
         </div>
       </div>
     </header>
