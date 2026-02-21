@@ -10,7 +10,7 @@ export type TicketStatus =
   | 'REOPENED';
 
 // User role enum
-export type UserRole = 'STAFF' | 'FIELD_EXECUTIVE' | 'ADMIN' | 'SUPER_ADMIN';
+export type UserRole = 'STAFF' | 'FIELD_EXECUTIVE' | 'ADMIN' | 'SUPER_ADMIN' | 'CLIENT';
 
 // WhatsApp event types
 export type WhatsAppEventType = 'SENT' | 'CLICKED' | 'EN_ROUTE' | 'UPLOAD' | 'RESOLUTION';
@@ -107,6 +107,7 @@ export interface Ticket {
   updated_at: string;
   /** Informational highlight flag; defaults to false if column not yet present. */
   priority?: boolean;
+  client_slug?: string | null;
 }
 
 // Ticket with assignment info
@@ -183,6 +184,7 @@ export interface TicketFilters {
   dateFrom?: string;
   dateTo?: string;
   unassignedOnly?: boolean;
+  clientSlug?: string | null;
 }
 
 // Audit log entry

@@ -406,6 +406,7 @@ interface UserProfile {
   email: string;
   role: UserRole;
   active: boolean;
+  client_slug: string | null;
 }
 
 interface AuthContextType {
@@ -424,6 +425,8 @@ interface AuthContextType {
   isFieldExecutive: boolean;
   isServiceStaff: boolean;
   isAdmin: boolean;
+  isClient: boolean;
+  clientSlug: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -435,7 +438,8 @@ const parseUserRole = (role: string): UserRole | null => {
     role === "STAFF" ||
     role === "FIELD_EXECUTIVE" ||
     role === "ADMIN" ||
-    role === "SUPER_ADMIN"
+    role === "SUPER_ADMIN" ||
+    role === "CLIENT"
   ) {
     return role;
   }
@@ -455,7 +459,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resolveUserProfile = async (authUser: User) => {
     const { data, error } = await supabase
       .from("users")
-      .select("id, name, email, role, active")
+      .select("id, name, email, role, active, client_slug")
       .eq("auth_id", authUser.id)
       .maybeSingle();
 
@@ -470,6 +474,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: data.email,
       role,
       active: data.active,
+      client_slug: data.client_slug ?? null,
     };
   };
 
@@ -584,6 +589,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isServiceStaff = userProfile?.role === "STAFF";
   const isAdmin =
     userProfile?.role === "ADMIN" || userProfile?.role === "SUPER_ADMIN";
+  const isClient = userProfile?.role === "CLIENT";
+  const clientSlug = userProfile?.client_slug ?? null;
 
   return (
     <AuthContext.Provider
@@ -598,6 +605,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isFieldExecutive,
         isServiceStaff,
         isAdmin,
+        isClient,
+        clientSlug,
       }}
     >
       {children}

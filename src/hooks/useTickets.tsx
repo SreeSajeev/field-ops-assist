@@ -43,6 +43,10 @@ export function useTickets(filters?: TicketFilters) {
         query = query.is("current_assignment_id", null);
       }
 
+      if (filters?.clientSlug != null && filters.clientSlug !== "") {
+        query = query.eq("client_slug", filters.clientSlug);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
 

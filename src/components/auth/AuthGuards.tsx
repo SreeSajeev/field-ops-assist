@@ -42,10 +42,10 @@ export function RequireAuth({ fallback }: GuardProps) {
 /* ================= STAFF ONLY ================= */
 /**
  * STAFF / ADMIN only.
- * FE is explicitly redirected.
+ * FE and CLIENT are explicitly redirected.
  */
 export function RequireStaff({ fallback }: GuardProps) {
-  const { user, loading, isFieldExecutive } = useAuth();
+  const { user, loading, isFieldExecutive, isClient } = useAuth();
 
   if (loading && !user) {
     return fallback ?? <AuthLoading />;
@@ -59,7 +59,33 @@ export function RequireStaff({ fallback }: GuardProps) {
     return <Navigate to="/" replace />;
   }
 
+  if (isClient) {
+    return <Navigate to="/app/client" replace />;
+  }
+
   return <Outlet />;
+}
+
+/* ================= CLIENT ONLY ================= */
+/**
+ * CLIENT only. Redirect non-CLIENT to /app.
+ */
+export function RequireClient({ children, fallback }: GuardProps & { children?: React.ReactNode }) {
+  const { user, loading, userProfile } = useAuth();
+
+  if (loading && !user) {
+    return (fallback ?? <AuthLoading />) as React.ReactElement;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (userProfile?.role !== "CLIENT") {
+    return <Navigate to="/app" replace />;
+  }
+
+  return children as React.ReactElement;
 }
 
 /* ================= FE ONLY ================= */

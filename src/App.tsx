@@ -102,6 +102,7 @@ import {
   RequireStaff,
   RequireFE,
   RequireSuperAdmin,
+  RequireClient,
 } from "@/components/auth/AuthGuards";
 
 // Pages
@@ -179,11 +180,22 @@ export default function App() {
               </Route>
 
               {/* ========================= */}
+              {/* 📋 CLIENT */}
+              {/* ========================= */}
+              <Route
+                path="/app/client"
+                element={
+                  <RequireClient>
+                    <ClientDashboard />
+                  </RequireClient>
+                }
+              />
+
+              {/* ========================= */}
               {/* 🧑‍💼 STAFF / ADMIN */}
               {/* ========================= */}
               <Route element={<RequireStaff />}>
                 <Route path="/app" element={<Dashboard />} />
-                <Route path="/app/client" element={<ClientDashboard />} />
                 <Route path="/app/tickets" element={<TicketsList />} />
                 <Route
                   path="/app/tickets/:ticketId"

@@ -2,21 +2,32 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardStats } from '@/lib/types';
 
-export function useDashboardStats() {
+export function useDashboardStats(clientSlug?: string | null) {
   return useQuery({
-    queryKey: ['dashboard-stats'],
+    queryKey: ['dashboard-stats', clientSlug ?? 'all'],
     queryFn: async (): Promise<DashboardStats> => {
-      // Get all tickets
-      const { data: tickets, error: ticketsError } = await supabase
+      let ticketsQuery = supabase
         .from('tickets')
-        .select('status, confidence_score, created_at');
+        .select('id, status, confidence_score, created_at');
+
+      if (clientSlug != null && clientSlug !== '') {
+        ticketsQuery = ticketsQuery.eq('client_slug', clientSlug);
+      }
+
+      const { data: tickets, error: ticketsError } = await ticketsQuery;
 
       if (ticketsError) throw ticketsError;
 
-      // Get SLA breaches
-      const { data: slaData, error: slaError } = await supabase
+      let slaQuery = supabase
         .from('sla_tracking')
-        .select('assignment_breached, onsite_breached, resolution_breached');
+        .select('ticket_id, assignment_breached, onsite_breached, resolution_breached');
+
+      if (clientSlug != null && clientSlug !== '' && tickets?.length) {
+        const ticketIds = tickets.map((t: { id: string }) => t.id);
+        slaQuery = slaQuery.in('ticket_id', ticketIds);
+      }
+
+      const { data: slaData, error: slaError } = await slaQuery;
 
       if (slaError) throw slaError;
 
@@ -39,7 +50,7 @@ export function useDashboardStats() {
         ? scoresWithValues.reduce((sum, t) => sum + (t.confidence_score || 0), 0) / scoresWithValues.length
         : 0;
 
-      const slaBreaches = slaData?.filter(s => 
+      const slaBreaches = slaData?.filter((s: { assignment_breached?: boolean; onsite_breached?: boolean; resolution_breached?: boolean }) =>
         s.assignment_breached || s.onsite_breached || s.resolution_breached
       ).length || 0;
 

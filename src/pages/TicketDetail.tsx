@@ -1,6 +1,6 @@
 //works
 import { useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, Navigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
   ArrowLeft,
@@ -37,10 +37,12 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { TicketStatus } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function TicketDetail() {
   const { ticketId } = useParams<{ ticketId: string }>();
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
 
   const { data: ticket, isLoading } = useTicket(ticketId ?? "");
   const { data: comments } = useTicketComments(ticketId ?? "");
@@ -78,6 +80,10 @@ export default function TicketDetail() {
         </PageContainer>
       </AppLayoutNew>
     );
+  }
+
+  if (userProfile?.role === "CLIENT" && ticket.client_slug !== userProfile.client_slug) {
+    return <Navigate to="/app/client" replace />;
   }
 
   const currentAssignment = assignments?.[0];

@@ -146,6 +146,10 @@ export default function Index() {
      ROLE-BASED ROUTING
   ========================= */
 
+  if (userProfile.role === "CLIENT") {
+    return <Navigate to="/app/client" replace />;
+  }
+
   if (userProfile.role === "FIELD_EXECUTIVE") {
     return <Navigate to="/fe" replace />;
   }

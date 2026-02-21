@@ -459,8 +459,9 @@ const DashboardFooter = () => (
 
 export default function ClientDashboard() {
   const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: tickets = [], isLoading: ticketsLoading } = useTickets({ status: "all" });
+  const { userProfile } = useAuth();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats(userProfile?.client_slug ?? undefined);
+  const { data: tickets = [], isLoading: ticketsLoading } = useTickets({ status: "all", clientSlug: userProfile?.client_slug ?? undefined });
 
   return (
     <div className="min-h-screen" style={{ background: "hsl(30 5% 98%)" }}>
