@@ -108,6 +108,7 @@ import {
 import SahayaLanding from "@/pages/SahayaLanding";
 import Index from "@/pages/Index";
 import Dashboard from "@/pages/Dashboard";
+import ClientDashboard from "@/pages/ClientDashboard";
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
 import TicketsList from "@/pages/TicketsList";
 import TicketDetail from "@/pages/TicketDetail";
@@ -182,6 +183,7 @@ export default function App() {
               {/* ========================= */}
               <Route element={<RequireStaff />}>
                 <Route path="/app" element={<Dashboard />} />
+                <Route path="/app/client" element={<ClientDashboard />} />
                 <Route path="/app/tickets" element={<TicketsList />} />
                 <Route
                   path="/app/tickets/:ticketId"
