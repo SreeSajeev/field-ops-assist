@@ -43,14 +43,12 @@ const modules = [
   { title: "Field Executive Control", description: "Token-based verification system that ensures physical presence and resolution authenticity.", capabilities: ["Time-bound secure tokens", "On-site confirmation", "Resolution proof submission", "Reassignment handling", "Field Executive-specific ticket interface"], icon: <MapPin className="h-5 w-5" />, accentIdx: 2 },
   { title: "Communication Automation", description: "Structured notification system ensuring stakeholders remain informed throughout the ticket lifecycle.", capabilities: ["Confirmation emails", "Missing detail requests", "Assignment notifications", "Resolution confirmations", "Event logging"], icon: <Mail className="h-5 w-5" />, accentIdx: 0 },
   { title: "Audit & Compliance Layer", description: "Permanent, structured logging system ensuring operational traceability and compliance readiness.", capabilities: ["State change history", "Assignment logs", "Comment tracking", "Proof record retention", "Exportable audit trails"], icon: <FileText className="h-5 w-5" />, accentIdx: 1 },
-  { title: "Multi-Tenant SaaS Architecture", description: "Enterprise-ready foundation supporting organization-based role segmentation.", capabilities: ["Super Admin (global visibility)", "Organization Admin", "Staff role control", "Field Executive role control", "Data isolation framework"], icon: <Layers className="h-5 w-5" />, accentIdx: 2 },
 ];
 
 const enterpriseFeatures = [
   { title: "Role-Based Access Control", description: "Granular role segmentation ensures appropriate operational visibility across teams.", icon: <Lock className="h-4 w-4" /> },
   { title: "SLA Configuration", description: "Organizations can define service-level expectations aligned with operational priorities.", icon: <Clock className="h-4 w-4" /> },
   { title: "Performance Analytics", description: "Operational metrics provide clarity into resolution performance and SLA adherence.", icon: <Activity className="h-4 w-4" /> },
-  { title: "CSV Export", description: "Structured reporting for management review and compliance submission.", icon: <FileText className="h-4 w-4" /> },
   { title: "Audit Trails", description: "Immutable operational logs for governance and traceability.", icon: <Database className="h-4 w-4" /> },
   { title: "Secure Authentication", description: "Token-based authentication with protected role-level access.", icon: <Shield className="h-4 w-4" /> },
   { title: "Scalable Architecture", description: "Built to support expanding teams, growing ticket volume, and multi-organization deployments.", icon: <Layers className="h-4 w-4" /> },
@@ -143,11 +141,12 @@ function Header() {
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-      style={scrolled ? { background: "hsl(285 45% 13% / 0.92)", backdropFilter: "blur(16px)", borderBottom: "1px solid hsl(285 35% 22% / 0.8)", boxShadow: "0 4px 24px hsl(285 45% 10% / 0.5)" } : { background: "transparent" }}
+      style={scrolled ? { background: "rgba(59, 18, 77, 0.92)", backdropFilter: "blur(16px)", borderBottom: "1px solid hsl(285 35% 22% / 0.8)", boxShadow: "0 4px 24px rgba(0,0,0,0.3)" } : { background: "transparent" }}
     >
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
         <a href="#" className="flex items-center gap-2.5">
-          <LogoMark size={32} />
+          <img src="/sahaya-logo.png" alt="Sahaya" className="h-8 w-auto sm:h-9 object-contain" onError={(e) => { e.currentTarget.style.display = "none"; const fallback = e.currentTarget.nextElementSibling as HTMLElement | null; if (fallback) fallback.style.display = "flex"; }} />
+          <div className="shrink-0 items-center" style={{ display: "none" }} aria-hidden="true"><LogoMark size={32} /></div>
           <div className="flex flex-col leading-none">
             <span className="text-sm font-bold text-white tracking-tight">Sahaya</span>
             <span className="text-[9px] font-semibold text-white/45 tracking-[0.16em] uppercase">by Pariskq</span>
@@ -199,7 +198,7 @@ function HeroSection() {
   return (
     <section
       className="relative overflow-hidden flex flex-col justify-center"
-      style={{ minHeight: "100vh", background: "linear-gradient(150deg, hsl(285 50% 10%) 0%, hsl(285 45% 16%) 50%, hsl(285 40% 12%) 100%)" }}
+      style={{ minHeight: "100vh", background: "linear-gradient(150deg, #3b124d 0%, #4a1659 50%, #5a1a6d 100%)" }}
       id="about"
     >
       <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.04) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.04) 1px, transparent 1px)", backgroundSize: "64px 64px" }} />
@@ -298,60 +297,7 @@ function HeroSection() {
           </div>
         </div>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none" style={{ background: "linear-gradient(to bottom, transparent, hsl(285 45% 10%))" }} />
-    </section>
-  );
-}
-
-// ─── Stats ────────────────────────────────────────────────────────────────────
-
-function StatsSection() {
-  const stats = [
-    { label: "Tickets Processed", highlight: "100% Structured", sub: "Workflow Coverage", icon: <Ticket className="h-5 w-5" />, variant: "primary" as const },
-    { label: "SLA Compliance", highlight: "Real-Time", sub: "Phase Tracking", icon: <Clock className="h-5 w-5" />, variant: "accent" as const },
-    { label: "Resolution Time", highlight: "Measured", sub: "and Auditable", icon: <BarChart3 className="h-5 w-5" />, variant: "default" as const },
-    { label: "Audit Events", highlight: "Complete", sub: "Chain of Custody", icon: <Database className="h-5 w-5" />, variant: "default" as const },
-  ];
-
-  return (
-    <section style={{ background: "hsl(285 45% 10%)" }}>
-      <GradientDivider />
-      <div className="max-w-7xl mx-auto px-6 py-14">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-white leading-tight">Operational Confidence at Scale</h2>
-            <p className="text-[13px] mt-1" style={{ color: "hsl(285 15% 55%)" }}>Every metric is a commitment to disciplined, measurable service delivery.</p>
-          </div>
-          <div className="shrink-0 text-[11px] font-mono px-3 py-1.5 rounded-md" style={{ background: "hsl(285 40% 16%)", border: "1px solid hsl(285 35% 25%)", color: "hsl(32 95% 60%)" }}>
-            ● Real-time data
-          </div>
-        </div>
-        <div className="rounded-2xl p-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px" style={{ background: "hsl(285 40% 22%)", boxShadow: "0 0 0 1px hsl(285 40% 22%)" }}>
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="group relative p-5 rounded-xl overflow-hidden transition-all duration-200 cursor-default"
-              style={{
-                background: stat.variant === "primary" ? "linear-gradient(145deg, hsl(285 50% 20%), hsl(285 45% 26%))" : stat.variant === "accent" ? "linear-gradient(145deg, hsl(285 45% 17%), hsl(285 40% 22%))" : "hsl(285 40% 14%)",
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = stat.variant === "default" ? "hsl(285 40% 17%)" : ""; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = stat.variant === "default" ? "hsl(285 40% 14%)" : ""; }}
-            >
-              {stat.variant !== "default" && <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, hsl(32 95% 52% / 0.12), transparent 70%)" }} />}
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: stat.variant === "primary" ? "hsl(0 0% 100% / 0.12)" : stat.variant === "accent" ? "hsl(32 95% 52% / 0.15)" : "hsl(285 40% 22%)", color: stat.variant === "primary" ? "hsl(32 95% 72%)" : stat.variant === "accent" ? "hsl(32 95% 68%)" : "hsl(285 30% 60%)" }}>
-                  {stat.icon}
-                </div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: "hsl(285 15% 52%)" }}>{stat.label}</p>
-              </div>
-              <p className="text-xl font-bold leading-tight text-white">{stat.highlight}</p>
-              <p className="text-xs mt-0.5" style={{ color: "hsl(285 15% 55%)" }}>{stat.sub}</p>
-              <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" style={{ boxShadow: "inset 0 0 0 1px hsl(32 95% 52% / 0.2)" }} />
-            </div>
-          ))}
-        </div>
-      </div>
-      <GradientDivider flip />
+      <div className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none" style={{ background: "linear-gradient(to bottom, transparent, #3b124d)" }} />
     </section>
   );
 }
@@ -410,10 +356,67 @@ const MODULE_ACCENTS = [
   { iconBg: "linear-gradient(135deg, hsl(285 40% 36%), hsl(285 45% 44%))", iconShadow: "0 4px 10px hsl(285 40% 36% / 0.35)", borderHover: "hsl(285 40% 50% / 0.25)" },
 ];
 
+function ModuleCard({
+  mod,
+  accent,
+  className = "",
+  style: styleProp,
+}: {
+  mod: (typeof modules)[0];
+  accent: (typeof MODULE_ACCENTS)[0];
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className={`group relative p-6 rounded-2xl flex flex-col transition-all duration-300 hover:-translate-y-1 h-full ${className}`}
+      style={{
+        background: "linear-gradient(145deg, hsl(0 0% 100%), hsl(285 20% 98%))",
+        border: "1px solid hsl(var(--border))",
+        boxShadow: "0 1px 3px hsl(285 25% 10% / 0.06), 0 0 0 1px hsl(285 30% 90% / 0.5)",
+        ...styleProp,
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.boxShadow = `0 12px 32px hsl(285 25% 10% / 0.12), 0 0 0 1px ${accent.borderHover}, inset 0 1px 0 hsl(0 0% 100% / 0.8)`;
+        el.style.background = "linear-gradient(145deg, hsl(0 0% 100%), hsl(285 18% 99%))";
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.boxShadow = "0 1px 3px hsl(285 25% 10% / 0.06), 0 0 0 1px hsl(285 30% 90% / 0.5)";
+        el.style.background = "linear-gradient(145deg, hsl(0 0% 100%), hsl(285 20% 98%))";
+      }}
+    >
+      <div className="absolute top-0 left-6 right-6 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `linear-gradient(90deg, transparent, ${accent.borderHover}, transparent)` }} />
+      <div className="flex items-start gap-4 mb-4">
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105" style={{ background: accent.iconBg, color: "white", boxShadow: accent.iconShadow }}>
+          {mod.icon}
+        </div>
+        <div className="pt-0.5">
+          <h3 className="text-[15px] font-bold text-foreground leading-tight">{mod.title}</h3>
+        </div>
+      </div>
+      <p className="text-[13px] text-muted-foreground leading-relaxed mb-4">{mod.description}</p>
+      <div className="mt-auto pt-5 border-t border-gray-200/80">
+        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground/70 mb-2.5">Capabilities</p>
+        <ul className="space-y-2">
+          {mod.capabilities.map((cap) => (
+            <li key={cap} className="flex items-center gap-2 text-[12px]" style={{ color: "hsl(var(--foreground) / 0.8)" }}>
+              <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: "hsl(32 95% 52%)" }} />
+              {cap}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 function ModulesSection() {
   return (
-    <section className="py-16 relative" id="modules" style={{ background: "linear-gradient(180deg, hsl(285 20% 96%) 0%, hsl(30 5% 98%) 100%)" }}>
-      <div className="max-w-7xl mx-auto px-6">
+    <section className="py-16 relative overflow-hidden" id="modules" style={{ background: "linear-gradient(180deg, hsl(285 25% 97%) 0%, hsl(285 15% 95%) 50%, hsl(30 5% 98%) 100%)" }}>
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(hsl(285 45% 45% / 0.04) 1.5px, transparent 1.5px)", backgroundSize: "24px 24px" }} />
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
             <SectionLabel>Platform Modules</SectionLabel>
@@ -421,44 +424,43 @@ function ModulesSection() {
             <p className="text-[14px] mt-1.5 text-muted-foreground max-w-lg">Purpose-built components working in concert to deliver structured, end-to-end service operations.</p>
           </div>
           <div className="shrink-0 text-[12px] font-semibold px-3 py-1.5 rounded-lg" style={{ background: "hsl(var(--primary) / 0.06)", border: "1px solid hsl(var(--primary) / 0.15)", color: "hsl(var(--primary))" }}>
-            6 Integrated Modules
+            5 Integrated Modules
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {modules.map((mod) => {
-            const accent = MODULE_ACCENTS[mod.accentIdx];
-            return (
-              <div
-                key={mod.title}
-                className="group relative p-5 rounded-xl flex flex-col transition-all duration-200 hover:-translate-y-0.5"
-                style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", boxShadow: "0 1px 4px hsl(285 25% 10% / 0.06)" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = `0 6px 20px hsl(285 25% 10% / 0.1), 0 0 0 1px ${accent.borderHover}`; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px hsl(285 25% 10% / 0.06)"; }}
-              >
-                <div className="absolute top-0 left-4 right-4 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `linear-gradient(90deg, transparent, ${accent.borderHover}, transparent)` }} />
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105" style={{ background: accent.iconBg, color: "white", boxShadow: accent.iconShadow }}>
-                    {mod.icon}
-                  </div>
-                  <div className="pt-0.5">
-                    <h3 className="text-[15px] font-bold text-foreground leading-tight">{mod.title}</h3>
-                  </div>
-                </div>
-                <p className="text-[13px] text-muted-foreground leading-relaxed mb-4">{mod.description}</p>
-                <div className="mt-auto pt-4" style={{ borderTop: "1px solid hsl(var(--border))" }}>
-                  <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground/70 mb-2.5">Capabilities</p>
-                  <ul className="space-y-1.5">
-                    {mod.capabilities.map((cap) => (
-                      <li key={cap} className="flex items-center gap-2 text-[12px]" style={{ color: "hsl(var(--foreground) / 0.75)" }}>
-                        <span className="h-1 w-1 rounded-full shrink-0" style={{ background: "hsl(32 95% 52%)" }} />
-                        {cap}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+
+        {/* Desktop lg: first row 3 centered, second row 2 centered */}
+        <div className="hidden lg:block">
+          <div className="grid grid-cols-3 gap-8">
+            {modules.slice(0, 3).map((mod) => (
+              <ModuleCard key={mod.title} mod={mod} accent={MODULE_ACCENTS[mod.accentIdx]} />
+            ))}
+          </div>
+          <div className="flex flex-wrap justify-center gap-8 mt-8">
+            {modules.slice(3, 5).map((mod) => (
+              <div key={mod.title} className="w-full max-w-[calc((100%-4rem)/3)] min-w-[280px]">
+                <ModuleCard mod={mod} accent={MODULE_ACCENTS[mod.accentIdx]} />
               </div>
-            );
-          })}
+            ))}
+          </div>
+        </div>
+
+        {/* Tablet md: 2 columns, 5th card centered */}
+        <div className="hidden md:grid lg:hidden grid-cols-2 gap-8">
+          {modules.slice(0, 4).map((mod) => (
+            <ModuleCard key={mod.title} mod={mod} accent={MODULE_ACCENTS[mod.accentIdx]} />
+          ))}
+          <div className="col-span-2 flex justify-center">
+            <div className="w-full max-w-[calc(50%-1rem)]">
+              <ModuleCard mod={modules[4]} accent={MODULE_ACCENTS[modules[4].accentIdx]} />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile: 1 column centered */}
+        <div className="grid grid-cols-1 gap-8 md:hidden">
+          {modules.map((mod) => (
+            <ModuleCard key={mod.title} mod={mod} accent={MODULE_ACCENTS[mod.accentIdx]} />
+          ))}
         </div>
       </div>
     </section>
@@ -469,32 +471,32 @@ function ModulesSection() {
 
 function EnterpriseSection() {
   return (
-    <section className="py-16 relative overflow-hidden" id="enterprise" style={{ background: "linear-gradient(160deg, hsl(285 50% 11%), hsl(285 45% 15%), hsl(285 40% 13%))" }}>
-      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.03) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.03) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-      <div className="absolute pointer-events-none" style={{ top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 700, height: 700, background: "radial-gradient(ellipse, hsl(32 95% 52% / 0.05) 0%, transparent 60%)" }} />
+    <section className="py-16 relative overflow-hidden" id="enterprise" style={{ background: "linear-gradient(160deg, #3b124d 0%, #4a1659 50%, #5a1a6d 100%)" }}>
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.04) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.04) 1px, transparent 1px)", backgroundSize: "64px 64px" }} />
+      <div className="absolute pointer-events-none" style={{ top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 700, height: 700, background: "radial-gradient(ellipse, hsl(32 95% 52% / 0.06) 0%, transparent 60%)" }} />
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="max-w-2xl mb-10">
           <SectionLabel dark>Enterprise Grade</SectionLabel>
           <h2 className="text-3xl font-bold text-white leading-tight mb-2">Enterprise-Ready by Design</h2>
-          <p className="text-[14px] leading-relaxed" style={{ color: "hsl(285 15% 55%)" }}>Infrastructure-grade capabilities for organizations that demand accountability at every layer.</p>
+          <p className="text-[14px] leading-relaxed" style={{ color: "hsl(285 15% 58%)" }}>Infrastructure-grade capabilities for organizations that demand accountability at every layer.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {enterpriseFeatures.map((feat, i) => (
             <div
               key={feat.title}
-              className="group relative p-4 rounded-xl transition-all duration-200 hover:-translate-y-0.5"
-              style={{ background: "hsl(285 40% 16% / 0.6)", border: "1px solid hsl(285 35% 26% / 0.7)", backdropFilter: "blur(8px)" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "hsl(285 40% 19% / 0.8)"; (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(285 40% 35% / 0.6)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "hsl(285 40% 16% / 0.6)"; (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(285 35% 26% / 0.7)"; }}
+              className="group relative p-5 rounded-xl transition-all duration-200 hover:-translate-y-0.5"
+              style={{ background: "hsl(285 40% 18% / 0.7)", border: "1px solid hsl(285 35% 28% / 0.6)", backdropFilter: "blur(8px)", boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "hsl(285 40% 21% / 0.85)"; (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(285 40% 38% / 0.5)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 28px rgba(0,0,0,0.3)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "hsl(285 40% 18% / 0.7)"; (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(285 35% 28% / 0.6)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.2)"; }}
             >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "hsl(285 45% 26%)", color: "hsl(285 30% 72%)", border: "1px solid hsl(285 40% 32%)" }}>
+              <span className="absolute top-4 right-4 text-[2.5rem] font-black leading-none select-none" style={{ color: "hsl(285 30% 25%)" }}>{String(i + 1).padStart(2, "0")}</span>
+              <div className="flex items-center gap-3 mb-3 relative">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "hsl(285 45% 28%)", color: "hsl(285 30% 75%)", border: "1px solid hsl(285 40% 35%)" }}>
                   {feat.icon}
                 </div>
-                <h3 className="text-[13px] font-semibold text-white leading-tight">{feat.title}</h3>
+                <h3 className="text-[14px] font-semibold text-white leading-tight">{feat.title}</h3>
               </div>
-              <p className="text-[12px] leading-relaxed pl-11" style={{ color: "hsl(285 15% 52%)" }}>{feat.description}</p>
-              <span className="absolute top-3 right-3 text-[9px] font-mono" style={{ color: "hsl(285 30% 40%)" }}>0{i + 1}</span>
+              <p className="text-[12px] leading-relaxed pl-12 relative" style={{ color: "hsl(285 15% 55%)" }}>{feat.description}</p>
             </div>
           ))}
         </div>
@@ -507,7 +509,7 @@ function EnterpriseSection() {
 
 function PricingSection() {
   const plans = [
-    { name: "Standard", description: "Designed for single-organization deployments requiring structured ticket lifecycle management and SLA visibility.", includes: ["Full Ticket Lifecycle", "Basic SLA Monitoring", "Email Notifications", "Audit Logging", "CSV Export"], cta: "Get Started", featured: false },
+    { name: "Standard", description: "Designed for single-organization deployments requiring structured ticket lifecycle management and SLA visibility.", includes: ["Full Ticket Lifecycle", "Basic SLA Monitoring", "Email Notifications", "Audit Logging"], cta: "Get Started", featured: false },
     { name: "Enterprise", description: "Designed for multi-organization environments requiring advanced analytics, SLA customization, and expanded governance controls.", includes: ["Multi-Organization Support", "Custom SLA Configuration", "Advanced Analytics", "Messaging Routing Controls", "Priority Support"], cta: "Contact Sales", featured: true },
   ];
 
@@ -575,7 +577,7 @@ function PricingSection() {
 
 function FinalCTASection() {
   return (
-    <section className="relative py-16 overflow-hidden" style={{ background: "linear-gradient(135deg, hsl(285 50% 12%), hsl(285 45% 18%))" }}>
+    <section className="relative py-16 overflow-hidden" style={{ background: "linear-gradient(135deg, #3b124d, #4a1659, #5a1a6d)" }}>
       <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 60%, hsl(32 95% 52% / 0.08) 0%, transparent 60%)" }} />
       <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.03) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.03) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
       <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, hsl(285 45% 50% / 0.4), transparent)" }} />
@@ -600,30 +602,34 @@ function Footer() {
   const footerLinks = ["About", "Modules", "Enterprise", "Pricing", "Documentation"];
 
   return (
-    <footer style={{ background: "hsl(285 50% 8%)", borderTop: "1px solid hsl(285 40% 14%)" }}>
+    <footer className="bg-white border-t border-gray-200">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex flex-col sm:flex-row items-start justify-between gap-6 mb-6 pb-6" style={{ borderBottom: "1px solid hsl(285 40% 13%)" }}>
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-6 mb-6 pb-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <LogoMark size={32} />
+            <img src="/sahaya-logo.png" alt="Sahaya" className="h-8 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = "none"; const fb = e.currentTarget.nextElementSibling as HTMLElement | null; if (fb) fb.style.display = "flex"; }} />
+            <div className="shrink-0 items-center" style={{ display: "none" }}><LogoMark size={32} /></div>
             <div>
               <div className="flex flex-col leading-none">
-                <span className="text-sm font-bold text-white">Sahaya</span>
-                <span className="text-[9px] font-semibold tracking-[0.16em] uppercase" style={{ color: "hsl(285 15% 42%)" }}>by Pariskq</span>
+                <span className="text-sm font-bold text-gray-900">Sahaya</span>
+                <span className="text-[9px] font-semibold tracking-[0.16em] uppercase text-gray-500">by Pariskq</span>
               </div>
-              <p className="text-[12px] mt-1" style={{ color: "hsl(285 15% 40%)" }}>Intelligent Field Operations. Verified Outcomes.</p>
             </div>
           </div>
           <nav className="flex flex-wrap gap-x-5 gap-y-1.5 items-center">
             {footerLinks.map((link) => (
-              <a key={link} href={`#${link.toLowerCase()}`} className="text-[13px] transition-colors duration-150" style={{ color: "hsl(285 15% 42%)" }} onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "hsl(285 15% 65%)"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "hsl(285 15% 42%)"; }}>
+              <a key={link} href={`#${link.toLowerCase()}`} className="text-[13px] text-gray-600 hover:text-gray-900 transition-colors duration-150">
                 {link}
               </a>
             ))}
           </nav>
         </div>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-[11px]" style={{ color: "hsl(285 15% 32%)" }}>© 2026 Pariskq. All rights reserved.</p>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "hsl(32 95% 48%)" }}>Precision Meets Perfection</p>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Powered by</p>
+          <img src="/pariskq-logo.png" alt="Pariskq" className="h-12 w-auto object-contain" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">Precision Meets Perfection</p>
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="text-[11px] text-gray-500">© 2026 Pariskq. All rights reserved.</p>
         </div>
       </div>
     </footer>
@@ -638,10 +644,9 @@ export default function SahayaLanding() {
       <Header />
       <main>
         <HeroSection />
-        <StatsSection />
-        <IntegrityChainSection />
-        <ModulesSection />
         <EnterpriseSection />
+        <ModulesSection />
+        <IntegrityChainSection />
         <PricingSection />
         <FinalCTASection />
       </main>
