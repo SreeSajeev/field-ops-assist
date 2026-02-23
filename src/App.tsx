@@ -111,6 +111,7 @@ import Index from "@/pages/Index";
 import Dashboard from "@/pages/Dashboard";
 import ClientDashboard from "@/pages/ClientDashboard";
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
+import SuperAdminOrgView from "@/pages/SuperAdminOrgView";
 import TicketsList from "@/pages/TicketsList";
 import TicketDetail from "@/pages/TicketDetail";
 import ReviewQueue from "@/pages/ReviewQueue";
@@ -177,6 +178,7 @@ export default function App() {
               {/* ========================= */}
               <Route element={<RequireSuperAdmin />}>
                 <Route path="/super-admin" element={<SuperAdminDashboard />} />
+                <Route path="/super-admin/org/:clientSlug" element={<SuperAdminOrgView />} />
               </Route>
 
               {/* ========================= */}

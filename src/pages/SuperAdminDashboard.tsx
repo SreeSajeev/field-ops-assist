@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AppLayoutNew } from "@/components/layout/AppLayoutNew";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useOrganizations } from "@/hooks/useOrganizations";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,8 +31,10 @@ import { User } from "@/lib/types";
 
 export default function SuperAdminDashboard() {
   const [activeTab, setActiveTab] = useState("organizations");
+  const navigate = useNavigate();
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: organizations = [], isLoading: orgsLoading } = useOrganizations();
 
   const { data: slaCount } = useQuery({
     queryKey: ["sla-tracking-count"],
@@ -140,9 +143,11 @@ export default function SuperAdminDashboard() {
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">—</p>
+              <p className="text-2xl font-bold">
+                {orgsLoading ? "—" : organizations.length}
+              </p>
               <p className="text-xs text-muted-foreground">
-                Placeholder · Multi-tenant coming soon
+                By client_slug from tickets
               </p>
             </CardContent>
           </Card>
@@ -161,26 +166,40 @@ export default function SuperAdminDashboard() {
               <CardHeader>
                 <CardTitle>Organizations</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  UI-only placeholder. Backend org isolation will appear here.
+                  Distinct client_slug from tickets. Click a row to view that organization.
                 </p>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Slug</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground">
-                        No organizations yet. Multi-tenant data model pending.
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                {orgsLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading…</p>
+                ) : organizations.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No organizations yet. Tickets with client_slug will appear here.
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Slug</TableHead>
+                        <TableHead className="text-right">Tickets</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {organizations.map((org) => (
+                        <TableRow
+                          key={org.slug}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/super-admin/org/${encodeURIComponent(org.slug)}`)}
+                        >
+                          <TableCell className="font-medium">{org.displayName}</TableCell>
+                          <TableCell className="font-mono text-sm">{org.slug}</TableCell>
+                          <TableCell className="text-right">{org.ticketCount}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

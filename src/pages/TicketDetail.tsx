@@ -52,6 +52,7 @@ export default function TicketDetail() {
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [closePending, setClosePending] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [tokenLabel, setTokenLabel] = useState<"ON_SITE" | "RESOLUTION">("ON_SITE");
 
@@ -144,32 +145,45 @@ export default function TicketDetail() {
 };
 
 
-const handleClose = async () => {
-  try {
-    const res = await fetch(
-      `${import.meta.env.VITE_CRM_API_URL}/tickets/${ticket.id}/close`,
-      { method: "POST" }
-    );
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data?.error || "Close failed");
+  const handleClose = async (verificationRemarks: string) => {
+    setClosePending(true);
+    const apiBase =
+      import.meta.env.VITE_CRM_API_URL ?? "http://localhost:3000";
+    try {
+      const res = await fetch(
+        `${apiBase}/tickets/${ticket.id}/close`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            verification_remarks:
+              verificationRemarks != null && String(verificationRemarks).trim() !== ""
+                ? String(verificationRemarks).trim()
+                : null,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Close failed");
+      }
+      setCloseDialogOpen(false);
+      toast({
+        title: "Ticket Closed",
+        description: `Ticket ${ticket.ticket_number} verified and closed.`,
+      });
+      window.location.reload();
+    } catch (err) {
+      toast({
+        title: "Close failed",
+        description:
+          err instanceof Error ? err.message : "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setClosePending(false);
     }
-
-    // 🔥 IMPORTANT: refetch ticket instead of manually mutating
-    updateStatus.reset(); // optional
-    window.location.reload(); // simple and stable fix
-
-  } catch (err) {
-    toast({
-      title: "Close failed",
-      description:
-        err instanceof Error ? err.message : "Something went wrong",
-      variant: "destructive",
-    });
-  }
-};
+  };
 
 
 
@@ -215,10 +229,11 @@ const handleClose = async () => {
 
             {isPendingVerification && (
               <Button
-                onClick={handleClose}
+                onClick={() => setCloseDialogOpen(true)}
                 className="bg-green-600 hover:bg-green-700"
+                disabled={closePending}
               >
-                Verify & Close
+                {closePending ? "Closing…" : "Verify & Close"}
               </Button>
             )}
 
@@ -427,7 +442,7 @@ const handleClose = async () => {
         open={closeDialogOpen}
         onOpenChange={setCloseDialogOpen}
         onConfirm={handleClose}
-        isPending={updateStatus.isPending}
+        isPending={closePending}
       />
     </PageContainer>
     </AppLayoutNew>
