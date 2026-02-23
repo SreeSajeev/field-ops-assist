@@ -81,7 +81,12 @@ function median(values: number[]): number {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-export default function Analytics() {
+interface AnalyticsProps {
+  /** When true, render only the analytics content (no staff layout); for embedding in Client Dashboard Reports. */
+  clientReportsMode?: boolean;
+}
+
+export default function Analytics({ clientReportsMode = false }: AnalyticsProps) {
   const { userProfile } = useAuth();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -451,10 +456,8 @@ export default function Analytics() {
     URL.revokeObjectURL(url);
   }, [analyticsData]);
 
-  return (
-    <AppLayoutNew>
-      <PageContainer>
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,360px)_1fr] gap-6 lg:gap-8 items-stretch">
+  const content = (
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,360px)_1fr] gap-6 lg:gap-8 items-stretch">
         {/* LEFT COLUMN: KPIs, Filters, Summary */}
         <aside className="space-y-6 order-1 flex flex-col">
           <div className="flex items-center gap-3">
@@ -969,7 +972,21 @@ export default function Analytics() {
         </div>
         </div>
       </div>
-    </PageContainer>
+  );
+
+  if (clientReportsMode) {
+    return (
+      <div className="mx-auto max-w-7xl px-6 py-6" style={{ minHeight: '100%' }}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <AppLayoutNew>
+      <PageContainer>
+        {content}
+      </PageContainer>
     </AppLayoutNew>
   );
 }

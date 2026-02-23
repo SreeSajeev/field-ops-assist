@@ -110,6 +110,8 @@ import SahayaLanding from "@/pages/SahayaLanding";
 import Index from "@/pages/Index";
 import Dashboard from "@/pages/Dashboard";
 import ClientDashboard from "@/pages/ClientDashboard";
+import ClientReports from "@/pages/ClientReports";
+import ClientSupport from "@/pages/ClientSupport";
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
 import SuperAdminOrgView from "@/pages/SuperAdminOrgView";
 import TicketsList from "@/pages/TicketsList";
@@ -184,6 +186,22 @@ export default function App() {
               {/* ========================= */}
               {/* 📋 CLIENT */}
               {/* ========================= */}
+              <Route
+                path="/app/client/reports"
+                element={
+                  <RequireClient>
+                    <ClientReports />
+                  </RequireClient>
+                }
+              />
+              <Route
+                path="/app/client/support"
+                element={
+                  <RequireClient>
+                    <ClientSupport />
+                  </RequireClient>
+                }
+              />
               <Route
                 path="/app/client"
                 element={

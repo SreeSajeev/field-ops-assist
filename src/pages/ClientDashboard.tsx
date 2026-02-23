@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   Shield,
   LayoutDashboard,
@@ -74,11 +74,21 @@ const LogoMark = ({ size = 32 }: { size?: number }) => (
   </div>
 );
 
-// ─── Client Header ───────────────────────────────────────────────────────────
+// ─── Client Header (exported for ClientReportsPage) ───────────────────────────
 
-const ClientHeader = () => {
+export const ClientHeader = () => {
   const { userProfile, signOut } = useAuth();
+  const location = useLocation();
+  const pathname = location.pathname;
+  const isReports = pathname.startsWith("/app/client/reports");
+  const isSupport = pathname.startsWith("/app/client/support");
   const initials = userProfile?.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "?";
+
+  const navItems = [
+    { label: "Dashboard", icon: LayoutDashboard, active: !isReports && !isSupport, to: "/app/client" },
+    { label: "Reports", icon: FileText, active: isReports, to: "/app/client/reports" },
+    { label: "Support", icon: HelpCircle, active: isSupport, to: "/app/client/support" },
+  ];
 
   return (
     <header
@@ -99,11 +109,7 @@ const ClientHeader = () => {
           </div>
         </div>
         <nav className="hidden items-center gap-0.5 md:flex">
-          {[
-            { label: "Dashboard", icon: LayoutDashboard, active: true, to: "/app/client" },
-            { label: "Reports", icon: FileText, active: false, to: "#" },
-            { label: "Support", icon: HelpCircle, active: false, to: "#" },
-          ].map((item) => (
+          {navItems.map((item) => (
             <Link
               key={item.label}
               to={item.to}
@@ -455,9 +461,9 @@ const SupportSection = () => (
   </section>
 );
 
-// ─── Footer ──────────────────────────────────────────────────────────────────
+// ─── Footer (exported for ClientReportsPage) ───────────────────────────────────
 
-const DashboardFooter = () => (
+export const DashboardFooter = () => (
   <footer className="py-5" style={{ borderTop: "1px solid hsl(270 15% 88% / 0.5)" }}>
     <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 text-xs text-muted-foreground sm:flex-row">
       <span>© 2026 Pariskq. All rights reserved.</span>

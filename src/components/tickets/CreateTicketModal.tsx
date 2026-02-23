@@ -36,9 +36,16 @@ import { Loader2, Plus, Ticket, Star } from 'lucide-react';
 import { CreateTicketSchema, CommentSchema, formatZodError } from '@/lib/validation';
 import { z } from 'zod';
 
+export interface ClientTicketContext {
+  openedByEmail: string;
+  clientSlug: string;
+}
+
 interface CreateTicketModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When set, ticket is created as client-originated: opened_by_email and client_slug are set; priority control is hidden. */
+  clientContext?: ClientTicketContext | null;
 }
 
 // Common ticket categories based on logistics CRM domain
@@ -68,9 +75,10 @@ const ISSUE_TYPES = [
   'Other',
 ];
 
-export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps) {
+export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateTicketModalProps) {
   const queryClient = useQueryClient();
-  
+  const isClientMode = !!clientContext;
+
   // Form state
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [category, setCategory] = useState('');
@@ -106,22 +114,28 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
         priority,
       });
 
+      const insertPayload: Record<string, unknown> = {
+        ticket_number: validatedTicket.ticket_number,
+        vehicle_number: validatedTicket.vehicle_number,
+        category: validatedTicket.category,
+        issue_type: validatedTicket.issue_type,
+        location: validatedTicket.location,
+        complaint_id: validatedTicket.complaint_id,
+        source: validatedTicket.source,
+        needs_review: validatedTicket.needs_review,
+        confidence_score: validatedTicket.confidence_score,
+        priority: validatedTicket.priority,
+        status: 'OPEN',
+        opened_at: new Date().toISOString(),
+      };
+      if (clientContext) {
+        insertPayload.opened_by_email = clientContext.openedByEmail;
+        insertPayload.client_slug = clientContext.clientSlug;
+      }
+
       const { data, error } = await supabase
         .from('tickets')
-        .insert({
-          ticket_number: validatedTicket.ticket_number,
-          vehicle_number: validatedTicket.vehicle_number,
-          category: validatedTicket.category,
-          issue_type: validatedTicket.issue_type,
-          location: validatedTicket.location,
-          complaint_id: validatedTicket.complaint_id,
-          source: validatedTicket.source,
-          needs_review: validatedTicket.needs_review,
-          confidence_score: validatedTicket.confidence_score,
-          priority: validatedTicket.priority,
-          status: 'OPEN',
-          opened_at: new Date().toISOString(),
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
@@ -147,10 +161,11 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
       await supabase.from('audit_logs').insert({
         entity_type: 'ticket',
         entity_id: data.id,
-        action: 'manual_ticket_created',
+        action: clientContext ? 'client_ticket_created' : 'manual_ticket_created',
         metadata: {
           ticket_number: ticketNumber,
           source: 'MANUAL',
+          ...(clientContext ? { client_slug: clientContext.clientSlug } : {}),
         },
       });
 
@@ -220,11 +235,12 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Ticket className="h-5 w-5 text-primary" />
-            Create New Ticket
+            {isClientMode ? 'Submit support request' : 'Create New Ticket'}
           </DialogTitle>
           <DialogDescription>
-            Manually create a service ticket. This ticket will be treated the same as 
-            email-generated tickets and can be assigned to Field Executives.
+            {isClientMode
+              ? 'Describe your issue below. Our team will review and assign a technician as needed.'
+              : 'Manually create a service ticket. This ticket will be treated the same as email-generated tickets and can be assigned to Field Executives.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -297,24 +313,26 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
             />
           </div>
 
-          {/* Priority */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="priority"
-              checked={priority}
-              onCheckedChange={(checked) => setPriority(checked === true)}
-              aria-label="Mark as priority"
-            />
-            <Label
-              htmlFor="priority"
-              className="flex items-center gap-1.5 text-sm font-medium cursor-pointer"
-            >
-              <span className="inline-flex rounded-full ring-2 ring-yellow-300/50 p-0.5" aria-hidden>
-                <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-              </span>
-              Mark as priority
-            </Label>
-          </div>
+          {/* Priority (staff only; clients cannot set SLA/priority) */}
+          {!isClientMode && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="priority"
+                checked={priority}
+                onCheckedChange={(checked) => setPriority(checked === true)}
+                aria-label="Mark as priority"
+              />
+              <Label
+                htmlFor="priority"
+                className="flex items-center gap-1.5 text-sm font-medium cursor-pointer"
+              >
+                <span className="inline-flex rounded-full ring-2 ring-yellow-300/50 p-0.5" aria-hidden>
+                  <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                </span>
+                Mark as priority
+              </Label>
+            </div>
+          )}
 
           {/* Description */}
           <div className="space-y-2">
@@ -341,12 +359,12 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
               {createTicketMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  {isClientMode ? 'Submitting...' : 'Creating...'}
                 </>
               ) : (
                 <>
                   <Plus className="mr-2 h-4 w-4" />
-                  Create Ticket
+                  {isClientMode ? 'Submit request' : 'Create Ticket'}
                 </>
               )}
             </Button>
