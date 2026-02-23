@@ -474,10 +474,33 @@ export default function ClientDashboard() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats(userProfile?.client_slug ?? undefined);
   const { data: tickets = [], isLoading: ticketsLoading } = useTickets({ status: "all", clientSlug: userProfile?.client_slug ?? undefined });
 
+  const clientDisplayName = userProfile?.name?.trim() || "Guest";
+
   return (
     <div className="min-h-screen" style={{ background: "hsl(30 5% 98%)" }}>
       <ClientHeader />
       <main className="pt-14">
+        {/* Welcome back — enterprise-style greeting card at top */}
+        <section className="pt-6 pb-2">
+          <div className="mx-auto max-w-7xl px-6">
+            <div
+              className="rounded-2xl px-6 py-5"
+              style={{
+                background: "linear-gradient(135deg, hsl(285 25% 97%), hsl(0 0% 100%))",
+                border: "1px solid hsl(270 15% 88% / 0.8)",
+                boxShadow: "0 4px 16px hsl(285 25% 10% / 0.06), 0 1px 3px hsl(285 25% 10% / 0.04), inset 0 1px 0 hsl(0 0% 100% / 0.8)",
+              }}
+            >
+              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                Welcome back, {clientDisplayName}
+              </h1>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Track your service requests with full transparency and SLA visibility.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <WelcomeSection stats={stats} loading={statsLoading} />
         <GradientDivider />
         <section className="pb-8">
