@@ -63,7 +63,9 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
                     {ticket.ticket_number}
                   </span>
                   {ticket.priority === true && (
-                    <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" aria-label="Priority" />
+                    <span className="inline-flex rounded-full ring-2 ring-yellow-300/60 p-0.5" aria-label="Priority">
+                      <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
+                    </span>
                   )}
                 </div>
                 <span className="text-xs text-muted-foreground truncate">
@@ -105,7 +107,9 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
             >
               <TableCell className="text-center">
                 {ticket.priority === true ? (
-                  <Star className="h-4 w-4 fill-amber-500 text-amber-500 inline" aria-label="Priority" />
+                  <span className="inline-flex rounded-full ring-2 ring-yellow-300/60 p-0.5" aria-label="Priority">
+                    <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                  </span>
                 ) : (
                   <span className="text-muted-foreground">—</span>
                 )}

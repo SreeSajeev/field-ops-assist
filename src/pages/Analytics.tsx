@@ -1,13 +1,21 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   BarChart3,
   RefreshCw,
@@ -74,22 +82,54 @@ function median(values: number[]): number {
 }
 
 export default function Analytics() {
+  const { userProfile } = useAuth();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedClientSlug, setSelectedClientSlug] = useState<string>('');
+
+  const isClientRole = userProfile?.role === 'CLIENT';
+  const showClientSelector =
+    userProfile?.role === 'STAFF' || userProfile?.role === 'SUPER_ADMIN';
+
+  const effectiveClientSlug = useMemo(() => {
+    if (isClientRole && userProfile?.client_slug) return userProfile.client_slug;
+    return selectedClientSlug || null;
+  }, [isClientRole, userProfile?.client_slug, selectedClientSlug]);
+
+  const { data: clientListData } = useQuery({
+    queryKey: ['analytics-client-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('client_slug')
+        .not('client_slug', 'is', null);
+      if (error) throw error;
+      const rows = (data ?? []) as unknown as Array<{ client_slug: string | null }>;
+      const slugs = [...new Set(rows.map((r) => r.client_slug).filter(Boolean) as string[])];
+      return slugs.sort();
+    },
+    enabled: showClientSelector,
+  });
+
+  const clientOptions = clientListData ?? [];
 
   const { data: analyticsData, isLoading, refetch } = useQuery({
-    queryKey: ['analytics-data', startDate || null, endDate || null],
+    queryKey: ['analytics-data', startDate || null, endDate || null, effectiveClientSlug],
     queryFn: async () => {
-      let ticketsQuery = supabase
+      // Type as any to avoid Supabase builder chain causing excessively deep instantiation
+      let ticketsQuery: ReturnType<ReturnType<typeof supabase.from>['select']> = supabase
         .from('tickets')
         .select('*')
         .order('created_at', { ascending: false });
 
+      if (effectiveClientSlug) {
+        ticketsQuery = ticketsQuery.eq('client_slug', effectiveClientSlug) as typeof ticketsQuery;
+      }
       if (startDate && startDate.trim()) {
-        ticketsQuery = ticketsQuery.gte('opened_at', startOfDayISO(startDate.trim()));
+        ticketsQuery = ticketsQuery.gte('opened_at', startOfDayISO(startDate.trim())) as typeof ticketsQuery;
       }
       if (endDate && endDate.trim()) {
-        ticketsQuery = ticketsQuery.lte('opened_at', endOfDayISO(endDate.trim()));
+        ticketsQuery = ticketsQuery.lte('opened_at', endOfDayISO(endDate.trim())) as typeof ticketsQuery;
       }
 
       const { data: tickets, error: ticketsError } = await ticketsQuery;
@@ -321,9 +361,10 @@ export default function Analytics() {
   const handleExportTickets = useCallback(() => {
     const tickets = analyticsData?.tickets as Record<string, unknown>[] | undefined;
     if (!tickets || tickets.length === 0) return;
-    const headers = ['ticket_number', 'status', 'complaint_id', 'vehicle_number', 'category', 'issue_type', 'location', 'opened_at', 'created_at', 'priority', 'confidence_score', 'needs_review'];
+    const headers = ['ticket_number', 'status', 'complaint_id', 'vehicle_number', 'category', 'issue_type', 'location', 'opened_at', 'created_at', 'priority', 'confidence_score', 'needs_review', 'client_slug'];
+    const headerDisplay = headers.map((h) => (h === 'client_slug' ? 'Client' : h));
     const rows = tickets.map((t) => headers.map((h) => (t[h] != null ? String(t[h]) : '')).join(','));
-    const csv = [headers.join(','), ...rows].join('\n');
+    const csv = [headerDisplay.join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -336,7 +377,11 @@ export default function Analytics() {
   const handleExportMetrics = useCallback(() => {
     const d = analyticsData;
     if (!d) return;
-    const rows = [
+    const escape = (v: string) => (v.includes(',') || v.includes('"') || v.includes('\n') ? `"${String(v).replace(/"/g, '""')}"` : v);
+    const sections: string[] = [];
+
+    // 1) Summary metrics (existing)
+    const summaryRows = [
       ['Metric', 'Value'],
       ['Total Tickets', String(d.totalTickets)],
       ['Resolved Tickets', String(d.resolvedTickets)],
@@ -358,7 +403,45 @@ export default function Analytics() {
       ['SLA Compliance (Priority)', `${d.slaCompliancePriority}%`],
       ['SLA Compliance (Normal)', `${d.slaComplianceNormal}%`],
     ];
-    const csv = rows.map((r) => r.join(',')).join('\n');
+    sections.push(summaryRows.map((r) => r.map(escape).join(',')).join('\n'));
+
+    // 2) Chart data: Status Distribution
+    const statusData = (d.statusData as { name: string; value: number }[]) ?? [];
+    if (statusData.length > 0) {
+      sections.push('\nStatus Distribution\nStatus,Count\n' + statusData.map((r) => `${escape(r.name)},${r.value}`).join('\n'));
+    }
+
+    // 3) Chart data: Category (Top 6)
+    const categoryData = (d.categoryData as { name: string; value: number }[]) ?? [];
+    if (categoryData.length > 0) {
+      sections.push('\nCategory (Top 6)\nCategory,Count\n' + categoryData.map((r) => `${escape(r.name)},${r.value}`).join('\n'));
+    }
+
+    // 4) Chart data: Location (Top 8)
+    const locationData = (d.locationData as { name: string; value: number }[]) ?? [];
+    if (locationData.length > 0) {
+      sections.push('\nLocation (Top 8)\nLocation,Count\n' + locationData.map((r) => `${escape(r.name)},${r.value}`).join('\n'));
+    }
+
+    // 5) Chart data: Volume by Day (Last 7 Days)
+    const volumeByDay = (d.volumeByDay as { date: string; count: number }[]) ?? [];
+    if (volumeByDay.length > 0) {
+      sections.push('\nVolume by Day (Last 7 Days)\nDate,Count\n' + volumeByDay.map((r) => `${escape(r.date)},${r.count}`).join('\n'));
+    }
+
+    // 6) Chart data: Confidence Distribution
+    const confidenceData = (d.confidenceData as { name: string; value: number }[]) ?? [];
+    if (confidenceData.length > 0) {
+      sections.push('\nConfidence Distribution\nLevel,Count\n' + confidenceData.map((r) => `${escape(r.name)},${r.value}`).join('\n'));
+    }
+
+    // 7) Chart data: FE Workload
+    const feWorkload = (d.feWorkload as { name: string; active: number; total: number }[]) ?? [];
+    if (feWorkload.length > 0) {
+      sections.push('\nField Executive Workload\nFE Name,Active,Total\n' + feWorkload.map((r) => `${escape(r.name)},${r.active},${r.total}`).join('\n'));
+    }
+
+    const csv = sections.join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -371,55 +454,87 @@ export default function Analytics() {
   return (
     <AppLayoutNew>
       <PageContainer>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,360px)_1fr] gap-6 lg:gap-8 items-stretch">
+        {/* LEFT COLUMN: KPIs, Filters, Summary */}
+        <aside className="space-y-6 order-1 flex flex-col">
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shrink-0">
               <BarChart3 className="h-5 w-5 text-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold">Analytics</h1>
               <p className="text-muted-foreground text-sm">Operational insights and performance metrics</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="startDate" className="text-xs text-muted-foreground whitespace-nowrap">From</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-36"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="endDate" className="text-xs text-muted-foreground whitespace-nowrap">To</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-36"
-              />
-            </div>
-            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExportTickets} disabled={!analyticsData?.tickets?.length}>
-              <Download className="h-4 w-4 mr-2" />
-              Export Tickets
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExportMetrics} disabled={!analyticsData}>
-              <Download className="h-4 w-4 mr-2" />
-              Export Metrics
-            </Button>
-          </div>
-        </div>
 
-        {/* SLA Deep Metrics */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {/* Filters */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Date range &amp; actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {showClientSelector && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Client</Label>
+                  <Select
+                    value={selectedClientSlug || 'all'}
+                    onValueChange={(v) => setSelectedClientSlug(v === 'all' ? '' : v)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="All Clients" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Clients</SelectItem>
+                      {clientOptions.map((slug) => (
+                        <SelectItem key={slug} value={slug}>
+                          {slug}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="startDate" className="text-xs text-muted-foreground">From</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="endDate" className="text-xs text-muted-foreground">To</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading} className="w-full justify-center">
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportTickets} disabled={!analyticsData?.tickets?.length} className="w-full justify-center">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Tickets
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportMetrics} disabled={!analyticsData} className="w-full justify-center">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Metrics
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SLA Deep Metrics */}
+          <div className="grid grid-cols-2 gap-3">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -498,10 +613,10 @@ export default function Analytics() {
               </div>
             </CardContent>
           </Card>
-        </div>
+          </div>
 
-        {/* Resolution & Priority */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+          {/* Resolution & Priority */}
+          <div className="grid grid-cols-2 gap-3">
           <Card>
             <CardContent className="pt-6">
               <p className="text-xl font-bold">{analyticsData?.avgResolutionHours != null ? analyticsData.avgResolutionHours.toFixed(1) : '—'}h</p>
@@ -550,42 +665,42 @@ export default function Analytics() {
               <p className="text-xs text-muted-foreground">Avg Res (Normal)</p>
             </CardContent>
           </Card>
-        </div>
+          </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <Star className="h-8 w-8 text-amber-500" />
-                <div>
+          <div className="grid grid-cols-2 gap-3">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <Star className="h-8 w-8 text-amber-500 shrink-0" />
+                <div className="min-w-0">
                   <p className="text-xl font-bold">{analyticsData?.slaCompliancePriority ?? 100}%</p>
-                  <p className="text-xs text-muted-foreground">SLA Compliance (Priority tickets)</p>
+                  <p className="text-xs text-muted-foreground">SLA Compliance (Priority)</p>
                 </div>
               </div>
             </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-8 w-8 text-green-600" />
-                <div>
-                  <p className="text-xl font-bold">{analyticsData?.slaComplianceNormal ?? 100}%</p>
-                  <p className="text-xs text-muted-foreground">SLA Compliance (Normal tickets)</p>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-8 w-8 text-green-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xl font-bold">{analyticsData?.slaComplianceNormal ?? 100}%</p>
+                    <p className="text-xs text-muted-foreground">SLA Compliance (Normal)</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-6 gap-4">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 gap-3">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
                   <Ticket className="h-5 w-5 text-blue-600" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-2xl font-bold">{analyticsData?.totalTickets ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Total Tickets</p>
                 </div>
@@ -595,10 +710,10 @@ export default function Analytics() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-green-100 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-2xl font-bold">{analyticsData?.resolvedTickets ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Resolved</p>
                 </div>
@@ -608,10 +723,10 @@ export default function Analytics() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
                   <AlertTriangle className="h-5 w-5 text-amber-600" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-2xl font-bold">{analyticsData?.needsReview ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Needs Review</p>
                 </div>
@@ -621,10 +736,10 @@ export default function Analytics() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
                   <TrendingUp className="h-5 w-5 text-purple-600" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-2xl font-bold">{analyticsData?.avgConfidence ?? 0}%</p>
                   <p className="text-xs text-muted-foreground">Avg Confidence</p>
                 </div>
@@ -634,10 +749,10 @@ export default function Analytics() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-teal-100 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-teal-100 flex items-center justify-center shrink-0">
                   <Clock className="h-5 w-5 text-teal-600" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-2xl font-bold">{analyticsData?.slaCompliance ?? 100}%</p>
                   <p className="text-xs text-muted-foreground">SLA Compliance</p>
                 </div>
@@ -647,34 +762,37 @@ export default function Analytics() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
                   <Users className="h-5 w-5 text-orange-600" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-2xl font-bold">{analyticsData?.activeFEs ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Active FEs</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
+          </div>
+        </aside>
 
-        {/* Charts Row 1 */}
-        <div className="grid grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
+        {/* RIGHT COLUMN: All charts - fills height to avoid negative space */}
+        <div className="order-2 min-w-0 flex flex-col min-h-0 flex-1">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 flex-1 min-h-0 grid-auto-rows: minmax(280px, 1fr)">
+          <Card className="flex flex-col h-full min-h-0">
+            <CardHeader className="shrink-0">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Activity className="h-4 w-4" />
                 Ticket Volume (Last 7 Days)
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
               {isLoading ? (
-                <div className="h-[250px] flex items-center justify-center">
+                <div className="flex-1 min-h-[200px] flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={250}>
+                <div className="flex-1 min-h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={analyticsData?.volumeByDay ?? []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="date" fontSize={12} tickLine={false} />
@@ -683,23 +801,25 @@ export default function Analytics() {
                     <Line type="monotone" dataKey="count" stroke="#6B21A8" strokeWidth={2} dot={{ fill: '#6B21A8', strokeWidth: 2, r: 4 }} />
                   </LineChart>
                 </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
+          <Card className="flex flex-col h-full min-h-0">
+            <CardHeader className="shrink-0">
               <CardTitle className="flex items-center gap-2 text-base">
                 <PieChart className="h-4 w-4" />
                 Ticket Status Distribution
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
               {isLoading ? (
-                <div className="h-[250px] flex items-center justify-center">
+                <div className="flex-1 min-h-[200px] flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={250}>
+                <div className="flex-1 min-h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
                   <RechartsPie>
                     <Pie
                       data={analyticsData?.statusData ?? []}
@@ -718,27 +838,25 @@ export default function Analytics() {
                     <Legend layout="vertical" align="right" verticalAlign="middle" fontSize={12} />
                   </RechartsPie>
                 </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
-        </div>
-
-        {/* Charts Row 2 */}
-        <div className="grid grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
+          <Card className="flex flex-col h-full min-h-0">
+            <CardHeader className="shrink-0">
               <CardTitle className="flex items-center gap-2 text-base">
                 <BarChart3 className="h-4 w-4" />
                 Issues by Category
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
               {isLoading ? (
-                <div className="h-[250px] flex items-center justify-center">
+                <div className="flex-1 min-h-[200px] flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={250}>
+                <div className="flex-1 min-h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={analyticsData?.categoryData ?? []} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                     <XAxis type="number" fontSize={12} tickLine={false} />
@@ -747,23 +865,25 @@ export default function Analytics() {
                     <Bar dataKey="value" fill="#F97316" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
+          <Card className="flex flex-col h-full min-h-0">
+            <CardHeader className="shrink-0">
               <CardTitle className="flex items-center gap-2 text-base">
                 <TrendingUp className="h-4 w-4" />
                 Parsing Confidence Distribution
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
               {isLoading ? (
-                <div className="h-[250px] flex items-center justify-center">
+                <div className="flex-1 min-h-[200px] flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={250}>
+                <div className="flex-1 min-h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
                   <RechartsPie>
                     <Pie
                       data={analyticsData?.confidenceData ?? []}
@@ -782,27 +902,25 @@ export default function Analytics() {
                     <Legend layout="vertical" align="right" verticalAlign="middle" fontSize={12} />
                   </RechartsPie>
                 </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
-        </div>
-
-        {/* Charts Row 3 */}
-        <div className="grid grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
+          <Card className="flex flex-col h-full min-h-0">
+            <CardHeader className="shrink-0">
               <CardTitle className="flex items-center gap-2 text-base">
                 <MapPin className="h-4 w-4" />
                 Issues by Location
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
               {isLoading ? (
-                <div className="h-[250px] flex items-center justify-center">
+                <div className="flex-1 min-h-[200px] flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={250}>
+                <div className="flex-1 min-h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={analyticsData?.locationData ?? []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                     <XAxis dataKey="name" fontSize={10} tickLine={false} angle={-45} textAnchor="end" height={60} />
@@ -811,28 +929,30 @@ export default function Analytics() {
                     <Bar dataKey="value" fill="#0EA5E9" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
+          <Card className="flex flex-col h-full min-h-0">
+            <CardHeader className="shrink-0">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Users className="h-4 w-4" />
                 Field Executive Workload
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
               {isLoading ? (
-                <div className="h-[250px] flex items-center justify-center">
+                <div className="flex-1 min-h-[200px] flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
                 </div>
               ) : (analyticsData?.feWorkload?.length ?? 0) === 0 ? (
-                <div className="h-[250px] flex flex-col items-center justify-center text-center">
+                <div className="flex-1 min-h-[200px] flex flex-col items-center justify-center text-center">
                   <Users className="h-10 w-10 text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground">No assignment data available</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={250}>
+                <div className="flex-1 min-h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={analyticsData?.feWorkload ?? []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                     <XAxis dataKey="name" fontSize={11} tickLine={false} />
@@ -842,9 +962,11 @@ export default function Analytics() {
                     <Bar dataKey="total" name="Total" fill="#E9D5FF" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
+        </div>
         </div>
       </div>
     </PageContainer>

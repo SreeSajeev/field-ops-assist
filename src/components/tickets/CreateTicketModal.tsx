@@ -307,9 +307,11 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
             />
             <Label
               htmlFor="priority"
-              className="flex items-center gap-1.5 text-sm font-normal cursor-pointer"
+              className="flex items-center gap-1.5 text-sm font-medium cursor-pointer"
             >
-              <Star className="h-4 w-4 text-amber-500" />
+              <span className="inline-flex rounded-full ring-2 ring-yellow-300/50 p-0.5" aria-hidden>
+                <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+              </span>
               Mark as priority
             </Label>
           </div>

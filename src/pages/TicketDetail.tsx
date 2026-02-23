@@ -207,8 +207,8 @@ export default function TicketDetail() {
                 </h1>
                 <StatusBadge status={ticket.status} />
                 {ticket.priority === true && (
-                  <Badge variant="outline" className="border-amber-500 text-amber-600">
-                    <Star className="mr-1 h-3 w-3 fill-current" />
+                  <Badge variant="outline" className="border-yellow-500 bg-yellow-500/15 text-yellow-800 font-semibold ring-2 ring-yellow-300/60 shadow-sm">
+                    <Star className="mr-1 h-3.5 w-3.5 fill-yellow-500 text-yellow-500 shrink-0" aria-hidden />
                     Priority
                   </Badge>
                 )}
@@ -350,8 +350,10 @@ export default function TicketDetail() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-amber-500" />
+                <CardTitle className="flex items-center gap-2 font-semibold">
+                  <span className="inline-flex rounded-full ring-2 ring-yellow-300/60 p-0.5" aria-hidden>
+                    <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
+                  </span>
                   Priority
                 </CardTitle>
               </CardHeader>
