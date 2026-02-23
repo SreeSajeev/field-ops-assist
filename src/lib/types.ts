@@ -161,6 +161,7 @@ export interface User {
   email: string;
   role: UserRole;
   active: boolean;
+  is_active?: boolean;
   created_at: string;
 }
 

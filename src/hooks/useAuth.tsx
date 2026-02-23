@@ -456,25 +456,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /* ---------- PROFILE FETCH ---------- */
 
-  const resolveUserProfile = async (authUser: User) => {
+  const resolveUserProfile = async (
+    authUser: User
+  ): Promise<{ profile: UserProfile | null; deactivated: boolean }> => {
     const { data, error } = await supabase
       .from("users")
-      .select("id, name, email, role, active, client_slug")
+      .select("id, name, email, role, active, is_active, client_slug")
       .eq("auth_id", authUser.id)
       .maybeSingle();
 
-    if (error || !data) return null;
+    if (error || !data) return { profile: null, deactivated: false };
+
+    if (data.is_active === false) {
+      return { profile: null, deactivated: true };
+    }
 
     const role = parseUserRole(data.role);
-    if (!role) return null;
+    if (!role) return { profile: null, deactivated: false };
 
     return {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      role,
-      active: data.active,
-      client_slug: data.client_slug ?? null,
+      profile: {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role,
+        active: data.active,
+        client_slug: data.client_slug ?? null,
+      },
+      deactivated: false,
     };
   };
 
@@ -490,10 +499,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(sess?.user ?? null);
 
       if (sess?.user) {
-        let profile = await resolveUserProfile(sess.user);
+        let result = await resolveUserProfile(sess.user);
+
+        if (result.deactivated) {
+          await supabase.auth.signOut();
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.setItem("auth_deactivated", "1");
+          }
+          if (!cancelled) {
+            setUser(null);
+            setSession(null);
+            setUserProfile(null);
+          }
+          if (!cancelled) setLoading(false);
+          return;
+        }
 
         // Auto-create profile for newly confirmed users (no row in public.users yet)
-        if (!profile && sess.user.email) {
+        if (!result.profile && sess.user.email) {
           const role =
             parseUserRole(sess.user.user_metadata?.role as string) || "STAFF";
           const { error: insertError } = await supabase.from("users").insert({
@@ -504,15 +527,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             active: true,
           });
           if (!insertError) {
-            profile = await resolveUserProfile(sess.user);
+            result = await resolveUserProfile(sess.user);
           }
-          // If duplicate (e.g. race), ignore and re-fetch once
           if (insertError?.code === "23505") {
-            profile = await resolveUserProfile(sess.user);
+            result = await resolveUserProfile(sess.user);
           }
         }
 
-        if (!cancelled) setUserProfile(profile);
+        if (!cancelled) setUserProfile(result.profile);
       } else {
         setUserProfile(null);
       }

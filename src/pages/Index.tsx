@@ -102,9 +102,23 @@ export default function Index() {
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+
+const DEACTIVATED_KEY = "auth_deactivated";
 
 export default function Index() {
   const { user, loading, userProfile, signOut } = useAuth();
+  const [deactivatedMessage, setDeactivatedMessage] = useState(false);
+
+  useEffect(() => {
+    if (typeof sessionStorage === "undefined") return;
+    if (sessionStorage.getItem(DEACTIVATED_KEY) === "1") {
+      sessionStorage.removeItem(DEACTIVATED_KEY);
+      setDeactivatedMessage(true);
+    }
+  }, []);
 
   /* =========================
      AUTH BOOTSTRAP
@@ -125,7 +139,19 @@ export default function Index() {
   ========================= */
 
   if (!user) {
-    return <LoginForm />;
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+        {deactivatedMessage && (
+          <Alert variant="destructive" className="max-w-md">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Account deactivated. Contact administrator.
+            </AlertDescription>
+          </Alert>
+        )}
+        <LoginForm />
+      </div>
+    );
   }
 
   /* =========================

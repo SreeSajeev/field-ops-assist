@@ -4,11 +4,23 @@ import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Table,
   TableBody,
@@ -36,6 +48,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { User, UserRole } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 const ROLE_BADGES: Record<UserRole, { label: string; className: string }> = {
   STAFF: { label: 'Service Staff', className: 'bg-blue-100 text-blue-700 border-blue-200' },
@@ -44,10 +57,55 @@ const ROLE_BADGES: Record<UserRole, { label: string; className: string }> = {
   SUPER_ADMIN: { label: 'Super Admin', className: 'bg-amber-100 text-amber-700 border-amber-200' },
 };
 
+const apiBase = () => import.meta.env.VITE_CRM_API_URL ?? 'http://localhost:3000';
+
 export default function Users() {
+  const { userProfile, session } = useAuth();
+  const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
+  const [statusPendingId, setStatusPendingId] = useState<string | null>(null);
+
+  const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
+
+  const updateUserStatus = async (userId: string, isActive: boolean) => {
+    const token = session?.access_token;
+    if (!token) {
+      toast({ title: 'Not signed in', variant: 'destructive' });
+      return;
+    }
+    setStatusPendingId(userId);
+    try {
+      const res = await fetch(`${apiBase()}/admin/users/${userId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ is_active: isActive }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error ?? 'Failed to update status');
+      }
+      toast({
+        title: isActive ? 'User activated' : 'User deactivated',
+        description: isActive ? 'They can sign in again.' : 'They will lose access immediately.',
+      });
+      refetch();
+    } catch (err) {
+      toast({
+        title: 'Update failed',
+        description: err instanceof Error ? err.message : 'Something went wrong',
+        variant: 'destructive',
+      });
+    } finally {
+      setStatusPendingId(null);
+      setDeactivateTarget(null);
+    }
+  };
 
   const { data: users, isLoading, refetch } = useQuery({
     queryKey: ['users'],
@@ -62,6 +120,8 @@ export default function Users() {
     },
   });
 
+  const isActive = (u: User) => u.is_active !== false && u.active !== false;
+
   // Filter users
   const filteredUsers = (users || []).filter(user => {
     const matchesSearch = !search || 
@@ -70,8 +130,8 @@ export default function Users() {
     
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'active' && user.active) ||
-      (statusFilter === 'inactive' && !user.active);
+      (statusFilter === 'active' && isActive(user)) ||
+      (statusFilter === 'inactive' && !isActive(user));
 
     return matchesSearch && matchesRole && matchesStatus;
   });
@@ -79,8 +139,8 @@ export default function Users() {
   // Calculate stats
   const stats = {
     total: users?.length || 0,
-    active: users?.filter(u => u.active).length || 0,
-    inactive: users?.filter(u => !u.active).length || 0,
+    active: users?.filter(u => isActive(u)).length || 0,
+    inactive: users?.filter(u => !isActive(u)).length || 0,
     admins: users?.filter(u => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN').length || 0,
   };
 
@@ -294,16 +354,35 @@ export default function Users() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {user.active ? (
-                        <Badge className="bg-green-100 text-green-700 border-green-200 gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                          Active
-                        </Badge>
+                      {isSuperAdmin ? (
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={isActive(user)}
+                            disabled={statusPendingId === user.id || user.id === userProfile?.id}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                updateUserStatus(user.id, true);
+                              } else {
+                                setDeactivateTarget(user);
+                              }
+                            }}
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            {isActive(user) ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
                       ) : (
-                        <Badge variant="outline" className="text-muted-foreground gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                          Inactive
-                        </Badge>
+                        isActive(user) ? (
+                          <Badge className="bg-green-100 text-green-700 border-green-200 gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                            Inactive
+                          </Badge>
+                        )
                       )}
                     </TableCell>
                     <TableCell>
@@ -318,6 +397,31 @@ export default function Users() {
             </Table>
           </div>
         )}
+
+        <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Deactivate user?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {deactivateTarget && (
+                  <>
+                    <strong>{deactivateTarget.name}</strong> will lose access immediately and cannot sign in until
+                    reactivated. Are you sure?
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deactivateTarget && updateUserStatus(deactivateTarget.id, false)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Deactivate
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </PageContainer>
     </AppLayoutNew>
