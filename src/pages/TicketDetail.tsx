@@ -145,7 +145,7 @@ export default function TicketDetail() {
 };
 
 
-  const handleClose = async (verificationRemarks: string) => {
+  const handleClose = async (verificationRemarks: string, resolutionCategory: string) => {
     setClosePending(true);
     const apiBase =
       import.meta.env.VITE_CRM_API_URL ?? "http://localhost:3000";
@@ -160,6 +160,10 @@ export default function TicketDetail() {
               verificationRemarks != null && String(verificationRemarks).trim() !== ""
                 ? String(verificationRemarks).trim()
                 : null,
+            resolution_category:
+              resolutionCategory != null && String(resolutionCategory).trim() !== ""
+                ? String(resolutionCategory).trim()
+                : undefined,
           }),
         }
       );

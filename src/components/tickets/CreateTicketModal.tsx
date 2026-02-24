@@ -35,6 +35,7 @@ import { toast } from '@/hooks/use-toast';
 import { Loader2, Plus, Ticket, Star } from 'lucide-react';
 import { CreateTicketSchema, CommentSchema, formatZodError } from '@/lib/validation';
 import { z } from 'zod';
+import { COMPLAINT_CATEGORIES, ISSUE_TYPES } from '@/constants/complaintCategories';
 
 export interface ClientTicketContext {
   openedByEmail: string;
@@ -48,33 +49,6 @@ interface CreateTicketModalProps {
   clientContext?: ClientTicketContext | null;
 }
 
-// Common ticket categories based on logistics CRM domain
-const CATEGORIES = [
-  'Delivery Issue',
-  'Vehicle Breakdown',
-  'Documentation',
-  'Customer Complaint',
-  'Damage Report',
-  'Schedule Change',
-  'Other',
-];
-
-// Common issue types
-const ISSUE_TYPES = [
-  'Delayed Delivery',
-  'Missing Package',
-  'Wrong Address',
-  'Vehicle Maintenance',
-  'Flat Tire',
-  'Engine Issue',
-  'Missing Documents',
-  'Incorrect Invoice',
-  'Damaged Goods',
-  'Lost Shipment',
-  'Route Change',
-  'Other',
-];
-
 export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateTicketModalProps) {
   const queryClient = useQueryClient();
   const isClientMode = !!clientContext;
@@ -83,10 +57,17 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [category, setCategory] = useState('');
   const [issueType, setIssueType] = useState('');
+  const [customIssueType, setCustomIssueType] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [complaintId, setComplaintId] = useState('');
   const [priority, setPriority] = useState(false);
+
+  // When "Other" is selected, use custom text if provided; otherwise send "Other"
+  const effectiveIssueType =
+    issueType === 'Other' && customIssueType.trim()
+      ? customIssueType.trim()
+      : issueType || null;
 
   // Generate a unique ticket number
   const generateTicketNumber = () => {
@@ -105,7 +86,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
         ticket_number: ticketNumber,
         vehicle_number: vehicleNumber.trim() || null,
         category: category || null,
-        issue_type: issueType || null,
+        issue_type: effectiveIssueType,
         location: location.trim() || null,
         complaint_id: complaintId.trim() || null,
         source: 'MANUAL',
@@ -207,6 +188,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
     setVehicleNumber('');
     setCategory('');
     setIssueType('');
+    setCustomIssueType('');
     setLocation('');
     setDescription('');
     setComplaintId('');
@@ -216,7 +198,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation: at least category or issue type should be provided
+    // Basic validation: at least category or issue type should be provided (unchanged)
     if (!category && !issueType) {
       toast({
         title: 'Missing Information',
@@ -268,7 +250,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
             />
           </div>
 
-          {/* Category */}
+          {/* Category — structured list from constants, "Other" at bottom */}
           <div className="space-y-2">
             <Label htmlFor="category">Category *</Label>
             <Select value={category} onValueChange={setCategory}>
@@ -276,7 +258,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((cat) => (
+                {COMPLAINT_CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
                   </SelectItem>
@@ -285,7 +267,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
             </Select>
           </div>
 
-          {/* Issue Type */}
+          {/* Issue Type — dropdown with custom entry when "Other" selected */}
           <div className="space-y-2">
             <Label htmlFor="issueType">Issue Type *</Label>
             <Select value={issueType} onValueChange={setIssueType}>
@@ -300,6 +282,15 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
                 ))}
               </SelectContent>
             </Select>
+            {issueType === 'Other' && (
+              <Input
+                id="customIssueType"
+                placeholder="Specify issue type (optional)"
+                value={customIssueType}
+                onChange={(e) => setCustomIssueType(e.target.value)}
+                className="mt-1.5"
+              />
+            )}
           </div>
 
           {/* Location */}

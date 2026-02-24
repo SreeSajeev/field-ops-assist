@@ -3,10 +3,10 @@
  *
  * Confirmation dialog for Service Staff to close/resolve a ticket.
  * Only allows closing tickets that are in appropriate states (ON_SITE, RESOLVED_PENDING_VERIFICATION).
- * Includes optional verification remarks (sent to backend and included in resolution email).
+ * Requires Resolution Category; includes optional verification remarks (sent to backend and included in resolution email).
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,14 +20,22 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CheckCircle, AlertTriangle } from "lucide-react";
 import { Ticket, TicketStatus } from "@/lib/types";
+import { RESOLUTION_CATEGORIES } from "@/constants/complaintCategories";
 
 interface CloseTicketDialogProps {
   ticket: Ticket;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (verificationRemarks: string) => void;
+  onConfirm: (verificationRemarks: string, resolutionCategory: string) => void;
   isPending: boolean;
 }
 
@@ -44,11 +52,22 @@ export function CloseTicketDialog({
   isPending,
 }: CloseTicketDialogProps) {
   const [remarks, setRemarks] = useState("");
+  const [resolutionCategory, setResolutionCategory] = useState("");
   const canClose = CLOSEABLE_STATUSES.includes(ticket.status);
+  const canConfirm = canClose && resolutionCategory.trim() !== "";
+
+  useEffect(() => {
+    if (!open) {
+      setRemarks("");
+      setResolutionCategory("");
+    }
+  }, [open]);
 
   const handleConfirm = () => {
-    onConfirm(remarks);
+    if (!canConfirm) return;
+    onConfirm(remarks, resolutionCategory.trim());
     setRemarks("");
+    setResolutionCategory("");
   };
 
   return (
@@ -73,6 +92,24 @@ export function CloseTicketDialog({
                     finalize the ticket lifecycle. This action indicates that the issue has been
                     verified and resolved.
                   </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="close-resolution-category">Resolution Category *</Label>
+                    <Select
+                      value={resolutionCategory}
+                      onValueChange={setResolutionCategory}
+                    >
+                      <SelectTrigger id="close-resolution-category">
+                        <SelectValue placeholder="Select resolution category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {RESOLUTION_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="close-remarks">Verification remarks (optional)</Label>
                     <Textarea
@@ -107,7 +144,7 @@ export function CloseTicketDialog({
           {canClose && (
             <AlertDialogAction
               onClick={handleConfirm}
-              disabled={isPending}
+              disabled={isPending || !canConfirm}
               className="bg-green-600 hover:bg-green-700"
             >
               {isPending ? "Closing…" : "Close Ticket"}
