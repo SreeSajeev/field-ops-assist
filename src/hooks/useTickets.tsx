@@ -194,10 +194,11 @@ export function useUpdateTicketStatus() {
 }
 
 /* =====================================================
-   Assign ticket
+   Assign ticket (via backend: creates assignment, ON_SITE token, emails, SLA)
 ===================================================== */
 export function useAssignTicket() {
   const queryClient = useQueryClient();
+  const apiBase = import.meta.env.VITE_CRM_API_URL ?? "http://localhost:3000";
 
   return useMutation({
     mutationFn: async ({
@@ -209,42 +210,25 @@ export function useAssignTicket() {
       feId: string;
       overrideReason?: string;
     }) => {
-      const { data: assignment, error } = await supabase
-        .from("ticket_assignments")
-        .insert({
-          ticket_id: ticketId,
-          fe_id: feId,
-          override_reason: overrideReason ?? null,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      await supabase
-        .from("tickets")
-        .update({
-          status: "ASSIGNED",
-          current_assignment_id: assignment.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", ticketId);
-
-      await supabase.from("audit_logs").insert({
-        entity_type: "ticket",
-        entity_id: ticketId,
-        action: "assigned",
-        metadata: {
-          fe_id: feId,
-          assignment_id: assignment.id,
-        },
+      const res = await fetch(`${apiBase}/tickets/${ticketId}/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          feId,
+          override_reason:
+            overrideReason != null && String(overrideReason).trim() !== ""
+              ? String(overrideReason).trim()
+              : undefined,
+        }),
       });
-
-      return assignment;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Assignment failed");
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
       queryClient.invalidateQueries({ queryKey: ["ticket-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["fe-active-tokens"] });
       toast({ title: "Ticket assigned" });
     },
   });

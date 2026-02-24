@@ -223,7 +223,13 @@ export default function TicketDetail() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {ticket.status === "OPEN" && (
+              <Button onClick={() => setAssignModalOpen(true)}>
+                <User className="mr-2 h-4 w-4" />
+                Assign Field Executive
+              </Button>
+            )}
             {ticket.status === "NEEDS_REVIEW" && (
               <Button onClick={handleApprove}>
                 <CheckCircle className="mr-2 h-4 w-4" />
@@ -393,12 +399,6 @@ export default function TicketDetail() {
                 <ConfidenceScore score={ticket.confidence_score} size="lg" />
               </CardContent>
             </Card>
-
-            {ticket.status === "ASSIGNED" && (
-              <Button onClick={() => generateToken("ON_SITE")} className="w-full">
-                Generate On-Site Token
-              </Button>
-            )}
 
             {ticket.status === "ON_SITE" && (
               <Button onClick={() => generateToken("RESOLUTION")} className="w-full">

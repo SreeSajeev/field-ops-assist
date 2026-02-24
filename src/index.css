@@ -450,10 +450,10 @@
     animation: glowPulse 3s ease-in-out infinite;
   }
 
-  /* Custom scrollbar */
+  /* Custom scrollbar - slightly wider for visibility */
   .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
