@@ -62,6 +62,11 @@ const statusConfig: Record<TicketStatus, {
     className: 'status-reopened',
     icon: RotateCcw
   },
+  FE_ATTEMPT_FAILED: { 
+    label: 'Attempt Failed', 
+    className: 'status-fe-attempt-failed',
+    icon: AlertTriangle
+  },
 };
 
 export function StatusBadge({ status, className, showIcon = true }: StatusBadgeProps) {

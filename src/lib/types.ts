@@ -7,7 +7,8 @@ export type TicketStatus =
   | 'ON_SITE' 
   | 'RESOLVED_PENDING_VERIFICATION' 
   | 'RESOLVED' 
-  | 'REOPENED';
+  | 'REOPENED'
+  | 'FE_ATTEMPT_FAILED';
 
 // User role enum
 export type UserRole = 'STAFF' | 'FIELD_EXECUTIVE' | 'ADMIN' | 'SUPER_ADMIN' | 'CLIENT';

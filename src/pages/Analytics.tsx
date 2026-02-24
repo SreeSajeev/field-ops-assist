@@ -252,6 +252,30 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
 
       const priorityTickets = ticketList.filter((t: Record<string, unknown>) => t.priority === true);
       const priorityPct = ticketList.length > 0 ? Math.round((priorityTickets.length / ticketList.length) * 100) : 0;
+
+      /* Multi-attempt FE resolution metrics */
+      const totalAttempts = assignmentList.length;
+      const failedOutcomes = (assignmentList as Record<string, unknown>[]).filter((a) => a.outcome === 'FAILED').length;
+      const successOutcomes = (assignmentList as Record<string, unknown>[]).filter((a) => a.outcome === 'SUCCESS').length;
+      const attemptsPerTicket = new Map<string, number>();
+      (assignmentList as Record<string, unknown>[]).forEach((a) => {
+        const tid = a.ticket_id as string;
+        attemptsPerTicket.set(tid, (attemptsPerTicket.get(tid) || 0) + 1);
+      });
+      const resolvedTicketIds = new Set(
+        ticketList
+          .filter((t: Record<string, unknown>) => t.status === 'RESOLVED')
+          .map((t: Record<string, unknown>) => t.id as string)
+      );
+      const resolvedAttemptCounts: number[] = [...resolvedTicketIds]
+        .map((id: string) => attemptsPerTicket.get(id) || 0)
+        .filter((n): n is number => n > 0);
+      const avgAttemptsBeforeResolution =
+        resolvedAttemptCounts.length > 0
+          ? resolvedAttemptCounts.reduce((s: number, n: number) => s + n, 0) / resolvedAttemptCounts.length
+          : null;
+      const failureRatePct =
+        totalAttempts > 0 ? Math.round((failedOutcomes / totalAttempts) * 100) : 0;
       const priorityResolvedHours = priorityTickets
         .map((t: Record<string, unknown>) => getResolutionHours(t as Parameters<typeof getResolutionHours>[0]))
         .filter((h): h is number => h != null);
@@ -358,6 +382,11 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
         avgResolutionNormal,
         slaCompliancePriority: slaCompliancePriority,
         slaComplianceNormal: slaComplianceNormal,
+        totalAttempts,
+        failedAttempts: failedOutcomes,
+        successAttempts: successOutcomes,
+        avgAttemptsBeforeResolution: avgAttemptsBeforeResolution != null ? Math.round(avgAttemptsBeforeResolution * 100) / 100 : null,
+        failureRatePct,
       };
     },
     refetchInterval: 60000,
@@ -407,6 +436,11 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
       ['Avg Resolution Normal (hours)', String(d.avgResolutionNormal?.toFixed(2) ?? '—')],
       ['SLA Compliance (Priority)', `${d.slaCompliancePriority}%`],
       ['SLA Compliance (Normal)', `${d.slaComplianceNormal}%`],
+      ['Total FE Attempts', String(d.totalAttempts ?? '—')],
+      ['Failed Attempts', String(d.failedAttempts ?? '—')],
+      ['Success Attempts', String(d.successAttempts ?? '—')],
+      ['Avg Attempts Before Resolution', String(d.avgAttemptsBeforeResolution != null ? d.avgAttemptsBeforeResolution : '—')],
+      ['Failure Rate %', `${d.failureRatePct ?? 0}%`],
     ];
     sections.push(summaryRows.map((r) => r.map(escape).join(',')).join('\n'));
 
@@ -600,6 +634,21 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
                   <p className="text-lg font-bold truncate" title={analyticsData?.feWithMostBreachesName ?? '—'}>{analyticsData?.feWithMostBreachesName ?? '—'}</p>
                   <p className="text-xs text-muted-foreground">FE Most Breaches ({analyticsData?.feMostBreachesCount ?? 0})</p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+          {/* FE multi-attempt resolution metrics */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">FE Resolution Attempts</p>
+                <p className="text-2xl font-bold">{analyticsData?.totalAttempts ?? 0}</p>
+                <p className="text-xs text-muted-foreground">
+                  {analyticsData?.failedAttempts ?? 0} failed · {analyticsData?.successAttempts ?? 0} success
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Avg attempts before resolution: {analyticsData?.avgAttemptsBeforeResolution != null ? analyticsData.avgAttemptsBeforeResolution : '—'} · Failure rate: {analyticsData?.failureRatePct ?? 0}%
+                </p>
               </div>
             </CardContent>
           </Card>

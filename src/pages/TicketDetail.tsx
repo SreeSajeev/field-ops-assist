@@ -224,7 +224,7 @@ export default function TicketDetail() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {ticket.status === "OPEN" && (
+            {(ticket.status === "OPEN" || ticket.status === "FE_ATTEMPT_FAILED") && (
               <Button onClick={() => setAssignModalOpen(true)}>
                 <User className="mr-2 h-4 w-4" />
                 Assign Field Executive
@@ -274,52 +274,73 @@ export default function TicketDetail() {
                 <IconInfo icon={Mail} label="Reported By" value={ticket.opened_by_email} />
               </CardContent>
             </Card>
+            {/* Attempt Failed: show when FE reported resolution failed */}
+            {ticket.status === "FE_ATTEMPT_FAILED" && currentAssignment && (
+              <Card className="border-amber-200 bg-amber-50/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-amber-800">
+                    <Truck className="h-5 w-5" />
+                    Attempt Failed
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-sm text-amber-800">
+                    <strong>Reason:</strong> {(currentAssignment as { failure_reason?: string | null }).failure_reason ?? "—"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Attempt count: {assignments?.length ?? 0}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Assignment */}
-                        {currentAssignment && assignedFE && (
-                          <Card>
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2">
-                                <Truck className="h-5 w-5" />
-                                Assigned Field Executive
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex items-center gap-4">
-                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-semibold">
-                                {assignedFE.name.charAt(0)}
-                              </div>
-                              <div className="flex-1">
-                                <p className="font-semibold">{assignedFE.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  Assigned{" "}
-                                  {format(
-                                    new Date(
-                                      currentAssignment.assigned_at ||
-                                        currentAssignment.created_at
-                                    ),
-                                    "PPp"
-                                  )}
-                                </p>
-                              </div>
-                              <Badge>{assignedFE.active ? "Active" : "Inactive"}</Badge>
-                            </CardContent>
-                          </Card>
-                        )}
-            {ticket.status === "OPEN" && (
-  <Card>
-    <CardHeader>
-      <CardTitle>Assign Field Executive</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <Button
-        className="w-full"
-        onClick={() => setAssignModalOpen(true)}
-      >
-        <User className="mr-2 h-4 w-4" />
-        Assign Field Executive
-      </Button>
-    </CardContent>
-  </Card>
-)}
+            {currentAssignment && assignedFE && ticket.status !== "FE_ATTEMPT_FAILED" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5" />
+                    Assigned Field Executive
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-semibold">
+                    {assignedFE.name.charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold">{assignedFE.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Assigned{" "}
+                      {format(
+                        new Date(
+                          currentAssignment.assigned_at ||
+                            currentAssignment.created_at
+                        ),
+                        "PPp"
+                      )}
+                    </p>
+                  </div>
+                  <Badge>{assignedFE.active ? "Active" : "Inactive"}</Badge>
+                </CardContent>
+              </Card>
+            )}
+
+            {(ticket.status === "OPEN" || ticket.status === "FE_ATTEMPT_FAILED") && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Assign Field Executive</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    className="w-full"
+                    onClick={() => setAssignModalOpen(true)}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Assign Field Executive
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* ACTIVITY */}
             <Card>

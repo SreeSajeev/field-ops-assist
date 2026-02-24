@@ -59,6 +59,7 @@
     --status-resolved: 145 65% 28%;
     --status-reopened: 0 72% 51%;
     --status-pending: 32 95% 52%;
+    --status-fe-attempt-failed: 0 72% 51%;
 
     /* Confidence Score Colors */
     --confidence-high: 145 65% 35%;
@@ -210,6 +211,12 @@
     background-color: hsl(var(--status-pending) / 0.12);
     color: hsl(32 80% 42%);
     border: 1px solid hsl(var(--status-pending) / 0.25);
+  }
+
+  .status-fe-attempt-failed {
+    background-color: hsl(var(--status-fe-attempt-failed) / 0.12);
+    color: hsl(var(--status-fe-attempt-failed));
+    border: 1px solid hsl(var(--status-fe-attempt-failed) / 0.25);
   }
 
   /* Confidence score colors */
