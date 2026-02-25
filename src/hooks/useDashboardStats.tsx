@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardStats } from '@/lib/types';
+import { getStartOfDayIST, todayIST } from '@/lib/dateUtils';
 
 export function useDashboardStats(clientSlug?: string | null) {
   return useQuery({
@@ -31,8 +32,7 @@ export function useDashboardStats(clientSlug?: string | null) {
 
       if (slaError) throw slaError;
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const startOfTodayIST = getStartOfDayIST(todayIST());
 
       const totalTickets = tickets?.length || 0;
       const openTickets = tickets?.filter(t => t.status === 'OPEN').length || 0;
@@ -42,7 +42,7 @@ export function useDashboardStats(clientSlug?: string | null) {
       const resolvedToday = tickets?.filter(t => {
         if (t.status !== 'RESOLVED') return false;
         const createdDate = new Date(t.created_at);
-        return createdDate >= today;
+        return createdDate >= startOfTodayIST;
       }).length || 0;
 
       const scoresWithValues = tickets?.filter(t => t.confidence_score !== null) || [];

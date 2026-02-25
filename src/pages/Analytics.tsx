@@ -48,23 +48,12 @@ import {
   LineChart,
   Line,
 } from 'recharts';
+import { formatIST, getStartOfDayIST, getEndOfDayIST, todayIST } from '@/lib/dateUtils';
 
 const COLORS = ['#6B21A8', '#F97316', '#0EA5E9', '#22C55E', '#EAB308', '#EF4444'];
 
 const MS_PER_HOUR = 1000 * 60 * 60;
 const HOURS_PER_DAY = 24;
-
-function startOfDayISO(dateStr: string): string {
-  const d = new Date(dateStr);
-  d.setUTCHours(0, 0, 0, 0);
-  return d.toISOString();
-}
-
-function endOfDayISO(dateStr: string): string {
-  const d = new Date(dateStr);
-  d.setUTCHours(23, 59, 59, 999);
-  return d.toISOString();
-}
 
 function getResolutionHours(ticket: { opened_at?: string | null; updated_at?: string | null; resolved_at?: string | null; status?: string }): number | null {
   if (ticket.status !== 'RESOLVED') return null;
@@ -131,10 +120,10 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
         ticketsQuery = ticketsQuery.eq('client_slug', effectiveClientSlug) as typeof ticketsQuery;
       }
       if (startDate && startDate.trim()) {
-        ticketsQuery = ticketsQuery.gte('opened_at', startOfDayISO(startDate.trim())) as typeof ticketsQuery;
+        ticketsQuery = ticketsQuery.gte('opened_at', getStartOfDayIST(startDate.trim()).toISOString()) as typeof ticketsQuery;
       }
       if (endDate && endDate.trim()) {
-        ticketsQuery = ticketsQuery.lte('opened_at', endOfDayISO(endDate.trim())) as typeof ticketsQuery;
+        ticketsQuery = ticketsQuery.lte('opened_at', getEndOfDayIST(endDate.trim()).toISOString()) as typeof ticketsQuery;
       }
 
       const { data: tickets, error: ticketsError } = await ticketsQuery;
@@ -325,16 +314,22 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
       }).filter((fe: { total: number }) => fe.total > 0);
 
       const now = new Date();
+      const todayStr = formatIST(now, 'yyyy-MM-dd');
       const volumeByDay: { date: string; count: number }[] = [];
       for (let i = 6; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-        const dayTickets = ticketList.filter((t: Record<string, unknown>) =>
-          String((t.created_at as string) || '').startsWith(dateStr)
-        );
+        const dayStartIST = getStartOfDayIST(todayStr);
+        const dayStartMs = dayStartIST.getTime() - i * 24 * 60 * 60 * 1000;
+        const dayStartDate = new Date(dayStartMs);
+        const dateStr = formatIST(dayStartDate, 'yyyy-MM-dd');
+        const dayEndDate = getEndOfDayIST(dateStr);
+        const dayTickets = ticketList.filter((t: Record<string, unknown>) => {
+          const created = (t.created_at as string) || '';
+          if (!created) return false;
+          const createdTime = new Date(created).getTime();
+          return createdTime >= dayStartDate.getTime() && createdTime <= dayEndDate.getTime();
+        });
         volumeByDay.push({
-          date: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          date: formatIST(dayStartDate, 'EEE MM/dd'),
           count: dayTickets.length,
         });
       }
@@ -403,7 +398,7 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `analytics-tickets-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `analytics-tickets-${todayIST()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }, [analyticsData?.tickets]);
@@ -485,7 +480,7 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `analytics-metrics-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `analytics-metrics-${todayIST()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }, [analyticsData]);

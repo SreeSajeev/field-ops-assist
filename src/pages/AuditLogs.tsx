@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { formatIST, getStartOfDayIST, getEndOfDayIST, todayIST } from '@/lib/dateUtils';
 import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
@@ -131,7 +131,7 @@ function AuditLogItem({ log }: AuditLogItemProps) {
                 <div className="mt-1.5 flex items-center gap-3 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" />
-                    {log.created_at ? format(new Date(log.created_at), 'PPpp') : '—'}
+                    {log.created_at ? formatIST(log.created_at, 'PPpp') : '—'}
                   </span>
                   {log.performed_by != null && String(log.performed_by).length > 0 && (
                     <span className="flex items-center gap-1.5">
@@ -198,11 +198,11 @@ export default function AuditLogs() {
         .order('created_at', { ascending: false });
 
       if (dateFrom && dateFrom.trim()) {
-        const start = startOfDay(new Date(dateFrom.trim()));
+        const start = getStartOfDayIST(dateFrom.trim());
         if (!isNaN(start.getTime())) query = query.gte('created_at', start.toISOString());
       }
       if (dateTo && dateTo.trim()) {
-        const end = endOfDay(new Date(dateTo.trim()));
+        const end = getEndOfDayIST(dateTo.trim());
         if (!isNaN(end.getTime())) query = query.lte('created_at', end.toISOString());
       }
       if (entityFilter && entityFilter !== 'all') {
@@ -289,7 +289,7 @@ export default function AuditLogs() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `audit-logs-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.download = `audit-logs-${todayIST()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }, [filteredLogs]);
@@ -308,7 +308,7 @@ export default function AuditLogs() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `audit-logs-summary-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.download = `audit-logs-summary-${todayIST()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }, [aggregations]);

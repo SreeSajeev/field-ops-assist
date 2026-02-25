@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { formatIST } from '@/lib/dateUtils';
 import { Ticket } from '@/lib/types';
 import { StatusBadge } from './StatusBadge';
 import { ConfidenceScore } from './ConfidenceScore';
+import { getDisplayConfidenceScore } from '@/lib/confidence';
 import {
   Table,
   TableBody,
@@ -126,7 +127,7 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
                 <StatusBadge status={ticket.status} />
               </TableCell>
               <TableCell>
-                <ConfidenceScore score={ticket.confidence_score} size="sm" />
+                <ConfidenceScore score={getDisplayConfidenceScore(ticket)} size="sm" />
               </TableCell>
               <TableCell>
                 {ticket.vehicle_number ? (
@@ -139,7 +140,7 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
                 {ticket.location || '—'}
               </TableCell>
               <TableCell>
-                {format(new Date(ticket.opened_at), 'MMM d, HH:mm')}
+                {formatIST(ticket.opened_at, 'MMM d, HH:mm')}
               </TableCell>
               <TableCell>
                 <Link

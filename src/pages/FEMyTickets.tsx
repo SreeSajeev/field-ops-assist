@@ -1,6 +1,6 @@
 
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { formatIST } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -262,7 +262,7 @@ const { data: feTokens } = useQuery({
                     <div>
                       <CardTitle className="font-mono text-lg">{ticket.ticket_number}</CardTitle>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Created {format(new Date(ticket.created_at), 'PPp')}
+                        Created {formatIST(ticket.created_at, 'PPp')}
                       </p>
                     </div>
                     <StatusBadge status={ticket.status} />

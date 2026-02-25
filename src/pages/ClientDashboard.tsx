@@ -23,7 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useTickets } from "@/hooks/useTickets";
 import { Ticket as TicketType, TicketStatus } from "@/lib/types";
-import { format } from "date-fns";
+import { formatIST } from "@/lib/dateUtils";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -275,7 +275,7 @@ const ClientTicketsTable = ({ tickets, loading, onSelect }: { tickets: TicketTyp
                     <td className="whitespace-nowrap px-5 py-3 font-mono text-xs font-medium text-foreground">{ticket.ticket_number}</td>
                     <td className="max-w-xs truncate px-5 py-3 text-foreground">{ticket.issue_type || ticket.category || ticket.ticket_number}</td>
                     <td className="px-5 py-3"><StatusBadge status={ticket.status} /></td>
-                    <td className="whitespace-nowrap px-5 py-3 text-muted-foreground">{format(new Date(ticket.updated_at), "yyyy-MM-dd")}</td>
+                    <td className="whitespace-nowrap px-5 py-3 text-muted-foreground">{formatIST(ticket.updated_at, "yyyy-MM-dd")}</td>
                     <td className="px-5 py-3 text-right">
                       <Link to={`/app/tickets/${ticket.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition-all duration-200 hover:bg-primary/6">
                         Details <ChevronRight className="h-3 w-3" />
@@ -327,7 +327,7 @@ const TicketDetailDrawer = ({ ticket, onClose }: { ticket: TicketType | null; on
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{ticket.category && ticket.issue_type ? `${ticket.category} · ${ticket.issue_type}` : "Service request"}</p>
             <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
               {ticket.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{ticket.location}</span>}
-              <span className="inline-flex items-center gap-1"><CalendarDays className="h-3 w-3" />Created {format(new Date(ticket.opened_at), "yyyy-MM-dd")}</span>
+              <span className="inline-flex items-center gap-1"><CalendarDays className="h-3 w-3" />Created {formatIST(ticket.opened_at, "yyyy-MM-dd")}</span>
             </div>
           </div>
 

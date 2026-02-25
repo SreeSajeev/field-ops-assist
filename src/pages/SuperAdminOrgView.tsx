@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/tickets/StatusBadge";
 import { Ticket as TicketIcon, Gauge, ArrowLeft } from "lucide-react";
-import { format } from "date-fns";
+import { formatIST } from "@/lib/dateUtils";
 import { Ticket } from "@/lib/types";
 
 function slugToDisplayName(slug: string): string {
@@ -195,7 +195,7 @@ export default function SuperAdminOrgView() {
                           <StatusBadge status={t.status} />
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {format(new Date(t.updated_at), "yyyy-MM-dd")}
+                          {formatIST(t.updated_at, "yyyy-MM-dd")}
                         </TableCell>
                         <TableCell>
                           <Link

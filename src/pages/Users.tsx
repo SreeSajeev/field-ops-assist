@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { formatIST } from '@/lib/dateUtils';
 import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
@@ -388,7 +388,7 @@ export default function Users() {
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Clock className="h-3.5 w-3.5" />
-                        {format(new Date(user.created_at), 'MMM d, yyyy')}
+                        {formatIST(user.created_at, 'MMM d, yyyy')}
                       </div>
                     </TableCell>
                   </TableRow>

@@ -97,11 +97,11 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <div className="grid min-h-screen w-full lg:grid-cols-2">
 
       {/* ================= LEFT PANEL ================= */}
-      <div className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden bg-gradient-to-br from-[#3b124d] via-[#4a1659] to-[#5a1a6d] text-white">
-        <div className="absolute inset-0 pointer-events-none opacity-40" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.06) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.06) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
+      <div className="relative hidden min-h-screen flex-col justify-between overflow-hidden bg-gradient-to-br from-[#3b124d] via-[#4a1659] to-[#5a1a6d] p-12 text-white lg:flex">
+        <div className="pointer-events-none absolute inset-0 opacity-40" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.06) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.06) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
         <div className="absolute top-1/4 right-0 w-96 h-96 pointer-events-none rounded-full blur-3xl" style={{ background: "radial-gradient(ellipse, hsl(32 95% 52% / 0.12) 0%, transparent 70%)" }} />
         <div className="absolute bottom-1/4 left-0 w-80 h-80 pointer-events-none rounded-full blur-3xl" style={{ background: "radial-gradient(ellipse, hsl(285 55% 55% / 0.08) 0%, transparent 70%)" }} />
 
@@ -165,23 +165,15 @@ export function LoginForm() {
       </div>
 
       {/* ================= RIGHT PANEL ================= */}
-      <div className="flex flex-col items-center justify-center p-6 relative overflow-hidden bg-gradient-to-b from-gray-50 to-gray-100/80">
-        <div className="absolute inset-0 pointer-events-none opacity-60" style={{ backgroundImage: "radial-gradient(hsl(285 45% 45% / 0.04) 1.5px, transparent 1.5px)", backgroundSize: "28px 28px" }} />
+      <div className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100/80 p-6">
+        <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: "radial-gradient(hsl(285 45% 45% / 0.04) 1.5px, transparent 1.5px)", backgroundSize: "28px 28px" }} />
         <Card className="relative z-10 w-full max-w-md border border-gray-200/80 bg-white/95 backdrop-blur-sm shadow-[0_4px_24px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.06)] transition-shadow duration-300">
           <CardHeader className="text-center">
-            <div className="lg:hidden flex flex-col items-center mb-4">
+            <div className="lg:hidden mb-4 flex flex-col items-center">
               <img
                 src="/sahaya-logo.png"
                 alt="Sahaya"
                 className="h-12"
-              />
-              <p className="text-xs text-muted-foreground mt-2">
-                Powered by
-              </p>
-              <img
-                src="/pariskq-logo.png"
-                alt="Pariskq"
-                className="h-6 mt-1"
               />
             </div>
             <CardTitle className="text-2xl">

@@ -1,7 +1,7 @@
 //works
 import { useState } from "react";
 import { useParams, Link, useNavigate, Navigate } from "react-router-dom";
-import { format } from "date-fns";
+import { formatIST } from "@/lib/dateUtils";
 import {
   ArrowLeft,
   MapPin,
@@ -18,6 +18,7 @@ import { AppLayoutNew } from "@/components/layout/AppLayoutNew";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { StatusBadge } from "@/components/tickets/StatusBadge";
 import { ConfidenceScore } from "@/components/tickets/ConfidenceScore";
+import { getDisplayConfidenceScore } from "@/lib/confidence";
 import { FEAssignmentModal } from "@/components/tickets/FEAssignmentModal";
 import { CloseTicketDialog } from "@/components/tickets/CloseTicketDialog";
 import { generateFEActionToken } from "@/lib/feToken";
@@ -218,7 +219,7 @@ export default function TicketDetail() {
                 )}
               </div>
               <p className="text-muted-foreground">
-                Opened {format(new Date(ticket.opened_at), "PPpp")}
+                Opened {formatIST(ticket.opened_at, "PPpp")}
               </p>
             </div>
           </div>
@@ -311,11 +312,9 @@ export default function TicketDetail() {
                     <p className="font-semibold">{assignedFE.name}</p>
                     <p className="text-sm text-muted-foreground">
                       Assigned{" "}
-                      {format(
-                        new Date(
-                          currentAssignment.assigned_at ||
-                            currentAssignment.created_at
-                        ),
+                      {formatIST(
+                        currentAssignment.assigned_at ||
+                          currentAssignment.created_at,
                         "PPp"
                       )}
                     </p>
@@ -354,7 +353,7 @@ export default function TicketDetail() {
                     <div key={c.id} className="border-l-2 pl-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Badge variant="outline">{c.source}</Badge>
-                        {format(new Date(c.created_at), "PPp")}
+                        {formatIST(c.created_at, "PPp")}
                       </div>
                       <p className="mt-1">{c.body}</p>
 
@@ -417,7 +416,7 @@ export default function TicketDetail() {
                 <CardTitle>Parsing Confidence</CardTitle>
               </CardHeader>
               <CardContent>
-                <ConfidenceScore score={ticket.confidence_score} size="lg" />
+                <ConfidenceScore score={getDisplayConfidenceScore(ticket)} size="lg" />
               </CardContent>
             </Card>
 

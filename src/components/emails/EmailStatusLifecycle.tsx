@@ -17,7 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { format } from 'date-fns';
+import { formatIST } from '@/lib/dateUtils';
 
 interface StatusStep {
   key: EmailProcessingStatus;
@@ -123,10 +123,10 @@ export function EmailStatusLifecycle({
     let actor = 'System';
 
     if (step.key === 'RECEIVED') {
-      timestamp = format(new Date(receivedAt), 'MMM d, yyyy HH:mm:ss');
+      timestamp = formatIST(receivedAt, 'MMM d, yyyy HH:mm:ss');
       rule = 'Postmark webhook trigger';
     } else if (step.key === 'PARSED' && parsedAt) {
-      timestamp = format(new Date(parsedAt), 'MMM d, yyyy HH:mm:ss');
+      timestamp = formatIST(parsedAt, 'MMM d, yyyy HH:mm:ss');
       rule = 'Rule-based extraction engine';
     } else if (step.key === currentStatus && confidenceScore !== null) {
       if (step.key === 'NEEDS_REVIEW') {

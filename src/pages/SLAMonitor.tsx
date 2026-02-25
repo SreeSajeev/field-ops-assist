@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { format, differenceInMinutes, differenceInHours, isPast, startOfDay, endOfDay, subDays } from 'date-fns';
+import { differenceInMinutes, differenceInHours, isPast, subDays } from 'date-fns';
+import { formatIST, getStartOfDayIST, getEndOfDayIST, todayIST } from '@/lib/dateUtils';
 import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
@@ -182,11 +183,11 @@ function inDateRange(rowDate: string | null | undefined, startDate: string, endD
   const row = new Date(rowDate);
   if (isNaN(row.getTime())) return true;
   if (startDate && startDate.trim()) {
-    const start = startOfDay(new Date(startDate.trim()));
+    const start = getStartOfDayIST(startDate.trim());
     if (row < start) return false;
   }
   if (endDate && endDate.trim()) {
-    const end = endOfDay(new Date(endDate.trim()));
+    const end = getEndOfDayIST(endDate.trim());
     if (row > end) return false;
   }
   return true;
@@ -311,7 +312,7 @@ export default function SLAMonitor() {
       if (isRowBreached(sla)) {
         stats.overdueCount++;
         if (rowCreatedAt) {
-          const dayStr = format(new Date(rowCreatedAt), 'yyyy-MM-dd');
+          const dayStr = formatIST(new Date(rowCreatedAt), 'yyyy-MM-dd');
           stats.breachByDay.set(dayStr, (stats.breachByDay.get(dayStr) ?? 0) + 1);
         }
         if (sla.feName !== undefined) {
@@ -342,8 +343,8 @@ export default function SLAMonitor() {
     const trend: { date: string; dayLabel: string; count: number }[] = [];
     for (let d = BREACH_TREND_DAYS - 1; d >= 0; d--) {
       const day = subDays(now, d);
-      const dayStr = format(day, 'yyyy-MM-dd');
-      trend.push({ date: dayStr, dayLabel: format(day, 'EEE MM/dd'), count: stats.breachByDay.get(dayStr) ?? 0 });
+      const dayStr = formatIST(day, 'yyyy-MM-dd');
+      trend.push({ date: dayStr, dayLabel: formatIST(day, 'EEE MM/dd'), count: stats.breachByDay.get(dayStr) ?? 0 });
     }
 
     return {
@@ -397,7 +398,7 @@ export default function SLAMonitor() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `sla-monitor-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.download = `sla-monitor-export-${todayIST()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }, [filteredRows]);

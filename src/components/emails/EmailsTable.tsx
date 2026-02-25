@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmailStatusLifecycle } from './EmailStatusLifecycle';
 import { ConfidenceScore } from '@/components/tickets/ConfidenceScore';
-import { format } from 'date-fns';
+import { formatIST } from '@/lib/dateUtils';
 import { Eye, RefreshCw, Plus, Mail, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -121,7 +121,7 @@ export function EmailsTable({
                 </TableCell>
                 <TableCell>
                   <span className="text-sm text-muted-foreground">
-                    {format(new Date(email.received_at), 'MMM d, HH:mm')}
+                    {formatIST(email.received_at, 'MMM d, HH:mm')}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">

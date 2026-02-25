@@ -140,16 +140,18 @@ export default function Index() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+      <div className="flex min-h-screen w-full flex-col">
         {deactivatedMessage && (
-          <Alert variant="destructive" className="max-w-md">
+          <Alert variant="destructive" className="mx-4 mt-4 max-w-md flex-shrink-0">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               Account deactivated. Contact administrator.
             </AlertDescription>
           </Alert>
         )}
-        <LoginForm />
+        <div className="flex flex-1 min-h-0 items-center justify-center">
+          <LoginForm />
+        </div>
       </div>
     );
   }
