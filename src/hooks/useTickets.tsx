@@ -2,23 +2,31 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Ticket, TicketFilters, TicketStatus } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 /* =====================================================
-   Tickets list
+   Tickets list (scoped by organisation_id for non–Super Admin)
 ===================================================== */
 export function useTickets(filters?: TicketFilters) {
+  const { userProfile } = useAuth();
+  const organisationId = userProfile?.organisation_id ?? null;
+  const isSuperAdmin = userProfile?.role === "SUPER_ADMIN";
+
   return useQuery({
-    queryKey: ["tickets", filters],
+    queryKey: ["tickets", filters, organisationId, isSuperAdmin, filters?.scopeAllOrganisations],
     queryFn: async () => {
-      let query = supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query: any = supabase
         .from("tickets")
         .select("*")
         .order("created_at", { ascending: false });
 
+      if (!isSuperAdmin && organisationId && !filters?.scopeAllOrganisations) {
+        query = query.eq("organisation_id", organisationId);
+      }
       if (filters?.status && filters.status !== "all") {
         query = query.eq("status", filters.status);
       }
-
       if (filters?.confidenceRange && filters.confidenceRange !== "all") {
         switch (filters.confidenceRange) {
           case "high":
@@ -32,17 +40,14 @@ export function useTickets(filters?: TicketFilters) {
             break;
         }
       }
-
       if (filters?.search) {
         query = query.or(
           `ticket_number.ilike.%${filters.search}%,complaint_id.ilike.%${filters.search}%,vehicle_number.ilike.%${filters.search}%`
         );
       }
-
       if (filters?.unassignedOnly) {
         query = query.is("current_assignment_id", null);
       }
-
       if (filters?.clientSlug != null && filters.clientSlug !== "") {
         query = query.eq("client_slug", filters.clientSlug);
       }

@@ -1,10 +1,10 @@
 /**
  * CreateFEModal.tsx
  * 
- * Modal component for Service Staff to create new Field Executives.
+ * Modal component for Service Manager to create new Field Executives.
  * Creates records in the existing field_executives table.
  * 
- * Part of Requirement 4: Service Staff Ability to Create Field Executives
+ * Part of Requirement 4: Service Manager Ability to Create Field Executives
  */
 
 import { useState } from 'react';
@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, UserPlus, X } from 'lucide-react';
 import { CreateFESchema, formatZodError } from '@/lib/validation';
@@ -51,7 +52,8 @@ const SKILL_OPTIONS = [
 
 export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
   const queryClient = useQueryClient();
-  
+  const { organisationId } = useAuth();
+
   // Form state
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -88,6 +90,7 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
           base_location: validated.base_location,
           skills: validated.skills,
           active: validated.active,
+          ...(organisationId ? { organisation_id: organisationId } : {}),
         })
         .select()
         .single();

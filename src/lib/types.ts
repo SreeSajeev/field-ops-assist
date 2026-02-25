@@ -78,6 +78,7 @@ export interface FieldExecutive {
   skills: Record<string, unknown> | null;
   active: boolean;
   created_at: string;
+  organisation_id?: string | null;
 }
 
 // Field Executive with stats
@@ -109,6 +110,7 @@ export interface Ticket {
   /** Informational highlight flag; defaults to false if column not yet present. */
   priority?: boolean;
   client_slug?: string | null;
+  organisation_id?: string | null;
 }
 
 // Ticket with assignment info
@@ -164,6 +166,16 @@ export interface User {
   active: boolean;
   is_active?: boolean;
   created_at: string;
+  organisation_id?: string | null;
+}
+
+// Organisation from database
+export interface Organisation {
+  id: string;
+  name: string;
+  slug: string;
+  created_at: string;
+  status: string;
 }
 
 // Dashboard stats
@@ -187,6 +199,8 @@ export interface TicketFilters {
   dateTo?: string;
   unassignedOnly?: boolean;
   clientSlug?: string | null;
+  /** When true, do not filter by organisation_id (e.g. Review Queue shows all NEEDS_REVIEW tickets to staff). */
+  scopeAllOrganisations?: boolean;
 }
 
 // Audit log entry

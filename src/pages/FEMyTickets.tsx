@@ -182,7 +182,7 @@ const { data: feTokens } = useQuery({
         return (
           <Badge variant="outline" className="w-full justify-center py-2 border-amber-500 text-amber-600">
             <Clock className="mr-2 h-4 w-4" />
-            Awaiting Staff Verification
+            Awaiting Service Manager Verification
           </Badge>
         );
       default:
@@ -234,7 +234,7 @@ const { data: feTokens } = useQuery({
           <AlertTriangle className="h-4 w-4 text-primary" />
           <AlertDescription className="text-white/80">
             <strong>Workflow:</strong> Mark tickets as "On Site" when you arrive, then "Work Complete" when finished. 
-            Service Staff will verify and close the ticket.
+            Service Manager will verify and close the ticket.
           </AlertDescription>
         </Alert>
 

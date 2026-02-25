@@ -407,6 +407,8 @@ interface UserProfile {
   role: UserRole;
   active: boolean;
   client_slug: string | null;
+  /** Super Admin: null. All other roles: must be set or access is blocked. */
+  organisation_id: string | null;
 }
 
 interface AuthContextType {
@@ -419,7 +421,8 @@ interface AuthContextType {
     email: string,
     password: string,
     name: string,
-    role: UserRole
+    role: UserRole,
+    organisationId?: string | null
   ) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isFieldExecutive: boolean;
@@ -427,6 +430,8 @@ interface AuthContextType {
   isAdmin: boolean;
   isClient: boolean;
   clientSlug: string | null;
+  /** Current user's organisation_id (null for Super Admin). */
+  organisationId: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -461,7 +466,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ): Promise<{ profile: UserProfile | null; deactivated: boolean }> => {
     const { data, error } = await supabase
       .from("users")
-      .select("id, name, email, role, active, is_active, client_slug")
+      .select("id, name, email, role, active, is_active, client_slug, organisation_id")
       .eq("auth_id", authUser.id)
       .maybeSingle();
 
@@ -474,6 +479,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const role = parseUserRole(data.role);
     if (!role) return { profile: null, deactivated: false };
 
+    const isSuperAdmin = role === "SUPER_ADMIN";
+    if (!isSuperAdmin && (data.organisation_id == null || data.organisation_id === "")) {
+      return { profile: null, deactivated: false };
+    }
+
     return {
       profile: {
         id: data.id,
@@ -482,6 +492,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role,
         active: data.active,
         client_slug: data.client_slug ?? null,
+        organisation_id: data.organisation_id ?? null,
       },
       deactivated: false,
     };
@@ -519,13 +530,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!result.profile && sess.user.email) {
           const role =
             parseUserRole(sess.user.user_metadata?.role as string) || "STAFF";
-          const { error: insertError } = await supabase.from("users").insert({
+          const organisationId = sess.user.user_metadata?.organisation_id as string | undefined;
+          const payload: Record<string, unknown> = {
             auth_id: sess.user.id,
             email: sess.user.email,
             name: (sess.user.user_metadata?.name as string)?.trim() || sess.user.email,
             role,
             active: true,
-          });
+          };
+          if (organisationId && role !== "SUPER_ADMIN") payload.organisation_id = organisationId;
+          const { error: insertError } = await supabase.from("users").insert(payload);
           if (!insertError) {
             result = await resolveUserProfile(sess.user);
           }
@@ -574,16 +588,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     name: string,
-    role: UserRole
+    role: UserRole,
+    organisationId?: string | null
   ) => {
     try {
       SignUpSchema.parse({ email, password, name, role });
+
+      const metadata: Record<string, unknown> = { name, role };
+      if (organisationId && role !== "SUPER_ADMIN") metadata.organisation_id = organisationId;
 
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          data: { name, role },
+          data: metadata,
           emailRedirectTo: window.location.origin,
         },
       });
@@ -613,6 +631,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     userProfile?.role === "ADMIN" || userProfile?.role === "SUPER_ADMIN";
   const isClient = userProfile?.role === "CLIENT";
   const clientSlug = userProfile?.client_slug ?? null;
+  const organisationId = userProfile?.organisation_id ?? null;
 
   return (
     <AuthContext.Provider
@@ -629,6 +648,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin,
         isClient,
         clientSlug,
+        organisationId,
       }}
     >
       {children}

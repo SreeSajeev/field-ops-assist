@@ -87,6 +87,14 @@ export default function TicketDetail() {
   if (userProfile?.role === "CLIENT" && ticket.client_slug !== userProfile.client_slug) {
     return <Navigate to="/app/client" replace />;
   }
+  if (
+    userProfile?.role !== "SUPER_ADMIN" &&
+    userProfile?.organisation_id &&
+    ticket.organisation_id &&
+    ticket.organisation_id !== userProfile.organisation_id
+  ) {
+    return <Navigate to="/app/tickets" replace />;
+  }
 
   const currentAssignment = assignments?.[0];
   const assignedFE = currentAssignment?.field_executives;

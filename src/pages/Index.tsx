@@ -104,6 +104,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 
 const DEACTIVATED_KEY = "auth_deactivated";
@@ -157,15 +158,18 @@ export default function Index() {
   }
 
   /* =========================
-     PROFILE NOT READY
+     PROFILE NOT READY (e.g. no organisation assigned)
   ========================= */
 
   if (!userProfile) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-muted-foreground">
-          Setting up your workspace…
-        </div>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4">
+        <p className="max-w-sm text-center text-muted-foreground">
+          Your account is not assigned to an organisation. Contact your administrator to get access.
+        </p>
+        <Button variant="outline" onClick={() => signOut()}>
+          Sign out
+        </Button>
       </div>
     );
   }

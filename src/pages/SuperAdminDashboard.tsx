@@ -3,8 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { AppLayoutNew } from "@/components/layout/AppLayoutNew";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
-import { useOrganizations } from "@/hooks/useOrganizations";
-import { useQuery } from "@tanstack/react-query";
+import { useOrganisationsTable, useCreateOrganisation } from "@/hooks/useOrganisationsTable";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +20,23 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Ticket,
   Gauge,
   Users,
@@ -26,15 +44,43 @@ import {
   Shield,
   RefreshCw,
   BarChart3,
+  UserPlus,
+  Plus,
 } from "lucide-react";
-import { User } from "@/lib/types";
+import { User, UserRole } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
+
+const ROLES_FOR_ORG: UserRole[] = ["ADMIN", "STAFF", "FIELD_EXECUTIVE", "CLIENT"];
+const ROLE_DISPLAY_LABELS: Record<UserRole, string> = {
+  ADMIN: "Admin",
+  STAFF: "Service Manager",
+  FIELD_EXECUTIVE: "Field Executive",
+  CLIENT: "Client",
+  SUPER_ADMIN: "Super Admin",
+};
 
 export default function SuperAdminDashboard() {
   const [activeTab, setActiveTab] = useState("organizations");
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { signUp } = useAuth();
+
+  const [createOrgOpen, setCreateOrgOpen] = useState(false);
+  const [createOrgName, setCreateOrgName] = useState("");
+  const [createOrgSlug, setCreateOrgSlug] = useState("");
+
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [addUserName, setAddUserName] = useState("");
+  const [addUserEmail, setAddUserEmail] = useState("");
+  const [addUserPassword, setAddUserPassword] = useState("");
+  const [addUserRole, setAddUserRole] = useState<UserRole>("STAFF");
+  const [addUserOrgId, setAddUserOrgId] = useState<string>("");
+  const [addUserSubmitting, setAddUserSubmitting] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: organizations = [], isLoading: orgsLoading } = useOrganizations();
+  const { data: organisations = [], isLoading: orgsLoading } = useOrganisationsTable();
+  const createOrgMutation = useCreateOrganisation();
 
   const { data: slaCount } = useQuery({
     queryKey: ["sla-tracking-count"],
@@ -144,10 +190,10 @@ export default function SuperAdminDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">
-                {orgsLoading ? "—" : organizations.length}
+                {orgsLoading ? "—" : organisations.length}
               </p>
               <p className="text-xs text-muted-foreground">
-                By client_slug from tickets
+                SaaS organisations
               </p>
             </CardContent>
           </Card>
@@ -163,18 +209,30 @@ export default function SuperAdminDashboard() {
 
           <TabsContent value="organizations" className="mt-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Organizations</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Distinct client_slug from tickets. Click a row to view that organization.
-                </p>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Organizations</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    SaaS organisations. Create one, then add users under it.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => setCreateOrgOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Organisation
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setAddUserOpen(true)}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {orgsLoading ? (
                   <p className="text-sm text-muted-foreground">Loading…</p>
-                ) : organizations.length === 0 ? (
+                ) : organisations.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No organizations yet. Tickets with client_slug will appear here.
+                    No organisations yet. Create one to get started.
                   </p>
                 ) : (
                   <Table>
@@ -182,19 +240,23 @@ export default function SuperAdminDashboard() {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Slug</TableHead>
-                        <TableHead className="text-right">Tickets</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {organizations.map((org) => (
+                      {organisations.map((org) => (
                         <TableRow
-                          key={org.slug}
+                          key={org.id}
                           className="cursor-pointer hover:bg-muted/50"
                           onClick={() => navigate(`/super-admin/org/${encodeURIComponent(org.slug)}`)}
                         >
-                          <TableCell className="font-medium">{org.displayName}</TableCell>
+                          <TableCell className="font-medium">{org.name}</TableCell>
                           <TableCell className="font-mono text-sm">{org.slug}</TableCell>
-                          <TableCell className="text-right">{org.ticketCount}</TableCell>
+                          <TableCell>
+                            <Badge variant={org.status === "active" ? "default" : "secondary"}>
+                              {org.status}
+                            </Badge>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -304,6 +366,171 @@ export default function SuperAdminDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Create Organisation modal */}
+        <Dialog open={createOrgOpen} onOpenChange={setCreateOrgOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Organisation</DialogTitle>
+              <DialogDescription>
+                Add a new organisation. Slug must be unique (e.g. sreemarketing).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="org-name">Name</Label>
+                <Input
+                  id="org-name"
+                  value={createOrgName}
+                  onChange={(e) => {
+                    setCreateOrgName(e.target.value);
+                    if (!createOrgSlug) setCreateOrgSlug(e.target.value.trim().toLowerCase().replace(/\s+/g, "-"));
+                  }}
+                  placeholder="e.g. Sree Marketing"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="org-slug">Slug</Label>
+                <Input
+                  id="org-slug"
+                  value={createOrgSlug}
+                  onChange={(e) => setCreateOrgSlug(e.target.value.trim().toLowerCase().replace(/\s+/g, "-"))}
+                  placeholder="e.g. sreemarketing"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateOrgOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={!createOrgName.trim() || !createOrgSlug.trim() || createOrgMutation.isPending}
+                onClick={async () => {
+                  try {
+                    await createOrgMutation.mutateAsync({ name: createOrgName.trim(), slug: createOrgSlug.trim().toLowerCase().replace(/\s+/g, "-") });
+                    toast({ title: "Organisation created" });
+                    setCreateOrgOpen(false);
+                    setCreateOrgName("");
+                    setCreateOrgSlug("");
+                  } catch (err) {
+                    toast({
+                      title: "Failed to create organisation",
+                      description: err instanceof Error ? err.message : "Unknown error",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                {createOrgMutation.isPending ? "Creating…" : "Create"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add User under Organisation modal */}
+        <Dialog open={addUserOpen} onOpenChange={setAddUserOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add User</DialogTitle>
+              <DialogDescription>
+                Create a user under an organisation. They will only see that organisation&apos;s data.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="user-name">Name</Label>
+                <Input
+                  id="user-name"
+                  value={addUserName}
+                  onChange={(e) => setAddUserName(e.target.value)}
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="user-email">Email</Label>
+                <Input
+                  id="user-email"
+                  type="email"
+                  value={addUserEmail}
+                  onChange={(e) => setAddUserEmail(e.target.value)}
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="user-password">Password</Label>
+                <Input
+                  id="user-password"
+                  type="password"
+                  value={addUserPassword}
+                  onChange={(e) => setAddUserPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Role</Label>
+                <Select value={addUserRole} onValueChange={(v) => setAddUserRole(v as UserRole)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLES_FOR_ORG.map((r) => (
+                      <SelectItem key={r} value={r}>{ROLE_DISPLAY_LABELS[r]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Organisation</Label>
+                <Select value={addUserOrgId} onValueChange={setAddUserOrgId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select organisation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organisations.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>{org.name} ({org.slug})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddUserOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={!addUserName.trim() || !addUserEmail.trim() || !addUserPassword || !addUserOrgId || addUserSubmitting}
+                onClick={async () => {
+                  setAddUserSubmitting(true);
+                  try {
+                    const { error } = await signUp(
+                      addUserEmail.trim(),
+                      addUserPassword,
+                      addUserName.trim(),
+                      addUserRole,
+                      addUserOrgId
+                    );
+                    if (error) {
+                      toast({ title: "Failed to add user", description: error.message, variant: "destructive" });
+                      return;
+                    }
+                    queryClient.invalidateQueries({ queryKey: ["users"] });
+                    toast({ title: "User created. They can sign in with the email and password." });
+                    setAddUserOpen(false);
+                    setAddUserName("");
+                    setAddUserEmail("");
+                    setAddUserPassword("");
+                    setAddUserRole("STAFF");
+                    setAddUserOrgId("");
+                  } finally {
+                    setAddUserSubmitting(false);
+                  }
+                }}
+              >
+                {addUserSubmitting ? "Creating…" : "Add User"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
       </PageContainer>
     </AppLayoutNew>

@@ -244,7 +244,7 @@ export function LoginForm() {
                     <SelectContent>
                       <SelectItem value="STAFF">
                         <Briefcase className="inline h-4 w-4 mr-2" />
-                        Service Staff
+                        Service Manager
                       </SelectItem>
                       <SelectItem value="FIELD_EXECUTIVE">
                         <Truck className="inline h-4 w-4 mr-2" />

@@ -1,7 +1,7 @@
 /**
  * CloseTicketDialog.tsx
  *
- * Confirmation dialog for Service Staff to close/resolve a ticket.
+ * Confirmation dialog for Service Manager to close/resolve a ticket.
  * Only allows closing tickets that are in appropriate states (ON_SITE, RESOLVED_PENDING_VERIFICATION).
  * Requires Resolution Category; includes optional verification remarks (sent to backend and included in resolution email).
  */

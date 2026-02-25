@@ -1,11 +1,11 @@
 /**
  * CreateTicketModal.tsx
  * 
- * Modal component for Service Staff to manually create tickets.
+ * Modal component for Service Manager to manually create tickets.
  * This creates tickets in the same tickets table as email-generated tickets,
  * but with source set to 'MANUAL' to distinguish them.
  * 
- * Part of Requirement 1: Manual Ticket Creation by Service Staff
+ * Part of Requirement 1: Manual Ticket Creation by Service Manager
  */
 
 import { useState } from 'react';
@@ -36,6 +36,8 @@ import { Loader2, Plus, Ticket, Star } from 'lucide-react';
 import { CreateTicketSchema, CommentSchema, formatZodError } from '@/lib/validation';
 import { z } from 'zod';
 import { COMPLAINT_CATEGORIES, ISSUE_TYPES } from '@/constants/complaintCategories';
+import { useAuth } from '@/hooks/useAuth';
+import type { Database } from '@/integrations/supabase/types';
 
 export interface ClientTicketContext {
   openedByEmail: string;
@@ -51,6 +53,7 @@ interface CreateTicketModalProps {
 
 export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateTicketModalProps) {
   const queryClient = useQueryClient();
+  const { userProfile } = useAuth();
   const isClientMode = !!clientContext;
 
   // Form state
@@ -95,7 +98,11 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
         priority,
       });
 
-      const insertPayload: Record<string, unknown> = {
+      type TicketInsert = Database['public']['Tables']['tickets']['Insert'] & {
+        client_slug?: string;
+        organisation_id?: string;
+      };
+      const insertPayload: TicketInsert = {
         ticket_number: validatedTicket.ticket_number,
         vehicle_number: validatedTicket.vehicle_number,
         category: validatedTicket.category,
@@ -108,11 +115,14 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
         priority: validatedTicket.priority,
         status: 'OPEN',
         opened_at: new Date().toISOString(),
+        ...(clientContext
+          ? {
+              opened_by_email: clientContext.openedByEmail,
+              client_slug: clientContext.clientSlug,
+            }
+          : {}),
+        ...(userProfile?.organisation_id ? { organisation_id: userProfile.organisation_id } : {}),
       };
-      if (clientContext) {
-        insertPayload.opened_by_email = clientContext.openedByEmail;
-        insertPayload.client_slug = clientContext.clientSlug;
-      }
 
       const { data, error } = await supabase
         .from('tickets')
@@ -304,7 +314,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
             />
           </div>
 
-          {/* Priority (staff only; clients cannot set SLA/priority) */}
+          {/* Priority (Service Manager only; clients cannot set SLA/priority) */}
           {!isClientMode && (
             <div className="flex items-center space-x-2">
               <Checkbox

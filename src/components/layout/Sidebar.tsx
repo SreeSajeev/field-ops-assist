@@ -66,8 +66,12 @@ export function Sidebar() {
         return 'Super Admin';
       case 'FIELD_EXECUTIVE':
         return 'Field Executive';
+      case 'CLIENT':
+        return 'Client';
+      case 'STAFF':
+        return 'Service Manager';
       default:
-        return 'Service Staff';
+        return 'Service Manager';
     }
   };
 

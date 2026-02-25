@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 //works
 export default function ReviewQueue() {
-  const { data: tickets, isLoading } = useTickets({ status: 'NEEDS_REVIEW' });
+  const { data: tickets, isLoading } = useTickets({ status: 'NEEDS_REVIEW', scopeAllOrganisations: true });
   // Display only tickets whose current status is NEEDS_REVIEW (single source of truth)
   const displayTickets = (tickets || []).filter((t) => t.status === 'NEEDS_REVIEW');
 
@@ -22,7 +22,7 @@ export default function ReviewQueue() {
           <div>
             <h1 className="text-2xl font-bold">Review Queue</h1>
             <p className="text-muted-foreground">
-              Tickets awaiting additional details or staff approval
+              Tickets awaiting additional details or Service Manager approval
             </p>
           </div>
         </div>

@@ -90,13 +90,20 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
     return selectedClientSlug || null;
   }, [isClientRole, userProfile?.client_slug, selectedClientSlug]);
 
+  const organisationIdForList = userProfile?.organisation_id ?? null;
+  const isSuperAdminForList = userProfile?.role === 'SUPER_ADMIN';
+
   const { data: clientListData } = useQuery({
-    queryKey: ['analytics-client-list'],
+    queryKey: ['analytics-client-list', organisationIdForList, isSuperAdminForList],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('tickets')
         .select('client_slug')
         .not('client_slug', 'is', null);
+      if (!isSuperAdminForList && organisationIdForList) {
+        query = query.eq('organisation_id', organisationIdForList);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       const rows = (data ?? []) as unknown as Array<{ client_slug: string | null }>;
       const slugs = [...new Set(rows.map((r) => r.client_slug).filter(Boolean) as string[])];
@@ -107,8 +114,11 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
 
   const clientOptions = clientListData ?? [];
 
+  const organisationId = userProfile?.organisation_id ?? null;
+  const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
+
   const { data: analyticsData, isLoading, refetch } = useQuery({
-    queryKey: ['analytics-data', startDate || null, endDate || null, effectiveClientSlug],
+    queryKey: ['analytics-data', startDate || null, endDate || null, effectiveClientSlug, organisationId, isSuperAdmin],
     queryFn: async () => {
       // Type as any to avoid Supabase builder chain causing excessively deep instantiation
       let ticketsQuery: ReturnType<ReturnType<typeof supabase.from>['select']> = supabase
@@ -116,6 +126,9 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
         .select('*')
         .order('created_at', { ascending: false });
 
+      if (!isSuperAdmin && organisationId) {
+        ticketsQuery = ticketsQuery.eq('organisation_id', organisationId) as typeof ticketsQuery;
+      }
       if (effectiveClientSlug) {
         ticketsQuery = ticketsQuery.eq('client_slug', effectiveClientSlug) as typeof ticketsQuery;
       }

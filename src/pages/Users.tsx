@@ -51,7 +51,7 @@ import { User, UserRole } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 const ROLE_BADGES: Record<UserRole, { label: string; className: string }> = {
-  STAFF: { label: 'Service Staff', className: 'bg-blue-100 text-blue-700 border-blue-200' },
+  STAFF: { label: 'Service Manager', className: 'bg-blue-100 text-blue-700 border-blue-200' },
   FIELD_EXECUTIVE: { label: 'Field Executive', className: 'bg-green-100 text-green-700 border-green-200' },
   ADMIN: { label: 'Admin', className: 'bg-purple-100 text-purple-700 border-purple-200' },
   SUPER_ADMIN: { label: 'Super Admin', className: 'bg-amber-100 text-amber-700 border-amber-200' },
@@ -107,14 +107,19 @@ export default function Users() {
     }
   };
 
+  const organisationId = userProfile?.organisation_id ?? null;
+
   const { data: users, isLoading, refetch } = useQuery({
-    queryKey: ['users'],
+    queryKey: ['users', organisationId, isSuperAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
-
+      if (!isSuperAdmin && organisationId) {
+        query = query.eq('organisation_id', organisationId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as User[];
     },
@@ -255,7 +260,7 @@ export default function Users() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="STAFF">Service Staff</SelectItem>
+              <SelectItem value="STAFF">Service Manager</SelectItem>
               <SelectItem value="ADMIN">Admin</SelectItem>
               <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
             </SelectContent>

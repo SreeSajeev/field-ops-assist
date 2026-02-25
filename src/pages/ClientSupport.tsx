@@ -8,7 +8,7 @@ import { HelpCircle, Plus, Ticket } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 /**
- * Client Support: create tickets (same insertion as staff). Ticket gets
+ * Client Support: create tickets (same insertion as Service Manager). Ticket gets
  * opened_by_email = client email, client_slug = user.client_slug, status = OPEN.
  * No FE assignment, no SLA controls — only ticket creation form.
  */

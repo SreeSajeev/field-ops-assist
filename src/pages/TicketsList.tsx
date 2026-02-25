@@ -11,7 +11,7 @@ import { Plus } from 'lucide-react';
 
 /**
  * TicketsList page with manual ticket creation capability.
- * Service staff can create tickets directly via the "Create Ticket" button.
+ * Service Manager can create tickets directly via the "Create Ticket" button.
  */
 export default function TicketsList() {
   const [filters, setFilters] = useState<TicketFilters>({});

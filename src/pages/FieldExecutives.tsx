@@ -31,7 +31,7 @@ import {
 
 /**
  * FieldExecutives page with ability to create new FEs.
- * Service staff can add new field executives via the "Add Field Executive" button.
+ * Service Manager can add new field executives via the "Add Field Executive" button.
  */
 export default function FieldExecutives() {
   const { data: executives, isLoading, refetch } = useFieldExecutivesWithStats();

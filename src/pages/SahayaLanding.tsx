@@ -30,10 +30,10 @@ const steps = [
   { number: 3, title: "Validate", description: "Required-field validation and confidence scoring determine whether the ticket is marked OPEN or NEEDS REVIEW.", icon: <AlertCircle className="h-4 w-4" /> },
   { number: 4, title: "Create Ticket", description: "A unique ticket number is generated, establishing a single source of truth for the request.", icon: <Ticket className="h-4 w-4" /> },
   { number: 5, title: "Notify", description: "The requester receives confirmation, including missing detail prompts when necessary.", icon: <Mail className="h-4 w-4" /> },
-  { number: 6, title: "Assign", description: "Staff assigns a Field Executive, and the assignment is logged in the audit trail.", icon: <Users className="h-4 w-4" /> },
+  { number: 6, title: "Assign", description: "Service Manager assigns a Field Executive, and the assignment is logged in the audit trail.", icon: <Users className="h-4 w-4" /> },
   { number: 7, title: "On-Site Token", description: "A time-bound token is generated to verify physical presence at the service location.", icon: <MapPin className="h-4 w-4" /> },
   { number: 8, title: "Resolution Proof", description: "The Field Executive submits resolution evidence, transitioning the ticket to RESOLVED PENDING VERIFICATION.", icon: <CheckCircle2 className="h-4 w-4" /> },
-  { number: 9, title: "Verify and Close", description: "Operations staff verifies the resolution and closes the ticket, notifying the customer.", icon: <Shield className="h-4 w-4" /> },
+  { number: 9, title: "Verify and Close", description: "Service Manager verifies the resolution and closes the ticket, notifying the customer.", icon: <Shield className="h-4 w-4" /> },
   { number: 10, title: "Audit", description: "Every state transition, assignment, comment, and proof submission is permanently logged.", icon: <Database className="h-4 w-4" /> },
 ];
 
