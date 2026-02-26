@@ -4,7 +4,9 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { FECard, FECardSkeleton } from '@/components/field-executives/FECard';
 import { FEDetailSheet } from '@/components/field-executives/FEDetailSheet';
 import { CreateFEModal } from '@/components/field-executives/CreateFEModal';
+import { EditFEModal } from '@/components/field-executives/EditFEModal';
 import { useFieldExecutivesWithStats } from '@/hooks/useFieldExecutives';
+import { useAuth } from '@/hooks/useAuth';
 import { FieldExecutive, FieldExecutiveWithStats } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -34,13 +36,21 @@ import {
  * Service Manager can add new field executives via the "Add Field Executive" button.
  */
 export default function FieldExecutives() {
+  const { userProfile } = useAuth();
   const { data: executives, isLoading, refetch } = useFieldExecutivesWithStats();
   const [selectedFE, setSelectedFE] = useState<FieldExecutiveWithStats | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [createFEModalOpen, setCreateFEModalOpen] = useState(false);
+  const [editingFE, setEditingFE] = useState<FieldExecutive | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [workloadFilter, setWorkloadFilter] = useState<'all' | 'available' | 'low' | 'moderate' | 'high'>('all');
+
+  const canEdit =
+    userProfile?.role === 'ADMIN' ||
+    userProfile?.role === 'STAFF' ||
+    userProfile?.role === 'SUPER_ADMIN';
 
   const handleViewFE = (fe: FieldExecutive) => {
     const feWithStats = executives?.find(e => e.id === fe.id);
@@ -241,6 +251,11 @@ export default function FieldExecutives() {
                 key={fe.id}
                 executive={fe}
                 onClick={handleViewFE}
+                canEdit={canEdit}
+                onEdit={(exec) => {
+                  setEditingFE(exec);
+                  setEditModalOpen(true);
+                }}
               />
             ))}
           </div>
@@ -261,6 +276,17 @@ export default function FieldExecutives() {
 
         {/* Create FE Modal - Requirement 4 */}
         <CreateFEModal open={createFEModalOpen} onOpenChange={setCreateFEModalOpen} />
+
+        {/* Edit FE Modal - Admin / Service Manager */}
+        <EditFEModal
+          executive={editingFE}
+          open={editModalOpen}
+          onOpenChange={(open) => {
+            setEditModalOpen(open);
+            if (!open) setEditingFE(null);
+          }}
+          onSuccess={() => refetch()}
+        />
       </div>
     </PageContainer>
     </AppLayoutNew>
