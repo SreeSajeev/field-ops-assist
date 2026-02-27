@@ -32,6 +32,7 @@ import {
   useUpdateTicketStatus,
   useUpdateTicket,
 } from "@/hooks/useTickets";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ export default function TicketDetail() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
 
+  const queryClient = useQueryClient();
   const { data: ticket, isLoading } = useTicket(ticketId ?? "");
   const { data: comments } = useTicketComments(ticketId ?? "");
   const { data: assignments } = useTicketAssignments(ticketId ?? "");
@@ -159,32 +161,43 @@ export default function TicketDetail() {
   };
 
   const generateToken = async (type: "ON_SITE" | "RESOLUTION") => {
-  if (!ticket || !currentAssignment?.fe_id) return;
+    if (!ticket || !currentAssignment?.fe_id) return;
 
-  try {
-    const result = await generateFEActionToken({
-      ticketId: ticket.id,
-      feId: currentAssignment.fe_id,
-      actionType: type,
-    });
+    const apiBase = import.meta.env.VITE_CRM_API_URL ?? "http://localhost:3000";
 
-    if (type === "RESOLUTION") {
-      await updateStatus.mutateAsync({
+    try {
+      if (type === "RESOLUTION") {
+        // Use backend so resolution token is created + email + SMS sent (same as on-site at assign)
+        const res = await fetch(`${apiBase}/tickets/${ticket.id}/on-site-token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error ?? "Resolution token failed");
+        setTokenLabel("RESOLUTION");
+        setGeneratedToken(data.resolutionToken ?? data.resolution_token ?? null);
+        queryClient.invalidateQueries({ queryKey: ["ticket", ticket.id] });
+        queryClient.invalidateQueries({ queryKey: ["ticket-assignments", ticket.id] });
+        queryClient.invalidateQueries({ queryKey: ["tickets"] });
+        toast({ title: "Resolution token generated; email and SMS sent to FE" });
+        return;
+      }
+
+      const result = await generateFEActionToken({
         ticketId: ticket.id,
-        status: "ON_SITE" as TicketStatus,
+        feId: currentAssignment.fe_id,
+        actionType: type,
+      });
+      setTokenLabel(type);
+      setGeneratedToken(result.tokenId);
+    } catch (err) {
+      toast({
+        title: "Token generation failed",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "destructive",
       });
     }
-
-    setTokenLabel(type);
-    setGeneratedToken(result.tokenId);
-
-  } catch {
-    toast({
-      title: "Token generation failed",
-      variant: "destructive",
-    });
-  }
-};
+  };
 
 
   const handleCompleteReview = () => {
