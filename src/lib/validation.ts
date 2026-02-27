@@ -55,6 +55,17 @@ export const TicketUpdateSchema = z.object({
 
 export type TicketUpdateInput = z.infer<typeof TicketUpdateSchema>;
 
+/** Required when completing "Needs Review" – ensures key structured fields are set. */
+export const ReviewCompleteSchema = z.object({
+  category: z.string().trim().min(1, { message: 'Category is required' }).max(50),
+  issue_type: z.string().trim().min(1, { message: 'Issue type is required' }).max(100),
+  location: z.string().trim().min(1, { message: 'Location is required' }).max(255),
+  vehicle_number: z.string().trim().max(20).nullable().optional(),
+  priority: z.boolean().optional(),
+});
+
+export type ReviewCompleteInput = z.infer<typeof ReviewCompleteSchema>;
+
 export const CreateTicketSchema = z.object({
   ticket_number: z.string().min(1).max(50),
   vehicle_number: z.string().max(20).nullable().optional(),

@@ -1,5 +1,5 @@
 //works
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, Link, useNavigate, Navigate } from "react-router-dom";
 import { formatIST } from "@/lib/dateUtils";
 import {
@@ -12,6 +12,7 @@ import {
   Clock,
   Image as ImageIcon,
   Star,
+  ClipboardCheck,
 } from "lucide-react";
 
 import { AppLayoutNew } from "@/components/layout/AppLayoutNew";
@@ -36,9 +37,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { TicketStatus } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { ReviewCompleteSchema, formatZodError } from "@/lib/validation";
+import { z } from "zod";
 
 export default function TicketDetail() {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -56,6 +61,34 @@ export default function TicketDetail() {
   const [closePending, setClosePending] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [tokenLabel, setTokenLabel] = useState<"ON_SITE" | "RESOLUTION">("ON_SITE");
+
+  const canCompleteReview =
+    Boolean(ticket?.needs_review) &&
+    (userProfile?.role === "ADMIN" ||
+      userProfile?.role === "STAFF" ||
+      userProfile?.role === "SUPER_ADMIN");
+
+  const [reviewCategory, setReviewCategory] = useState("");
+  const [reviewIssueType, setReviewIssueType] = useState("");
+  const [reviewVehicleNumber, setReviewVehicleNumber] = useState("");
+  const [reviewLocation, setReviewLocation] = useState("");
+  const [reviewPriority, setReviewPriority] = useState(false);
+  const [reviewErrors, setReviewErrors] = useState<Record<string, string>>({});
+  const reviewFormSynced = useRef(false);
+  useEffect(() => {
+    if (ticket && canCompleteReview) {
+      if (!reviewFormSynced.current) {
+        reviewFormSynced.current = true;
+        setReviewCategory(ticket.category ?? "");
+        setReviewIssueType(ticket.issue_type ?? "");
+        setReviewVehicleNumber(ticket.vehicle_number ?? "");
+        setReviewLocation(ticket.location ?? "");
+        setReviewPriority(ticket.priority === true);
+      }
+    } else {
+      reviewFormSynced.current = false;
+    }
+  }, [ticket?.id, canCompleteReview, ticket?.category, ticket?.issue_type, ticket?.vehicle_number, ticket?.location, ticket?.priority]);
 
   if (isLoading) {
     return (
@@ -153,6 +186,56 @@ export default function TicketDetail() {
   }
 };
 
+
+  const handleCompleteReview = () => {
+    if (!ticket) return;
+    setReviewErrors({});
+    const payload = {
+      category: reviewCategory.trim(),
+      issue_type: reviewIssueType.trim(),
+      location: reviewLocation.trim(),
+      vehicle_number: reviewVehicleNumber.trim() || null,
+      priority: reviewPriority,
+    };
+    const result = ReviewCompleteSchema.safeParse(payload);
+    if (!result.success) {
+      const err = result.error as z.ZodError;
+      const next: Record<string, string> = {};
+      err.errors.forEach((e) => {
+        const path = e.path[0] as string;
+        if (path && e.message) next[path] = e.message;
+      });
+      setReviewErrors(next);
+      toast({
+        title: "Validation failed",
+        description: formatZodError(err),
+        variant: "destructive",
+      });
+      return;
+    }
+    updateTicket.mutate(
+      {
+        ticketId: ticket.id,
+        updates: {
+          category: result.data.category,
+          issue_type: result.data.issue_type,
+          location: result.data.location,
+          vehicle_number: result.data.vehicle_number ?? null,
+          priority: result.data.priority ?? false,
+          needs_review: false,
+          confidence_score: 100,
+        },
+      },
+      {
+        onError: (err) =>
+          toast({
+            title: "Update failed",
+            description: err.message,
+            variant: "destructive",
+          }),
+      }
+    );
+  };
 
   const handleClose = async (verificationRemarks: string, resolutionCategory: string) => {
     setClosePending(true);
@@ -271,16 +354,95 @@ export default function TicketDetail() {
           <div className="lg:col-span-2 space-y-6">
             {/* DETAILS */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle>Ticket Details</CardTitle>
+                {canCompleteReview && (
+                  <Button
+                    onClick={handleCompleteReview}
+                    disabled={updateTicket.isPending}
+                  >
+                    <ClipboardCheck className="mr-2 h-4 w-4" />
+                    Complete Review
+                  </Button>
+                )}
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 <Info label="Complaint ID" value={ticket.complaint_id} />
-                <Info label="Vehicle Number" value={ticket.vehicle_number} mono />
-                <Info label="Category" value={ticket.category} />
-                <Info label="Issue Type" value={ticket.issue_type} />
-                <IconInfo icon={MapPin} label="Location" value={ticket.location} />
-                <IconInfo icon={Mail} label="Reported By" value={ticket.opened_by_email} />
+                {canCompleteReview ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="review-vehicle">Vehicle Number</Label>
+                      <Input
+                        id="review-vehicle"
+                        value={reviewVehicleNumber}
+                        onChange={(e) => setReviewVehicleNumber(e.target.value)}
+                        className={reviewErrors.vehicle_number ? "border-destructive" : ""}
+                      />
+                      {reviewErrors.vehicle_number && (
+                        <p className="text-xs text-destructive">{reviewErrors.vehicle_number}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="review-category">Category *</Label>
+                      <Input
+                        id="review-category"
+                        value={reviewCategory}
+                        onChange={(e) => setReviewCategory(e.target.value)}
+                        className={reviewErrors.category ? "border-destructive" : ""}
+                      />
+                      {reviewErrors.category && (
+                        <p className="text-xs text-destructive">{reviewErrors.category}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="review-issue-type">Issue Type *</Label>
+                      <Input
+                        id="review-issue-type"
+                        value={reviewIssueType}
+                        onChange={(e) => setReviewIssueType(e.target.value)}
+                        className={reviewErrors.issue_type ? "border-destructive" : ""}
+                      />
+                      {reviewErrors.issue_type && (
+                        <p className="text-xs text-destructive">{reviewErrors.issue_type}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="review-location">Location *</Label>
+                      <Input
+                        id="review-location"
+                        value={reviewLocation}
+                        onChange={(e) => setReviewLocation(e.target.value)}
+                        className={reviewErrors.location ? "border-destructive" : ""}
+                      />
+                      {reviewErrors.location && (
+                        <p className="text-xs text-destructive">{reviewErrors.location}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 sm:col-span-2">
+                      <Switch
+                        id="review-priority"
+                        checked={reviewPriority}
+                        onCheckedChange={setReviewPriority}
+                      />
+                      <Label htmlFor="review-priority">Priority</Label>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Info label="Vehicle Number" value={ticket.vehicle_number} mono />
+                    <Info label="Category" value={ticket.category} />
+                    <Info label="Issue Type" value={ticket.issue_type} />
+                    <IconInfo icon={MapPin} label="Location" value={ticket.location} />
+                  </>
+                )}
+                {!canCompleteReview && (
+                  <IconInfo icon={Mail} label="Reported By" value={ticket.opened_by_email} />
+                )}
+                {canCompleteReview && (
+                  <div className="sm:col-span-2">
+                    <IconInfo icon={Mail} label="Reported By" value={ticket.opened_by_email} />
+                  </div>
+                )}
               </CardContent>
             </Card>
             {/* Attempt Failed: show when FE reported resolution failed */}
