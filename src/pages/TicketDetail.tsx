@@ -303,7 +303,7 @@ export default function TicketDetail() {
       <PageContainer>
       <div className="space-y-6">
         {/* HEADER */}
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/app")} aria-label="Back to dashboard">
               <ArrowLeft className="h-5 w-5" />
@@ -362,9 +362,9 @@ export default function TicketDetail() {
         </div>
 
         {/* MAIN GRID */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* LEFT */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="md:col-span-2 space-y-6">
             {/* DETAILS */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -379,7 +379,7 @@ export default function TicketDetail() {
                   </Button>
                 )}
               </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
+              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Info label="Complaint ID" value={ticket.complaint_id} />
                 {canCompleteReview ? (
                   <>
@@ -598,7 +598,7 @@ export default function TicketDetail() {
       {/* TOKEN MODAL */}
       {generatedToken && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded w-full max-w-md space-y-3">
+          <div className="bg-white p-6 rounded w-full max-w-md max-h-[90vh] overflow-y-auto space-y-3">
             <h2 className="font-semibold">
               {tokenLabel === "ON_SITE" ? "On-Site Token" : "Resolution Token"}
             </h2>

@@ -223,7 +223,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Ticket className="h-5 w-5 text-primary" />
@@ -245,6 +245,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
               placeholder="e.g., COMP-12345"
               value={complaintId}
               onChange={(e) => setComplaintId(e.target.value)}
+              className="w-full"
             />
           </div>
 
@@ -256,7 +257,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
               placeholder="e.g., MH-12-AB-1234"
               value={vehicleNumber}
               onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-              className="font-mono"
+              className="w-full font-mono"
             />
           </div>
 
@@ -264,7 +265,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
           <div className="space-y-2">
             <Label htmlFor="category">Category *</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category">
+              <SelectTrigger id="category" className="w-full">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
@@ -281,7 +282,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
           <div className="space-y-2">
             <Label htmlFor="issueType">Issue Type *</Label>
             <Select value={issueType} onValueChange={setIssueType}>
-              <SelectTrigger id="issueType">
+              <SelectTrigger id="issueType" className="w-full">
                 <SelectValue placeholder="Select issue type" />
               </SelectTrigger>
               <SelectContent>
@@ -298,7 +299,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
                 placeholder="Specify issue type (optional)"
                 value={customIssueType}
                 onChange={(e) => setCustomIssueType(e.target.value)}
-                className="mt-1.5"
+                className="mt-1.5 w-full"
               />
             )}
           </div>
@@ -311,6 +312,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
               placeholder="e.g., Mumbai, Andheri East"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
+              className="w-full"
             />
           </div>
 
@@ -344,6 +346,7 @@ export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateT
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              className="w-full"
             />
           </div>
 

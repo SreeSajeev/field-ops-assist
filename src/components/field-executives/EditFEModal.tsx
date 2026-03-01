@@ -118,7 +118,7 @@ export function EditFEModal({ executive, open, onOpenChange, onSuccess }: EditFE
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Pencil className="h-4 w-4" />
@@ -142,6 +142,7 @@ export function EditFEModal({ executive, open, onOpenChange, onSuccess }: EditFE
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Full name"
+                className="w-full"
               />
             </div>
             <div className="grid gap-2">
@@ -151,6 +152,7 @@ export function EditFEModal({ executive, open, onOpenChange, onSuccess }: EditFE
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Phone number"
+                className="w-full"
               />
             </div>
             <div className="grid gap-2">
@@ -160,6 +162,7 @@ export function EditFEModal({ executive, open, onOpenChange, onSuccess }: EditFE
                 value={baseLocation}
                 onChange={(e) => setBaseLocation(e.target.value)}
                 placeholder="Base location"
+                className="w-full"
               />
             </div>
             <div className="flex items-center gap-2">

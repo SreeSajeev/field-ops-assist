@@ -172,6 +172,7 @@ export default function SuperAdminOrgView() {
               ) : tickets.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No tickets.</p>
               ) : (
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -209,6 +210,7 @@ export default function SuperAdminOrgView() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </CardContent>
           </Card>

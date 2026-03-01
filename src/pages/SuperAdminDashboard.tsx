@@ -235,6 +235,7 @@ export default function SuperAdminDashboard() {
                     No organisations yet. Create one to get started.
                   </p>
                 ) : (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -261,6 +262,7 @@ export default function SuperAdminDashboard() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -286,6 +288,7 @@ export default function SuperAdminDashboard() {
                 {usersLoading ? (
                   <p className="text-sm text-muted-foreground">Loading users…</p>
                 ) : (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -314,6 +317,7 @@ export default function SuperAdminDashboard() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>

@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { SidebarNew } from './SidebarNew';
+import { MobileSidebarWrapper } from './MobileSidebarWrapper';
 
 /**
  * New app layout matching sahaya-operations-suite structure.
@@ -13,7 +13,7 @@ interface AppLayoutNewProps {
 export function AppLayoutNew({ children }: AppLayoutNewProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <SidebarNew />
+      <MobileSidebarWrapper />
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-thin bg-background">
         {children}
       </main>

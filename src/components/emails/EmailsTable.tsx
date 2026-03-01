@@ -50,6 +50,7 @@ export function EmailsTable({
 
   return (
     <div className="rounded-xl border bg-card">
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
@@ -172,6 +173,7 @@ export function EmailsTable({
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

@@ -667,6 +667,7 @@ export default function SLAMonitor() {
         ) : (
           <>
             <div className="rounded-xl border bg-card overflow-hidden">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30">
@@ -712,6 +713,7 @@ export default function SLAMonitor() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </div>
             {totalPages > 1 && (
               <div className="flex items-center justify-between">

@@ -168,7 +168,7 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-primary" />
@@ -190,6 +190,7 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              className="w-full"
             />
           </div>
 
@@ -202,6 +203,7 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               type="tel"
+              className="w-full"
             />
           </div>
 
@@ -213,6 +215,7 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
               placeholder="e.g., Mumbai, Andheri"
               value={baseLocation}
               onChange={(e) => setBaseLocation(e.target.value)}
+              className="w-full"
             />
             <p className="text-xs text-muted-foreground">
               Used for location-based ticket assignment recommendations

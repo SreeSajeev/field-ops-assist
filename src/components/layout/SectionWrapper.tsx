@@ -21,14 +21,14 @@ export function SectionWrapper({
 }: SectionWrapperProps) {
   return (
     <section className={cn('py-8', className)}>
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-7xl px-3 md:px-6">
         {title && (
           <h2 className="mb-4 text-base font-bold tracking-tight text-foreground">
             {title}
           </h2>
         )}
         {elevated ? (
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+          <div className="rounded-2xl border border-border bg-card p-3 md:p-5 shadow-card">
             {children}
           </div>
         ) : (

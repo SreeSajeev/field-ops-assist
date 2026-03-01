@@ -320,6 +320,7 @@ export default function Users() {
           </div>
         ) : (
           <div className="rounded-xl border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">
@@ -400,6 +401,7 @@ export default function Users() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         )}
 

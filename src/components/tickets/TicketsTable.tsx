@@ -86,6 +86,7 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -154,6 +155,7 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

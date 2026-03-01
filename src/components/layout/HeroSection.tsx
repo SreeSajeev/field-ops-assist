@@ -49,7 +49,7 @@ export function HeroSection({ children, className }: HeroSectionProps) {
             'radial-gradient(ellipse, hsl(32 95% 52% / 0.06) 0%, transparent 70%)',
         }}
       />
-      <div className="relative z-10 mx-auto max-w-7xl px-6">{children}</div>
+      <div className="relative z-10 mx-auto max-w-7xl px-3 md:px-6">{children}</div>
     </section>
   );
 }
