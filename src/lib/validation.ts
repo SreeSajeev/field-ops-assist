@@ -11,18 +11,32 @@ import { z } from 'zod';
 // User & Auth Validation
 // ============================================================
 
+/** Reject strings that could be used for XSS (HTML/script markers). */
+const safeDisplayName = z.string()
+  .trim()
+  .min(1, { message: 'Name is required' })
+  .max(100, { message: 'Name must be less than 100 characters' })
+  .refine(
+    (s) => !/[<>"'\\]|\p{C}/u.test(s),
+    { message: 'Name cannot contain <, >, quotes, backslash, or control characters' }
+  );
+
+/** Password must include uppercase, lowercase, number, and special character. */
+const passwordComplexity = z.string()
+  .min(8, { message: 'Password must be at least 8 characters' })
+  .max(72, { message: 'Password must be less than 72 characters' })
+  .refine(
+    (s) => /[a-z]/.test(s) && /[A-Z]/.test(s) && /\d/.test(s) && /[^\w\s]/.test(s),
+    { message: 'Password must include uppercase, lowercase, a number, and a special character' }
+  );
+
 export const SignUpSchema = z.object({
   email: z.string()
     .trim()
     .email({ message: 'Invalid email address' })
     .max(255, { message: 'Email must be less than 255 characters' }),
-  password: z.string()
-    .min(8, { message: 'Password must be at least 8 characters' })
-    .max(72, { message: 'Password must be less than 72 characters' }),
-  name: z.string()
-    .trim()
-    .min(1, { message: 'Name is required' })
-    .max(100, { message: 'Name must be less than 100 characters' }),
+  password: passwordComplexity,
+  name: safeDisplayName,
   role: z.enum(['STAFF', 'FIELD_EXECUTIVE', 'ADMIN', 'SUPER_ADMIN']),
 });
 
@@ -120,10 +134,7 @@ export type AssignmentInput = z.infer<typeof AssignmentSchema>;
 // ============================================================
 
 export const CreateFESchema = z.object({
-  name: z.string()
-    .trim()
-    .min(1, { message: 'Name is required' })
-    .max(100, { message: 'Name must be less than 100 characters' }),
+  name: safeDisplayName,
   phone: z.string()
     .max(20, { message: 'Phone number too long' })
     .nullable()

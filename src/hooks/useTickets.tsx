@@ -215,19 +215,37 @@ export function useAssignTicket() {
       feId: string;
       overrideReason?: string;
     }) => {
-      const res = await fetch(`${apiBase}/tickets/${ticketId}/assign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          feId,
-          override_reason:
-            overrideReason != null && String(overrideReason).trim() !== ""
-              ? String(overrideReason).trim()
-              : undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Assignment failed");
+      let res: Response;
+      try {
+        res = await fetch(`${apiBase}/tickets/${ticketId}/assign`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            feId,
+            override_reason:
+              overrideReason != null && String(overrideReason).trim() !== ""
+                ? String(overrideReason).trim()
+                : undefined,
+          }),
+        });
+      } catch (err) {
+        const isNetwork = err instanceof TypeError && (err.message === "Failed to fetch" || err.message?.includes("fetch"));
+        throw new Error(
+          isNetwork
+            ? "Cannot reach backend. If this app is deployed, set VITE_CRM_API_URL to your backend URL and ensure the backend is running."
+            : err instanceof Error ? err.message : "Assignment request failed"
+        );
+      }
+      let data: { error?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Non-JSON response (e.g. 502 HTML)
+      }
+      if (!res.ok) {
+        const message = data?.error ?? (res.status === 404 ? "Ticket not found" : res.status === 502 || res.status === 504 ? "Backend unreachable. Check VITE_CRM_API_URL." : "Assignment failed");
+        throw new Error(message);
+      }
       return data;
     },
     onSuccess: () => {

@@ -174,8 +174,13 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
       setSelectedFE(null);
       setOverrideReason('');
     } catch (error) {
-      // Error is handled by the mutation's onError
       setConfirmDialogOpen(false);
+      const message = error instanceof Error ? error.message : "Assignment failed";
+      toast({
+        variant: "destructive",
+        title: "Assignment failed",
+        description: message,
+      });
     }
   };
 

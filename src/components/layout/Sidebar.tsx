@@ -13,7 +13,6 @@ import {
   BarChart3,
   Shield,
   ChevronRight,
-  Building2,
   Crown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -46,8 +45,6 @@ const adminNavigation = [
 
 const superAdminNavigation = [
   { name: 'Overview', href: '/super-admin', icon: Crown },
-  { name: 'Organizations', href: '/super-admin', icon: Building2 },
-  { name: 'Global Users', href: '/app/users', icon: Users },
 ];
 
 export function Sidebar() {

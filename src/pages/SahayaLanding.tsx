@@ -109,16 +109,18 @@ const PrimaryButton = ({ children, className = "", onClick, style: styleProp, as
   );
 };
 
-const OutlineButton = ({ children, className = "", dark = false, onClick }: { children: React.ReactNode; className?: string; dark?: boolean; onClick?: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`inline-flex items-center gap-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:-translate-y-px active:translate-y-0 focus:outline-none ${dark ? "text-white/80 hover:text-white hover:bg-white/8" : "text-foreground hover:bg-muted/60"} ${className}`}
-    style={{ border: dark ? "1px solid hsl(0 0% 100% / 0.18)" : "1px solid hsl(var(--border))", padding: "10px 22px" }}
-  >
-    {children}
-  </button>
-);
+const OutlineButton = ({ children, className = "", dark = false, onClick, asLink, to }: { children: React.ReactNode; className?: string; dark?: boolean; onClick?: () => void; asLink?: boolean; to?: string }) => {
+  const classNameStr = `inline-flex items-center gap-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:-translate-y-px active:translate-y-0 focus:outline-none ${dark ? "text-white/80 hover:text-white hover:bg-white/8" : "text-foreground hover:bg-muted/60"} ${className}`;
+  const style = { border: dark ? "1px solid hsl(0 0% 100% / 0.18)" : "1px solid hsl(var(--border))", padding: "10px 22px" };
+  if (asLink && to) {
+    return <Link to={to} className={classNameStr} style={style}>{children}</Link>;
+  }
+  return (
+    <button type="button" onClick={onClick} className={classNameStr} style={style}>
+      {children}
+    </button>
+  );
+};
 
 const GradientDivider = ({ flip = false }: { flip?: boolean }) => (
   <div className="h-px w-full" style={{ background: flip ? "linear-gradient(90deg, transparent, hsl(285 45% 55% / 0.2), hsl(32 95% 52% / 0.15), transparent)" : "linear-gradient(90deg, transparent, hsl(285 45% 55% / 0.15), transparent)" }} />
@@ -155,7 +157,7 @@ function Header() {
 
         <nav className="hidden lg:flex items-center">
           {navLinks.map((link) => (
-            <a key={link} href={`#${link.toLowerCase().replace(" ", "-")}`} className="px-3.5 py-1.5 text-[13px] font-medium text-white/60 hover:text-white/90 transition-colors duration-150">
+            <a key={link} href={`#${link.toLowerCase().replace(/\s+/g, "-")}`} className="px-3.5 py-1.5 text-[13px] font-medium text-white/60 hover:text-white/90 transition-colors duration-150">
               {link}
             </a>
           ))}
@@ -176,7 +178,7 @@ function Header() {
         <div style={{ background: "hsl(285 45% 12% / 0.97)", borderTop: "1px solid hsl(285 35% 22% / 0.5)" }}>
           <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col gap-0.5">
             {navLinks.map((link) => (
-              <a key={link} href={`#${link.toLowerCase().replace(" ", "-")}`} className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-all" onClick={() => setMobileOpen(false)}>
+              <a key={link} href={`#${link.toLowerCase().replace(/\s+/g, "-")}`} className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-all" onClick={() => setMobileOpen(false)}>
                 {link}
               </a>
             ))}
@@ -227,7 +229,7 @@ function HeroSection() {
             </p>
             <div className="flex flex-wrap gap-3 mb-8">
               <PrimaryButton asLink to="/login">Login to Dashboard <ArrowRight className="h-4 w-4" /></PrimaryButton>
-              <OutlineButton dark>Request Demo</OutlineButton>
+              <OutlineButton dark asLink to="/login">Request Demo</OutlineButton>
             </div>
             <div className="flex flex-wrap gap-5 pt-6" style={{ borderTop: "1px solid hsl(285 35% 30% / 0.5)" }}>
               {["100% Structured Workflows", "Real-Time SLA Tracking", "Audit-Ready Traceability"].map((item) => (
@@ -272,7 +274,7 @@ function HeroSection() {
               </div>
               <div className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: "1px solid hsl(285 35% 25% / 0.5)", background: "hsl(285 45% 12%)" }}>
                 <span className="text-[10px] font-mono" style={{ color: "hsl(285 15% 45%)" }}>5 active tickets · 2 SLA critical</span>
-                <span className="text-[10px]" style={{ color: "hsl(32 95% 60%)" }}>View All →</span>
+                <Link to="/login" className="text-[10px] hover:underline" style={{ color: "hsl(32 95% 60%)" }}>View All →</Link>
               </div>
               <div className="absolute top-0 right-0 w-40 h-40 pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, hsl(32 95% 52% / 0.08), transparent 70%)" }} />
             </div>
@@ -557,13 +559,7 @@ function PricingSection() {
                 </ul>
               </div>
               <div className="px-6 pb-6">
-                {plan.featured ? (
-                  <PrimaryButton className="w-full justify-center">{plan.cta} <ArrowRight className="h-4 w-4" /></PrimaryButton>
-                ) : (
-                  <button type="button" className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-semibold text-white transition-all duration-200 hover:-translate-y-px" style={{ background: "linear-gradient(135deg, hsl(285 45% 28%), hsl(285 50% 36%))", boxShadow: "0 2px 10px hsl(285 45% 30% / 0.3)" }}>
-                    {plan.cta} <ArrowRight className="h-4 w-4" />
-                  </button>
-                )}
+                <PrimaryButton asLink to="/login" className="w-full justify-center">{plan.cta} <ArrowRight className="h-4 w-4" /></PrimaryButton>
               </div>
             </div>
           ))}
@@ -602,7 +598,7 @@ function Footer() {
   const footerLinks = ["About", "Modules", "Enterprise", "Pricing", "Documentation"];
 
   return (
-    <footer className="bg-white border-t border-gray-200">
+    <footer id="documentation" className="bg-white border-t border-gray-200">
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex flex-col sm:flex-row items-start justify-between gap-6 mb-6 pb-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
@@ -617,7 +613,7 @@ function Footer() {
           </div>
           <nav className="flex flex-wrap gap-x-5 gap-y-1.5 items-center">
             {footerLinks.map((link) => (
-              <a key={link} href={`#${link.toLowerCase()}`} className="text-[13px] text-gray-600 hover:text-gray-900 transition-colors duration-150">
+              <a key={link} href={`#${link.toLowerCase().replace(/\s+/g, "-")}`} className="text-[13px] text-gray-600 hover:text-gray-900 transition-colors duration-150">
                 {link}
               </a>
             ))}

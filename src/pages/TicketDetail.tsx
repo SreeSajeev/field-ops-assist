@@ -507,23 +507,6 @@ export default function TicketDetail() {
               </Card>
             )}
 
-            {(ticket.status === "OPEN" || ticket.status === "FE_ATTEMPT_FAILED") && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Assign Field Executive</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Button
-                    className="w-full"
-                    onClick={() => setAssignModalOpen(true)}
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    Assign Field Executive
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
             {/* ACTIVITY */}
             <Card>
               <CardHeader>

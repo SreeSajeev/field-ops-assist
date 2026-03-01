@@ -194,14 +194,16 @@ export function LoginForm() {
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div>
-                    <Label>Email</Label>
-                    <Input name="email" type="email" required />
+                    <Label htmlFor="signin-email">Email</Label>
+                    <Input id="signin-email" name="email" type="email" autoComplete="email" required />
                   </div>
                   <div>
-                    <Label>Password</Label>
+                    <Label htmlFor="signin-password">Password</Label>
                     <Input
+                      id="signin-password"
                       name="password"
                       type="password"
+                      autoComplete="current-password"
                       required
                     />
                   </div>
@@ -218,29 +220,44 @@ export function LoginForm() {
 
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
-                  <Input name="name" placeholder="Full Name" required />
-                  <Input
-                    name="email"
-                    type="email"
-                    placeholder="Email"
-                    required
-                  />
-                  <Input
-                    name="password"
-                    type="password"
-                    placeholder="Password"
-                    required
-                  />
+                  <div>
+                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Input id="signup-name" name="name" placeholder="Full Name" autoComplete="name" required />
+                  </div>
+                  <div>
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      name="email"
+                      type="email"
+                      placeholder="Email"
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input
+                      id="signup-password"
+                      name="password"
+                      type="password"
+                      placeholder="Password"
+                      autoComplete="new-password"
+                      required
+                    />
+                  </div>
 
-                  <Select
-                    value={selectedRole}
-                    onValueChange={(v) =>
-                      setSelectedRole(v as UserRole)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
+                  <div>
+                    <Label htmlFor="signup-role">Role</Label>
+                    <Select
+                      value={selectedRole}
+                      onValueChange={(v) =>
+                        setSelectedRole(v as UserRole)
+                      }
+                    >
+                      <SelectTrigger id="signup-role" aria-label="Select role">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="STAFF">
                         <Briefcase className="inline h-4 w-4 mr-2" />
@@ -252,6 +269,7 @@ export function LoginForm() {
                       </SelectItem>
                     </SelectContent>
                   </Select>
+                  </div>
 
                   <Button
                     type="submit"
