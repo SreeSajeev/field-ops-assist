@@ -1,4 +1,4 @@
-# LogiCRM Design System Documentation
+# Sahaya Design System Documentation
 ## By Pariskq
 
 > **Version:** 1.0  
@@ -29,7 +29,7 @@
 - **Aesthetic:** Refined minimalism with purposeful color accents
 
 ### 1.2 Design Philosophy
-The LogiCRM interface prioritizes **operational clarity** and **status-driven visual communication**. The design supports:
+The Sahaya interface prioritizes **operational clarity** and **status-driven visual communication**. The design supports:
 - Quick status recognition through color coding
 - Scannable data tables with clear hierarchy
 - Action-oriented workflows with prominent CTAs
@@ -43,7 +43,7 @@ The LogiCRM interface prioritizes **operational clarity** and **status-driven vi
 
 ### 1.4 Brand Elements
 - **Logo:** Shield icon with gradient background
-- **Product Name:** "LogiCRM"
+- **Product Name:** "Sahaya"
 - **Tagline:** "by Pariskq"
 - **Brand Statement:** "Clear Connections, Total Control"
 
@@ -942,4 +942,4 @@ src/
 
 ---
 
-*This design documentation represents the existing LogiCRM platform as built. Any future development should strictly adhere to these specifications to maintain visual consistency across all platforms.*
+*This design documentation represents the existing Sahaya platform as built. Any future development should strictly adhere to these specifications to maintain visual consistency across all platforms.*

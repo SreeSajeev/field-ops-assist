@@ -21,6 +21,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { APP_NAME } from '@/lib/constants';
 
 interface ConfigItem {
   key: string;
@@ -275,7 +276,7 @@ export default function Settings() {
             >
               <ConfigRow 
                 label="Platform Version" 
-                value="LogiCRM v1.0.0"
+                value={`${APP_NAME} v1.0.0`}
                 type="text"
                 systemControlled
               />

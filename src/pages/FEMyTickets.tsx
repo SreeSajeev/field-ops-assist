@@ -1,6 +1,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { formatIST } from '@/lib/dateUtils';
+import { APP_NAME } from '@/lib/constants';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -201,7 +202,7 @@ const { data: feTokens } = useQuery({
               <Shield className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">LogiCRM</h1>
+              <h1 className="text-lg font-bold text-white">{APP_NAME}</h1>
               <p className="text-xs text-white/60">Field Executive Portal</p>
             </div>
           </div>

@@ -16,6 +16,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { APP_NAME } from '@/lib/constants';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -114,9 +115,13 @@ export function Sidebar() {
   ========================= */
   return (
     <div className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar">
-      {/* Logo */}
+      {/* Logo + Branding */}
       <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-5">
-        <img src="/sahaya-logo.png" alt="Sahaya" className="h-8 w-auto" />
+        <img src="/sahaya-logo.png" alt={APP_NAME} className="h-8 w-auto flex-shrink-0" />
+        <div className="flex min-w-0 flex-col">
+          <span className="truncate text-sm font-bold text-sidebar-foreground">{APP_NAME}</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-primary/70">BY PARISKQ</span>
+        </div>
       </div>
 
       {/* Navigation */}
