@@ -201,6 +201,8 @@ export interface TicketFilters {
   clientSlug?: string | null;
   /** When true, do not filter by organisation_id (e.g. Review Queue shows all NEEDS_REVIEW tickets to staff). */
   scopeAllOrganisations?: boolean;
+  /** When set (Super Admin only), filter tickets by this organisation_id. */
+  organisationId?: string | null;
 }
 
 // Audit log entry

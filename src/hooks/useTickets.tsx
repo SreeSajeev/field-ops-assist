@@ -13,7 +13,7 @@ export function useTickets(filters?: TicketFilters) {
   const isSuperAdmin = userProfile?.role === "SUPER_ADMIN";
 
   return useQuery({
-    queryKey: ["tickets", filters, organisationId, isSuperAdmin, filters?.scopeAllOrganisations],
+    queryKey: ["tickets", filters, organisationId, isSuperAdmin, filters?.scopeAllOrganisations, filters?.organisationId],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query: any = supabase
@@ -23,6 +23,9 @@ export function useTickets(filters?: TicketFilters) {
 
       if (!isSuperAdmin && organisationId && !filters?.scopeAllOrganisations) {
         query = query.eq("organisation_id", organisationId);
+      }
+      if (isSuperAdmin && filters?.organisationId != null && filters.organisationId !== "") {
+        query = query.eq("organisation_id", filters.organisationId);
       }
       if (filters?.status && filters.status !== "all") {
         query = query.eq("status", filters.status);

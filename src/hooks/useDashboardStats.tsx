@@ -4,13 +4,13 @@ import { DashboardStats } from '@/lib/types';
 import { getStartOfDayIST, todayIST } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 
-export function useDashboardStats(clientSlug?: string | null) {
+export function useDashboardStats(clientSlug?: string | null, organisationIdOverride?: string | null) {
   const { userProfile } = useAuth();
   const organisationId = userProfile?.organisation_id ?? null;
   const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
 
   return useQuery({
-    queryKey: ['dashboard-stats', clientSlug ?? 'all', organisationId, isSuperAdmin],
+    queryKey: ['dashboard-stats', clientSlug ?? 'all', organisationId, isSuperAdmin, organisationIdOverride],
     queryFn: async (): Promise<DashboardStats> => {
       let ticketsQuery = supabase
         .from('tickets')
@@ -18,6 +18,9 @@ export function useDashboardStats(clientSlug?: string | null) {
 
       if (!isSuperAdmin && organisationId) {
         ticketsQuery = ticketsQuery.eq('organisation_id', organisationId);
+      }
+      if (isSuperAdmin && organisationIdOverride != null && organisationIdOverride !== '') {
+        ticketsQuery = ticketsQuery.eq('organisation_id', organisationIdOverride);
       }
       if (clientSlug != null && clientSlug !== '') {
         ticketsQuery = ticketsQuery.eq('client_slug', clientSlug);

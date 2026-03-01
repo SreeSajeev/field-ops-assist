@@ -114,6 +114,10 @@ import ClientReports from "@/pages/ClientReports";
 import ClientSupport from "@/pages/ClientSupport";
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
 import SuperAdminOrgView from "@/pages/SuperAdminOrgView";
+import PlatformOverview from "@/pages/PlatformOverview";
+import Organisations from "@/pages/Organisations";
+import TenantView from "@/pages/TenantView";
+import ServiceManagers from "@/pages/ServiceManagers";
 import TicketsList from "@/pages/TicketsList";
 import TicketDetail from "@/pages/TicketDetail";
 import ReviewQueue from "@/pages/ReviewQueue";
@@ -181,6 +185,10 @@ export default function App() {
               <Route element={<RequireSuperAdmin />}>
                 <Route path="/super-admin" element={<SuperAdminDashboard />} />
                 <Route path="/super-admin/org/:clientSlug" element={<SuperAdminOrgView />} />
+                <Route path="/app/platform" element={<PlatformOverview />} />
+                <Route path="/app/organisations" element={<Organisations />} />
+                <Route path="/app/tenant/:orgId" element={<TenantView />} />
+                <Route path="/app/service-managers" element={<ServiceManagers />} />
               </Route>
 
               {/* ========================= */}

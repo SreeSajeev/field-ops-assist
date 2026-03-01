@@ -13,7 +13,7 @@ import {
   BarChart3,
   Shield,
   ChevronRight,
-  Crown,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,7 +44,9 @@ const adminNavigation = [
 ];
 
 const superAdminNavigation = [
-  { name: 'Overview', href: '/super-admin', icon: Crown },
+  { name: 'Platform Overview', href: '/app/platform', icon: LayoutDashboard },
+  { name: 'Organisations', href: '/app/organisations', icon: Building2 },
+  { name: 'Service Managers', href: '/app/service-managers', icon: Shield },
 ];
 
 export function Sidebar() {
