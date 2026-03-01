@@ -105,7 +105,7 @@ export const ClientHeader = () => {
     >
       <div className="w-full md:mx-auto flex h-14 md:max-w-7xl items-center justify-between px-3 md:px-6">
         <div className="flex items-center gap-2.5">
-          <img src="/logo.png" alt="Sahaya" className="h-8 w-auto" />
+          <img src="/sahaya-logo.png" alt="Sahaya" className="h-8 w-auto" />
         </div>
         <nav className="hidden items-center gap-0.5 md:flex">
           {navItems.map((item) => (

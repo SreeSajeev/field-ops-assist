@@ -116,7 +116,7 @@ export function Sidebar() {
     <div className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-5">
-        <img src="/logo.png" alt="Sahaya" className="h-8 w-auto" />
+        <img src="/sahaya-logo.png" alt="Sahaya" className="h-8 w-auto" />
       </div>
 
       {/* Navigation */}
