@@ -30,7 +30,7 @@ export default function FETicketView() {
   const token = tokenQuery.data as any | null;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
+    <div className="p-6 w-full md:max-w-2xl md:mx-auto space-y-6">
       {/* Ticket Info */}
       <Card className="p-6 space-y-2">
         <h2 className="text-xl font-semibold">

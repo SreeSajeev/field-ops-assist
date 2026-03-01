@@ -27,7 +27,7 @@ export default function ClientSupport() {
     <div className="min-h-screen" style={{ background: "hsl(30 5% 98%)" }}>
       <ClientHeader />
       <main className="pt-14">
-        <div className="mx-auto max-w-3xl px-6 py-8">
+        <div className="w-full md:mx-auto md:max-w-3xl px-3 md:px-6 py-8">
           <div className="mb-8 flex items-center gap-3">
             <div
               className="flex h-11 w-11 items-center justify-center rounded-xl shrink-0 text-white"

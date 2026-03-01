@@ -84,7 +84,7 @@ export default function Dashboard() {
         <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.025) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.025) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
         <div className="absolute pointer-events-none" style={{ top: "-20%", right: "10%", width: 400, height: 300, background: "radial-gradient(ellipse, hsl(32 95% 52% / 0.06) 0%, transparent 70%)" }} />
 
-        <div className="relative z-10 mx-auto max-w-7xl px-6">
+        <div className="relative z-10 w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground tracking-tight">Dashboard</h1>
@@ -121,7 +121,7 @@ export default function Dashboard() {
 
       {/* OverviewMetrics — 4 cards in reference style */}
       <section className="pb-8">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
           <h2 className="mb-4 text-base font-bold text-foreground tracking-tight">Service Overview</h2>
           <div
             className="rounded-2xl p-5"
@@ -170,7 +170,7 @@ export default function Dashboard() {
         <>
           <GradientDivider />
           <section className="pb-6">
-            <div className="mx-auto max-w-7xl px-6">
+            <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
               <div
                 className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-slide-up"
                 style={{
@@ -206,7 +206,7 @@ export default function Dashboard() {
 
       {/* Tickets table + right side panels (reference density) */}
       <section className="py-8">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <div

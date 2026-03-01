@@ -21,7 +21,7 @@ export function SectionWrapper({
 }: SectionWrapperProps) {
   return (
     <section className={cn('py-8', className)}>
-      <div className="mx-auto max-w-7xl px-3 md:px-6">
+      <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
         {title && (
           <h2 className="mb-4 text-base font-bold tracking-tight text-foreground">
             {title}

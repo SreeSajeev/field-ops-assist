@@ -193,8 +193,8 @@ const { data: feTokens } = useQuery({
   return (
     <div className="min-h-screen" style={{ background: 'hsl(285 45% 12%)' }}>
       {/* Header */}
-      <header className="border-b px-6 py-4" style={{ borderColor: 'hsl(285 35% 20%)', background: 'hsl(285 45% 16%)' }}>
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <header className="border-b px-3 md:px-6 py-4" style={{ borderColor: 'hsl(285 35% 20%)', background: 'hsl(285 45% 16%)' }}>
+        <div className="w-full md:max-w-4xl md:mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl logo-glow"
                  style={{ background: 'linear-gradient(135deg, hsl(32 95% 48%), hsl(32 95% 55%))' }}>
@@ -221,7 +221,7 @@ const { data: feTokens } = useQuery({
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main className="w-full md:max-w-4xl md:mx-auto px-3 md:px-6 py-8">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-white mb-2">My Assigned Tickets</h2>
           <p className="text-white/60">

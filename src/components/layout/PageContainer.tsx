@@ -11,7 +11,7 @@ interface PageContainerProps {
 
 export function PageContainer({ children, className = '' }: PageContainerProps) {
   return (
-    <div className={`mx-auto max-w-7xl px-3 md:px-6 space-y-10 ${className}`.trim()}>
+    <div className={`w-full md:mx-auto md:max-w-7xl px-3 md:px-6 space-y-10 ${className}`.trim()}>
       {children}
     </div>
   );

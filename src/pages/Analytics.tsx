@@ -873,7 +873,7 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
 
   if (clientReportsMode) {
     return (
-      <div className="mx-auto max-w-7xl px-6 py-6" style={{ minHeight: '100%' }}>
+      <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6 py-6" style={{ minHeight: '100%' }}>
         {content}
       </div>
     );

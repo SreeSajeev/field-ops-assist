@@ -100,7 +100,7 @@ export const ClientHeader = () => {
         boxShadow: "0 1px 8px hsl(285 25% 10% / 0.06), 0 0 0 1px hsl(270 15% 88% / 0.3)",
       }}
     >
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
+      <div className="w-full md:mx-auto flex h-14 md:max-w-7xl items-center justify-between px-3 md:px-6">
         <div className="flex items-center gap-2.5">
           <LogoMark size={32} />
           <div className="leading-none">
@@ -147,7 +147,7 @@ const WelcomeSection = ({ stats, loading }: { stats: { totalTickets?: number; op
     <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.025) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.025) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
     <div className="absolute pointer-events-none" style={{ top: "-20%", right: "10%", width: 400, height: 300, background: "radial-gradient(ellipse, hsl(32 95% 52% / 0.06) 0%, transparent 70%)" }} />
 
-    <div className="relative z-10 mx-auto max-w-7xl px-6">
+    <div className="relative z-10 w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Welcome back</h1>
@@ -236,7 +236,7 @@ const SlaBadge = ({ onTrack }: { onTrack: boolean }) => (
 
 const ClientTicketsTable = ({ tickets, loading, onSelect }: { tickets: TicketType[]; loading: boolean; onSelect: (t: TicketType) => void }) => (
   <section className="py-10">
-    <div className="mx-auto max-w-7xl px-6">
+    <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
       <h2 className="mb-4 text-base font-bold text-foreground tracking-tight">Your Service Requests</h2>
       <div className="overflow-hidden rounded-2xl" style={{ border: "1px solid hsl(270 15% 88% / 0.7)", boxShadow: "0 1px 4px hsl(285 25% 10% / 0.04), 0 8px 24px hsl(285 25% 10% / 0.06)" }}>
         <div className="overflow-x-auto">
@@ -406,7 +406,7 @@ const REPORTS = [
 
 const ReportsSection = () => (
   <section className="relative py-10 overflow-hidden">
-    <div className="relative z-10 mx-auto max-w-7xl px-6">
+    <div className="relative z-10 w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
       <h2 className="mb-4 text-base font-bold text-foreground tracking-tight">Reports & Documentation</h2>
       <div className="grid gap-4 sm:grid-cols-3">
         {REPORTS.map((r) => (
@@ -434,7 +434,7 @@ const ReportsSection = () => (
 
 const SupportSection = () => (
   <section className="py-8">
-    <div className="mx-auto max-w-7xl px-6">
+    <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
       <div
         className="rounded-2xl p-6 md:flex md:items-center md:justify-between"
         style={{
@@ -465,7 +465,7 @@ const SupportSection = () => (
 
 export const DashboardFooter = () => (
   <footer className="py-5" style={{ borderTop: "1px solid hsl(270 15% 88% / 0.5)" }}>
-    <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 text-xs text-muted-foreground sm:flex-row">
+    <div className="w-full md:mx-auto flex md:max-w-7xl flex-col items-center justify-between gap-2 px-3 md:px-6 text-xs text-muted-foreground sm:flex-row">
       <span>© 2026 Pariskq. All rights reserved.</span>
       <span className="font-medium" style={{ letterSpacing: "0.08em" }}>Precision Meets Perfection</span>
     </div>
@@ -488,7 +488,7 @@ export default function ClientDashboard() {
       <main className="pt-14">
         {/* Welcome back — enterprise-style greeting card at top */}
         <section className="pt-6 pb-2">
-          <div className="mx-auto max-w-7xl px-6">
+          <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
             <div
               className="rounded-2xl px-6 py-5"
               style={{
@@ -510,7 +510,7 @@ export default function ClientDashboard() {
         <WelcomeSection stats={stats} loading={statsLoading} />
         <GradientDivider />
         <section className="pb-8">
-          <div className="mx-auto max-w-7xl px-6">
+          <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
             <h2 className="mb-4 text-base font-bold text-foreground tracking-tight">Service Overview</h2>
             <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg, hsl(285 15% 97%) 0%, hsl(30 5% 98%) 100%)", border: "1px solid hsl(270 15% 88% / 0.5)", boxShadow: "0 4px 24px hsl(285 25% 10% / 0.05), inset 0 1px 0 hsl(0 0% 100% / 0.7)" }}>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

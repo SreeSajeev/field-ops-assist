@@ -44,7 +44,7 @@ export function MobileSidebarWrapper() {
             aria-hidden
           />
           <div
-            className="fixed left-0 top-0 bottom-0 z-50 w-64 flex flex-col bg-sidebar border-r border-sidebar-border md:hidden overflow-hidden"
+            className="fixed left-0 top-0 bottom-0 z-50 w-56 flex flex-col bg-sidebar border-r border-sidebar-border md:hidden overflow-hidden"
             role="dialog"
             aria-label="Menu"
           >
