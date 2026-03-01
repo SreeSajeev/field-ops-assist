@@ -116,17 +116,7 @@ export function Sidebar() {
     <div className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl logo-bg-accent logo-glow">
-          <Shield className="h-5 w-5 text-primary-foreground" />
-        </div>
-        <div>
-          <h1 className="text-base font-bold tracking-tight text-sidebar-foreground">
-            Sahaya
-          </h1>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-sidebar-primary">
-            by Pariskq
-          </p>
-        </div>
+        <img src="/logo.png" alt="Sahaya" className="h-8 w-auto" />
       </div>
 
       {/* Navigation */}

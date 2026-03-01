@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Shield,
   LayoutDashboard,
@@ -24,6 +26,7 @@ import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useTickets } from "@/hooks/useTickets";
 import { Ticket as TicketType, TicketStatus } from "@/lib/types";
 import { formatIST } from "@/lib/dateUtils";
+import { createCSVDownload } from "@/lib/csvExport";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -102,11 +105,7 @@ export const ClientHeader = () => {
     >
       <div className="w-full md:mx-auto flex h-14 md:max-w-7xl items-center justify-between px-3 md:px-6">
         <div className="flex items-center gap-2.5">
-          <LogoMark size={32} />
-          <div className="leading-none">
-            <span className="text-sm font-bold text-foreground tracking-tight">Sahaya</span>
-            <span className="ml-1.5 text-[9px] font-semibold text-muted-foreground tracking-[0.12em] uppercase">by Pariskq</span>
-          </div>
+          <img src="/logo.png" alt="Sahaya" className="h-8 w-auto" />
         </div>
         <nav className="hidden items-center gap-0.5 md:flex">
           {navItems.map((item) => (
@@ -277,7 +276,7 @@ const ClientTicketsTable = ({ tickets, loading, onSelect }: { tickets: TicketTyp
                     <td className="px-5 py-3"><StatusBadge status={ticket.status} /></td>
                     <td className="whitespace-nowrap px-5 py-3 text-muted-foreground">{formatIST(ticket.updated_at, "yyyy-MM-dd")}</td>
                     <td className="px-5 py-3 text-right">
-                      <Link to={`/app/tickets/${ticket.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition-all duration-200 hover:bg-primary/6">
+                      <Link to={`/app/client/tickets/${ticket.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition-all duration-200 hover:bg-primary/6">
                         Details <ChevronRight className="h-3 w-3" />
                       </Link>
                     </td>
@@ -383,7 +382,7 @@ const TicketDetailDrawer = ({ ticket, onClose }: { ticket: TicketType | null; on
 
         <div className="p-6" style={{ borderTop: "1px solid hsl(270 15% 88% / 0.6)" }}>
           <Link
-            to={`/app/tickets/${ticket.id}`}
+            to={`/app/client/tickets/${ticket.id}`}
             className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-px"
             style={{ background: "linear-gradient(135deg, hsl(32 95% 46%), hsl(32 95% 54%))", boxShadow: "0 2px 12px hsl(32 95% 52% / 0.35), inset 0 1px 0 hsl(0 0% 100% / 0.15)" }}
           >
@@ -398,37 +397,129 @@ const TicketDetailDrawer = ({ ticket, onClose }: { ticket: TicketType | null; on
 
 // ─── Reports Section ─────────────────────────────────────────────────────────
 
+type SlaRow = { ticket_id: string; assignment_breached?: boolean; onsite_breached?: boolean; resolution_breached?: boolean };
+
 const REPORTS = [
-  { title: "Ticket Summary (CSV)", desc: "Export all service requests with status and SLA data.", icon: FileText },
-  { title: "Monthly SLA Report", desc: "Phase-based SLA compliance summary for management review.", icon: BarChart3 },
-  { title: "Resolution Report", desc: "Detailed resolution records with proof and timelines.", icon: CheckCircle2 },
+  { id: "ticket-summary" as const, title: "Ticket Summary (CSV)", desc: "Export all service requests with status and SLA data.", icon: FileText },
+  { id: "monthly-sla" as const, title: "Monthly SLA Report", desc: "Phase-based SLA compliance summary for management review.", icon: BarChart3 },
+  { id: "resolution" as const, title: "Resolution Report", desc: "Detailed resolution records with proof and timelines.", icon: CheckCircle2 },
 ];
 
-const ReportsSection = () => (
-  <section className="relative py-10 overflow-hidden">
-    <div className="relative z-10 w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
-      <h2 className="mb-4 text-base font-bold text-foreground tracking-tight">Reports & Documentation</h2>
-      <div className="grid gap-4 sm:grid-cols-3">
-        {REPORTS.map((r) => (
-          <div
-            key={r.title}
-            className="group flex flex-col rounded-xl p-5 transition-all duration-200 hover:-translate-y-0.5"
-            style={{ background: "hsl(0 0% 100%)", border: "1px solid hsl(270 15% 88% / 0.7)", boxShadow: "0 1px 4px hsl(285 25% 10% / 0.04), 0 4px 12px hsl(285 25% 10% / 0.03)" }}
-            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 4px 20px hsl(285 25% 10% / 0.08), 0 1px 4px hsl(285 25% 10% / 0.04)"; e.currentTarget.style.borderColor = "hsl(285 45% 60% / 0.2)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 1px 4px hsl(285 25% 10% / 0.04), 0 4px 12px hsl(285 25% 10% / 0.03)"; e.currentTarget.style.borderColor = "hsl(270 15% 88% / 0.7)"; }}
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-primary" style={{ background: "hsl(285 45% 30% / 0.06)" }}>
-              <r.icon className="h-5 w-5" />
-            </div>
-            <h3 className="mt-3 text-sm font-semibold text-foreground">{r.title}</h3>
-            <p className="mt-1 flex-1 text-xs leading-relaxed text-muted-foreground">{r.desc}</p>
-            <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary"> <Download className="h-3.5 w-3.5" /> Download </span>
-          </div>
-        ))}
+function getReportFilename(prefix: string, orgNameOrSlug: string): string {
+  const safe = (orgNameOrSlug || "export").replace(/[^a-zA-Z0-9-_]/g, "-").slice(0, 32);
+  const date = new Date().toISOString().slice(0, 10);
+  return `${prefix}-${safe}-${date}.csv`;
+}
+
+const ReportsSection = ({
+  tickets,
+  stats,
+  slaData,
+  orgNameOrSlug,
+}: {
+  tickets: TicketType[];
+  stats: { slaBreaches?: number } | null;
+  slaData: SlaRow[] | undefined;
+  orgNameOrSlug: string;
+}) => {
+  const breachedSet = React.useMemo(() => {
+    if (!slaData) return new Set<string>();
+    return new Set(
+      slaData
+        .filter((s) => s.assignment_breached || s.onsite_breached || s.resolution_breached)
+        .map((s) => s.ticket_id)
+    );
+  }, [slaData]);
+
+  const onTicketSummary = () => {
+    const headers = ["ticket_id", "summary", "status", "client_slug", "created_at", "updated_at", "sla_status", "organisation_id"];
+    const rows = [
+      headers,
+      ...tickets.map((t) => [
+        t.id,
+        t.issue_type || t.category || t.ticket_number || "",
+        t.status,
+        t.client_slug ?? "",
+        t.created_at ?? "",
+        t.updated_at ?? "",
+        breachedSet.has(t.id) ? "breached" : "compliant",
+        t.organisation_id ?? "",
+      ]),
+    ];
+    createCSVDownload(rows, getReportFilename("ticket-summary", orgNameOrSlug));
+  };
+
+  const onMonthlySla = () => {
+    const monthMap: Record<string, { total: number; breached: number }> = {};
+    for (const t of tickets) {
+      const created = t.created_at ? new Date(t.created_at) : new Date();
+      const key = `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, "0")}`;
+      if (!monthMap[key]) monthMap[key] = { total: 0, breached: 0 };
+      monthMap[key].total++;
+      if (breachedSet.has(t.id)) monthMap[key].breached++;
+    }
+    const sortedMonths = Object.keys(monthMap).sort();
+    const rows = [
+      ["Month", "Total Tickets", "Breached", "Compliant"],
+      ...sortedMonths.map((m) => {
+        const v = monthMap[m];
+        return [m, v.total, v.breached, v.total - v.breached];
+      }),
+    ];
+    createCSVDownload(rows, getReportFilename("monthly-sla", orgNameOrSlug));
+  };
+
+  const onResolutionReport = () => {
+    const resolved = tickets.filter((t) => t.status === "RESOLVED");
+    const headers = ["ticket_id", "summary", "assigned_fe", "resolved_at", "time_to_resolution", "proof"];
+    const rows = [
+      headers,
+      ...resolved.map((t) => [
+        t.id,
+        t.issue_type || t.category || t.ticket_number || "",
+        "",
+        t.updated_at ?? "",
+        "",
+        "",
+      ]),
+    ];
+    createCSVDownload(rows, getReportFilename("resolution-report", orgNameOrSlug));
+  };
+
+  const handleDownload = (id: "ticket-summary" | "monthly-sla" | "resolution") => {
+    if (id === "ticket-summary") onTicketSummary();
+    else if (id === "monthly-sla") onMonthlySla();
+    else onResolutionReport();
+  };
+
+  return (
+    <section className="relative py-10 overflow-hidden">
+      <div className="relative z-10 w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
+        <h2 className="mb-4 text-base font-bold text-foreground tracking-tight">Reports & Documentation</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {REPORTS.map((r) => (
+            <button
+              key={r.title}
+              type="button"
+              onClick={() => handleDownload(r.id)}
+              className="group flex flex-col rounded-xl p-5 text-left transition-all duration-200 hover:-translate-y-0.5"
+              style={{ background: "hsl(0 0% 100%)", border: "1px solid hsl(270 15% 88% / 0.7)", boxShadow: "0 1px 4px hsl(285 25% 10% / 0.04), 0 4px 12px hsl(285 25% 10% / 0.03)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 4px 20px hsl(285 25% 10% / 0.08), 0 1px 4px hsl(285 25% 10% / 0.04)"; e.currentTarget.style.borderColor = "hsl(285 45% 60% / 0.2)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 1px 4px hsl(285 25% 10% / 0.04), 0 4px 12px hsl(285 25% 10% / 0.03)"; e.currentTarget.style.borderColor = "hsl(270 15% 88% / 0.7)"; }}
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl text-primary" style={{ background: "hsl(285 45% 30% / 0.06)" }}>
+                <r.icon className="h-5 w-5" />
+              </div>
+              <h3 className="mt-3 text-sm font-semibold text-foreground">{r.title}</h3>
+              <p className="mt-1 flex-1 text-xs leading-relaxed text-muted-foreground">{r.desc}</p>
+              <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary"> <Download className="h-3.5 w-3.5" /> Download </span>
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 // ─── Support Section ─────────────────────────────────────────────────────────
 
@@ -480,7 +571,22 @@ export default function ClientDashboard() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats(userProfile?.client_slug ?? undefined);
   const { data: tickets = [], isLoading: ticketsLoading } = useTickets({ status: "all", clientSlug: userProfile?.client_slug ?? undefined });
 
+  const ticketIds = React.useMemo(() => tickets.map((t) => t.id), [tickets]);
+  const { data: slaData } = useQuery({
+    queryKey: ["sla-tracking", ticketIds.length],
+    enabled: ticketIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sla_tracking")
+        .select("ticket_id, assignment_breached, onsite_breached, resolution_breached")
+        .in("ticket_id", ticketIds);
+      if (error) throw error;
+      return (data ?? []) as SlaRow[];
+    },
+  });
+
   const clientDisplayName = userProfile?.name?.trim() || "Guest";
+  const reportOrgSlug = userProfile?.client_slug ?? "client";
 
   return (
     <div className="min-h-screen" style={{ background: "hsl(30 5% 98%)" }}>
@@ -525,7 +631,7 @@ export default function ClientDashboard() {
         <GradientDivider />
         <ClientTicketsTable tickets={tickets} loading={ticketsLoading} onSelect={setSelectedTicket} />
         <GradientDivider />
-        <ReportsSection />
+        <ReportsSection tickets={tickets} stats={stats ?? null} slaData={slaData} orgNameOrSlug={reportOrgSlug} />
         <GradientDivider />
         <SupportSection />
       </main>

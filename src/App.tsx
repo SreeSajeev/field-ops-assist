@@ -218,6 +218,14 @@ export default function App() {
                   </RequireClient>
                 }
               />
+              <Route
+                path="/app/client/tickets/:ticketId"
+                element={
+                  <RequireClient>
+                    <TicketDetail />
+                  </RequireClient>
+                }
+              />
 
               {/* ========================= */}
               {/* 🧑‍💼 STAFF / ADMIN */}
