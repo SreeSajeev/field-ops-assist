@@ -23,12 +23,12 @@ export function SectionWrapper({
     <section className={cn('py-8', className)}>
       <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
         {title && (
-          <h2 className="mb-4 text-base font-bold tracking-tight text-foreground">
+          <h2 className="mb-4 text-xl font-bold tracking-tight text-foreground md:text-2xl">
             {title}
           </h2>
         )}
         {elevated ? (
-          <div className="rounded-2xl border border-border bg-card p-3 md:p-5 shadow-card">
+          <div className="rounded-xl border border-border bg-card p-3 shadow-card md:rounded-2xl md:p-5">
             {children}
           </div>
         ) : (

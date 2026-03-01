@@ -152,7 +152,7 @@
   }
 
   body {
-    @apply min-h-screen bg-background text-foreground antialiased;
+    @apply min-h-screen overflow-x-hidden bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
@@ -168,6 +168,25 @@
 }
 
 @layer components {
+  /* Dashboard: lighter shadow on mobile, original on desktop (>=768px) */
+  @media (min-width: 768px) {
+    .dashboard-welcome-stats {
+      box-shadow: 0 4px 16px hsl(285 25% 10% / 0.06), 0 1px 3px hsl(285 25% 10% / 0.04), inset 0 1px 0 hsl(0 0% 100% / 0.8);
+    }
+    .dashboard-overview-section {
+      box-shadow: 0 4px 24px hsl(285 25% 10% / 0.05), inset 0 1px 0 hsl(0 0% 100% / 0.7);
+    }
+    .dashboard-tickets-card {
+      box-shadow: 0 1px 4px hsl(285 25% 10% / 0.04), 0 8px 24px hsl(285 25% 10% / 0.06);
+    }
+    .dashboard-side-card {
+      box-shadow: 0 1px 4px hsl(285 25% 10% / 0.04), 0 4px 12px hsl(285 25% 10% / 0.03);
+    }
+    .dashboard-metric-card {
+      box-shadow: 0 1px 4px hsl(285 25% 10% / 0.05), 0 4px 12px hsl(285 25% 10% / 0.04);
+    }
+  }
+
   /* Status badge variants */
   .status-badge {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide;

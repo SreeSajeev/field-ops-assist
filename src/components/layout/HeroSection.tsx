@@ -18,17 +18,17 @@ export function HeroSection({ children, className }: HeroSectionProps) {
         className
       )}
     >
-      {/* Subtle gradient bg */}
+      {/* Subtle gradient bg — hidden on mobile for plain background */}
       <div
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 hidden md:block"
         style={{
           background:
             'linear-gradient(180deg, hsl(285 30% 96%) 0%, hsl(30 5% 98%) 100%)',
         }}
       />
-      {/* Grid overlay */}
+      {/* Grid overlay — hidden on mobile */}
       <div
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 hidden md:block"
         style={{
           backgroundImage: `
             linear-gradient(hsl(285 45% 55% / 0.025) 1px, transparent 1px),
@@ -37,9 +37,9 @@ export function HeroSection({ children, className }: HeroSectionProps) {
           backgroundSize: '48px 48px',
         }}
       />
-      {/* Radial glow */}
+      {/* Radial glow — hidden on mobile */}
       <div
-        className="pointer-events-none absolute"
+        className="pointer-events-none absolute hidden md:block"
         style={{
           top: '-20%',
           right: '10%',

@@ -44,12 +44,12 @@ function MetricCard({
 
   return (
     <div
-      className={`group relative rounded-xl p-5 transition-all duration-200 hover:-translate-y-0.5 ${!isGradient ? "border border-border bg-card" : "text-white"}`}
+      className={`group relative rounded-xl p-4 transition-all duration-200 hover:-translate-y-0.5 md:p-5 ${!isGradient ? "dashboard-metric-card border border-border bg-card" : "text-white"}`}
       style={{
         ...(isGradient ? { background: s.bg } : {}),
         boxShadow: isGradient
           ? "0 4px 16px hsl(285 45% 20% / 0.3), inset 0 1px 0 hsl(0 0% 100% / 0.1)"
-          : "0 1px 4px hsl(285 25% 10% / 0.05), 0 4px 12px hsl(285 25% 10% / 0.04)",
+          : "0 1px 3px hsl(285 25% 10% / 0.05), 0 4px 12px hsl(285 25% 10% / 0.04)",
       }}
       onMouseEnter={(e) => {
         if (!isGradient) e.currentTarget.style.boxShadow = "0 4px 20px hsl(285 25% 10% / 0.10), 0 1px 4px hsl(285 25% 10% / 0.06)";
@@ -78,24 +78,24 @@ export default function Dashboard() {
 
   return (
     <AppLayoutNew>
-      {/* WelcomeSection — gradient background block (reference ClientDashboard) */}
-      <section className="relative overflow-hidden py-8">
-        <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, hsl(285 30% 96%) 0%, hsl(30 5% 98%) 100%)" }} />
-        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.025) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.025) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
-        <div className="absolute pointer-events-none" style={{ top: "-20%", right: "10%", width: 400, height: 300, background: "radial-gradient(ellipse, hsl(32 95% 52% / 0.06) 0%, transparent 70%)" }} />
+      {/* WelcomeSection — gradient background block (reference ClientDashboard). Plain bg on mobile. */}
+      <section className="relative overflow-hidden py-6 md:py-8">
+        <div className="absolute inset-0 pointer-events-none hidden md:block" style={{ background: "linear-gradient(180deg, hsl(285 30% 96%) 0%, hsl(30 5% 98%) 100%)" }} />
+        <div className="absolute inset-0 pointer-events-none hidden md:block" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.025) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.025) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
+        <div className="absolute pointer-events-none hidden md:block" style={{ top: "-20%", right: "10%", width: 400, height: 300, background: "radial-gradient(ellipse, hsl(32 95% 52% / 0.06) 0%, transparent 70%)" }} />
 
         <div className="relative z-10 w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-4 md:gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground tracking-tight">Dashboard</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Welcome back. Here&apos;s your operations overview.</p>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">Dashboard</h1>
+              <p className="mt-1 text-sm text-muted-foreground md:text-base">Welcome back. Here&apos;s your operations overview.</p>
             </div>
             <div
-              className="flex items-center gap-4 rounded-2xl p-4"
+              className="dashboard-welcome-stats flex items-center gap-4 rounded-xl p-4 md:rounded-2xl"
               style={{
                 background: "linear-gradient(135deg, hsl(285 25% 97%), hsl(0 0% 100%))",
                 border: "1px solid hsl(270 15% 88% / 0.8)",
-                boxShadow: "0 4px 16px hsl(285 25% 10% / 0.06), 0 1px 3px hsl(285 25% 10% / 0.04), inset 0 1px 0 hsl(0 0% 100% / 0.8)",
+                boxShadow: "0 1px 3px hsl(285 25% 10% / 0.04), inset 0 1px 0 hsl(0 0% 100% / 0.8)",
               }}
             >
               <div className="px-3 text-center">
@@ -120,15 +120,15 @@ export default function Dashboard() {
       <GradientDivider />
 
       {/* OverviewMetrics — 4 cards in reference style */}
-      <section className="pb-8">
+      <section className="pb-6 md:pb-8">
         <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
-          <h2 className="mb-4 text-base font-bold text-foreground tracking-tight">Service Overview</h2>
+          <h2 className="mb-4 text-xl font-bold tracking-tight text-foreground md:text-2xl">Service Overview</h2>
           <div
-            className="rounded-2xl p-5"
+            className="dashboard-overview-section rounded-xl p-4 md:rounded-2xl md:p-5"
             style={{
               background: "linear-gradient(135deg, hsl(285 15% 97%) 0%, hsl(30 5% 98%) 100%)",
               border: "1px solid hsl(270 15% 88% / 0.5)",
-              boxShadow: "0 4px 24px hsl(285 25% 10% / 0.05), inset 0 1px 0 hsl(0 0% 100% / 0.7)",
+              boxShadow: "0 1px 3px hsl(285 25% 10% / 0.05), inset 0 1px 0 hsl(0 0% 100% / 0.7)",
             }}
           >
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -169,14 +169,14 @@ export default function Dashboard() {
       {stats?.needsReviewCount ? (
         <>
           <GradientDivider />
-          <section className="pb-6">
+          <section className="pb-4 md:pb-6">
             <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
               <div
-                className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-slide-up"
+                className="rounded-xl p-4 md:rounded-2xl md:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-slide-up"
                 style={{
                   background: "hsl(38 95% 50% / 0.08)",
                   border: "1px solid hsl(38 95% 50% / 0.25)",
-                  boxShadow: "0 1px 4px hsl(285 25% 10% / 0.04)",
+                  boxShadow: "0 1px 3px hsl(285 25% 10% / 0.04)",
                 }}
               >
                 <div className="flex items-center gap-4">
@@ -205,23 +205,23 @@ export default function Dashboard() {
       <GradientDivider />
 
       {/* Tickets table + right side panels (reference density) */}
-      <section className="py-8">
+      <section className="py-6 md:py-8">
         <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <div
-                className="overflow-hidden rounded-2xl"
+                className="dashboard-tickets-card overflow-hidden rounded-xl md:rounded-2xl"
                 style={{
                   border: "1px solid hsl(270 15% 88% / 0.7)",
-                  boxShadow: "0 1px 4px hsl(285 25% 10% / 0.04), 0 8px 24px hsl(285 25% 10% / 0.06)",
+                  boxShadow: "0 1px 3px hsl(285 25% 10% / 0.04), 0 4px 12px hsl(285 25% 10% / 0.04)",
                 }}
               >
                 <div
-                  className="flex flex-row items-center justify-between px-5 py-4"
+                  className="flex flex-row items-center justify-between px-4 py-3 md:px-5 md:py-4"
                   style={{ borderBottom: "1px solid hsl(270 15% 88% / 0.7)", background: "linear-gradient(135deg, hsl(285 20% 96%), hsl(270 10% 94%))" }}
                 >
                   <div>
-                    <h2 className="text-base font-bold text-foreground tracking-tight">Recent Tickets</h2>
+                    <h2 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">Recent Tickets</h2>
                     <p className="mt-0.5 text-sm text-muted-foreground">Latest service requests</p>
                   </div>
                   <Link to="/app/tickets">
@@ -237,17 +237,17 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-4 md:space-y-5">
               {/* Automation Health */}
               <div
-                className="rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5"
+                className="dashboard-side-card rounded-xl p-4 transition-all duration-200 hover:-translate-y-0.5 md:rounded-2xl md:p-5"
                 style={{
                   border: "1px solid hsl(270 15% 88% / 0.6)",
-                  boxShadow: "0 1px 4px hsl(285 25% 10% / 0.04), 0 4px 12px hsl(285 25% 10% / 0.03)",
+                  boxShadow: "0 1px 3px hsl(285 25% 10% / 0.04)",
                   background: "hsl(var(--card))",
                 }}
               >
-                <h3 className="flex items-center gap-2 text-base font-semibold text-foreground mb-4">
+                <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground md:mb-4">
                   <Zap className="h-4 w-4 text-accent" />
                   Automation Health
                 </h3>
@@ -269,14 +269,14 @@ export default function Dashboard() {
 
               {/* Ticket Status */}
               <div
-                className="rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5"
+                className="dashboard-side-card rounded-xl p-4 transition-all duration-200 hover:-translate-y-0.5 md:rounded-2xl md:p-5"
                 style={{
                   border: "1px solid hsl(270 15% 88% / 0.6)",
-                  boxShadow: "0 1px 4px hsl(285 25% 10% / 0.04), 0 4px 12px hsl(285 25% 10% / 0.03)",
+                  boxShadow: "0 1px 3px hsl(285 25% 10% / 0.04)",
                   background: "hsl(var(--card))",
                 }}
               >
-                <h3 className="flex items-center gap-2 text-base font-semibold text-foreground mb-4">
+                <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground md:mb-4">
                   <TrendingUp className="h-4 w-4 text-primary" />
                   Ticket Status
                 </h3>
@@ -298,14 +298,14 @@ export default function Dashboard() {
 
               {/* Field Team */}
               <div
-                className="rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5"
+                className="dashboard-side-card rounded-xl p-4 transition-all duration-200 hover:-translate-y-0.5 md:rounded-2xl md:p-5"
                 style={{
                   border: "1px solid hsl(270 15% 88% / 0.6)",
-                  boxShadow: "0 1px 4px hsl(285 25% 10% / 0.04), 0 4px 12px hsl(285 25% 10% / 0.03)",
+                  boxShadow: "0 1px 3px hsl(285 25% 10% / 0.04)",
                   background: "hsl(var(--card))",
                 }}
               >
-                <h3 className="flex items-center gap-2 text-base font-semibold text-foreground mb-4">
+                <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground md:mb-4">
                   <Users className="h-4 w-4 text-accent" />
                   Field Team
                 </h3>
