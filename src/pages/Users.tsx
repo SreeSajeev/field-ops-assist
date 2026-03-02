@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatIST } from '@/lib/dateUtils';
 import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -6,6 +7,14 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganisationsTable } from '@/hooks/useOrganisationsTable';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -45,7 +54,8 @@ import {
   UserCheck,
   UserX,
   Clock,
-  Info
+  Info,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { User, UserRole } from '@/lib/types';
@@ -61,16 +71,28 @@ const ROLE_BADGES: Record<UserRole, { label: string; className: string }> = {
 
 const apiBase = () => import.meta.env.VITE_CRM_API_URL ?? 'http://localhost:3000';
 
+const TENANT_ADMIN_ROLES: UserRole[] = ['ADMIN', 'STAFF', 'FIELD_EXECUTIVE', 'CLIENT'];
+const SUPER_ADMIN_ROLES: UserRole[] = ['ADMIN', 'STAFF', 'FIELD_EXECUTIVE', 'CLIENT', 'SUPER_ADMIN'];
+
 export default function Users() {
-  const { userProfile, session } = useAuth();
+  const queryClient = useQueryClient();
+  const { userProfile, session, signUp } = useAuth();
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
   const [statusPendingId, setStatusPendingId] = useState<string | null>(null);
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [addUserName, setAddUserName] = useState('');
+  const [addUserEmail, setAddUserEmail] = useState('');
+  const [addUserPassword, setAddUserPassword] = useState('');
+  const [addUserRole, setAddUserRole] = useState<UserRole>('STAFF');
+  const [addUserOrgId, setAddUserOrgId] = useState('');
+  const [addUserSubmitting, setAddUserSubmitting] = useState(false);
 
   const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
+  const isTenantAdmin = userProfile?.role === 'ADMIN';
 
   const updateUserStatus = async (userId: string, isActive: boolean) => {
     const token = session?.access_token;
@@ -195,7 +217,7 @@ export default function Users() {
       <PageContainer>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600">
               <UsersIcon className="h-5 w-5 text-white" />
@@ -203,27 +225,42 @@ export default function Users() {
             <div>
               <h1 className="text-2xl font-bold">Users</h1>
               <p className="text-muted-foreground text-sm">
-                System user management and role overview
+                {isTenantAdmin ? 'Manage users in your organisation' : 'System user management and role overview'}
               </p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            {(isTenantAdmin && organisationId) || isSuperAdmin ? (
+              <Button size="sm" onClick={() => setAddUserOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            ) : null}
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Admin Notice */}
         <Alert className="bg-purple-50 border-purple-200">
           <Shield className="h-4 w-4 text-purple-600" />
           <AlertDescription className="text-sm text-purple-800">
-            <strong>Admin View:</strong> This page shows all system users and their roles.
-            User management operations require appropriate administrative privileges.
+            {isTenantAdmin ? (
+              <>
+                <strong>Tenant Admin:</strong> You manage users in your organisation only. You can add users, change roles, and activate or deactivate them. Organisation cannot be changed.
+              </>
+            ) : (
+              <>
+                <strong>Admin View:</strong> This page shows all system users and their roles. User management operations require appropriate administrative privileges.
+              </>
+            )}
           </AlertDescription>
         </Alert>
 
@@ -393,7 +430,9 @@ export default function Users() {
               <SelectItem value="all">All Roles</SelectItem>
               <SelectItem value="STAFF">Service Manager</SelectItem>
               <SelectItem value="ADMIN">Admin</SelectItem>
-              <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+              {isSuperAdmin && <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>}
+              <SelectItem value="FIELD_EXECUTIVE">Field Executive</SelectItem>
+              <SelectItem value="CLIENT">Client</SelectItem>
             </SelectContent>
           </Select>
 
@@ -538,6 +577,126 @@ export default function Users() {
             </div>
           </div>
         ))}
+
+        <Dialog open={addUserOpen} onOpenChange={(open) => {
+          setAddUserOpen(open);
+          if (!open) setAddUserOrgId('');
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add User</DialogTitle>
+              <DialogDescription>
+                {isSuperAdmin
+                  ? 'Create a user in any organisation. They will sign in with the email and password you set.'
+                  : 'Create a user in your organisation. They will sign in with the email and password you set. Organisation cannot be changed.'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="add-user-name">Name</Label>
+                <Input
+                  id="add-user-name"
+                  value={addUserName}
+                  onChange={(e) => setAddUserName(e.target.value)}
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="add-user-email">Email</Label>
+                <Input
+                  id="add-user-email"
+                  type="email"
+                  value={addUserEmail}
+                  onChange={(e) => setAddUserEmail(e.target.value)}
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="add-user-password">Password</Label>
+                <Input
+                  id="add-user-password"
+                  type="password"
+                  value={addUserPassword}
+                  onChange={(e) => setAddUserPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+              {isSuperAdmin && (
+                <div className="grid gap-2">
+                  <Label>Organisation</Label>
+                  <Select value={addUserOrgId} onValueChange={setAddUserOrgId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select organisation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(organisations as { id: string; name: string; slug?: string }[]).map((org) => (
+                        <SelectItem key={org.id} value={org.id}>
+                          {org.name} {org.slug ? `(${org.slug})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="grid gap-2">
+                <Label>Role</Label>
+                <Select value={addUserRole} onValueChange={(v) => setAddUserRole(v as UserRole)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(isSuperAdmin ? SUPER_ADMIN_ROLES : TENANT_ADMIN_ROLES).map((r) => (
+                      <SelectItem key={r} value={r}>{ROLE_BADGES[r]?.label ?? r}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddUserOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={
+                  !addUserName.trim() ||
+                  !addUserEmail.trim() ||
+                  !addUserPassword ||
+                  (isSuperAdmin ? !addUserOrgId : !organisationId) ||
+                  addUserSubmitting
+                }
+                onClick={async () => {
+                  const selectedOrganisationId = isSuperAdmin ? addUserOrgId : organisationId ?? undefined;
+                  setAddUserSubmitting(true);
+                  try {
+                    const { error } = await signUp(
+                      addUserEmail.trim(),
+                      addUserPassword,
+                      addUserName.trim(),
+                      addUserRole,
+                      selectedOrganisationId
+                    );
+                    if (error) {
+                      toast({ title: 'Failed to add user', description: error.message, variant: 'destructive' });
+                      return;
+                    }
+                    queryClient.invalidateQueries({ queryKey: ['users', organisationId, isSuperAdmin] });
+                    toast({ title: 'User created', description: 'They can sign in with the email and password.' });
+                    setAddUserOpen(false);
+                    setAddUserName('');
+                    setAddUserEmail('');
+                    setAddUserPassword('');
+                    setAddUserRole('STAFF');
+                    setAddUserOrgId('');
+                  } finally {
+                    setAddUserSubmitting(false);
+                  }
+                }}
+              >
+                {addUserSubmitting ? 'Creating…' : 'Add User'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
           <AlertDialogContent>
