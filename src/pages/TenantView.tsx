@@ -1,11 +1,22 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppLayoutNew } from "@/components/layout/AppLayoutNew";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { TicketsTable } from "@/components/tickets/TicketsTable";
 import { FECard } from "@/components/field-executives/FECard";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
@@ -23,6 +34,7 @@ import {
   UserCheck,
   ArrowLeft,
   LayoutDashboard,
+  Plus,
 } from "lucide-react";
 import { User, UserRole } from "@/lib/types";
 import {
@@ -58,12 +70,22 @@ const apiBase = () => import.meta.env.VITE_CRM_API_URL ?? "http://localhost:3000
  * Reuses Dashboard stats, TicketsTable, FE list, Users table logic, and client counts.
  * No new logic; filter by organisation_id only.
  */
+const ADD_USER_ROLES: UserRole[] = ["ADMIN", "STAFF", "FIELD_EXECUTIVE", "CLIENT"];
+
 export default function TenantView() {
   const { orgId } = useParams<{ orgId: string }>();
-  const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const { session, signUp } = useAuth();
   const { toast } = useToast();
   const [clientFilter, setClientFilter] = useState<string | null>(null);
   const [statusPendingId, setStatusPendingId] = useState<string | null>(null);
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [addUserName, setAddUserName] = useState("");
+  const [addUserEmail, setAddUserEmail] = useState("");
+  const [addUserPassword, setAddUserPassword] = useState("");
+  const [addUserRole, setAddUserRole] = useState<UserRole>("STAFF");
+  const [addUserActive, setAddUserActive] = useState(true);
+  const [addUserSubmitting, setAddUserSubmitting] = useState(false);
 
   const { data: org, isLoading: orgLoading } = useQuery({
     queryKey: ["organisation", orgId],
@@ -337,6 +359,13 @@ export default function TenantView() {
             </TabsContent>
 
             <TabsContent value="users" className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm text-muted-foreground">Users in this organisation. Add users or change roles and status.</p>
+                <Button size="sm" onClick={() => setAddUserOpen(true)} disabled={!orgId}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add User
+                </Button>
+              </div>
               <div className="rounded-xl border bg-card overflow-hidden">
                 <div className="overflow-x-auto">
                   <Table>
@@ -416,6 +445,105 @@ export default function TenantView() {
             </TabsContent>
           </Tabs>
         </div>
+
+        <Dialog open={addUserOpen} onOpenChange={setAddUserOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add User</DialogTitle>
+              <DialogDescription>
+                Create a user in this organisation. They will sign in with the email and password you set.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="add-user-name">Name</Label>
+                <Input
+                  id="add-user-name"
+                  value={addUserName}
+                  onChange={(e) => setAddUserName(e.target.value)}
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="add-user-email">Email</Label>
+                <Input
+                  id="add-user-email"
+                  type="email"
+                  value={addUserEmail}
+                  onChange={(e) => setAddUserEmail(e.target.value)}
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="add-user-password">Password</Label>
+                <Input
+                  id="add-user-password"
+                  type="password"
+                  value={addUserPassword}
+                  onChange={(e) => setAddUserPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Role</Label>
+                <Select value={addUserRole} onValueChange={(v) => setAddUserRole(v as UserRole)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ADD_USER_ROLES.map((r) => (
+                      <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="add-user-active">Active</Label>
+                <Switch
+                  id="add-user-active"
+                  checked={addUserActive}
+                  onCheckedChange={setAddUserActive}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddUserOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={!addUserName.trim() || !addUserEmail.trim() || !addUserPassword || !orgId || addUserSubmitting}
+                onClick={async () => {
+                  setAddUserSubmitting(true);
+                  try {
+                    const { error } = await signUp(
+                      addUserEmail.trim(),
+                      addUserPassword,
+                      addUserName.trim(),
+                      addUserRole,
+                      orgId ?? undefined
+                    );
+                    if (error) {
+                      toast({ title: "Failed to add user", description: error.message, variant: "destructive" });
+                      return;
+                    }
+                    queryClient.invalidateQueries({ queryKey: ["users-tenant", orgId] });
+                    toast({ title: "User created", description: "They can sign in with the email and password." });
+                    setAddUserOpen(false);
+                    setAddUserName("");
+                    setAddUserEmail("");
+                    setAddUserPassword("");
+                    setAddUserRole("STAFF");
+                    setAddUserActive(true);
+                  } finally {
+                    setAddUserSubmitting(false);
+                  }
+                }}
+              >
+                {addUserSubmitting ? "Creating…" : "Add User"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </PageContainer>
     </AppLayoutNew>
   );

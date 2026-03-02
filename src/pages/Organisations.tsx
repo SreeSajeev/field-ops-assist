@@ -1,12 +1,26 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AppLayoutNew } from "@/components/layout/AppLayoutNew";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useOrganisationsTable } from "@/hooks/useOrganisationsTable";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useOrganisationsTable, useCreateOrganisation } from "@/hooks/useOrganisationsTable";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Ticket, Users, Truck, UserCheck, ChevronRight } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { Building2, Ticket, Users, Truck, UserCheck, ChevronRight, Plus } from "lucide-react";
 import { Organisation } from "@/lib/types";
 
 /**
@@ -15,7 +29,15 @@ import { Organisation } from "@/lib/types";
  * Click → /app/tenant/:orgId
  */
 export default function Organisations() {
+  const { userProfile } = useAuth();
+  const { toast } = useToast();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createSlug, setCreateSlug] = useState("");
+
   const { data: organisations = [], isLoading: orgsLoading } = useOrganisationsTable();
+  const createOrgMutation = useCreateOrganisation();
+  const isSuperAdmin = userProfile?.role === "SUPER_ADMIN";
 
   const { data: perOrgStats, isLoading: statsLoading } = useQuery({
     queryKey: ["organisations-stats", organisations.map((o) => o.id).join(",")],
@@ -88,16 +110,24 @@ export default function Organisations() {
     <AppLayoutNew>
       <PageContainer>
         <div className="space-y-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/90 to-primary">
-              <Building2 className="h-6 w-6 text-primary-foreground" />
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/90 to-primary">
+                <Building2 className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">Organisations</h1>
+                <p className="text-sm text-muted-foreground">
+                  Tenant cards. Click to open tenant view.
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">Organisations</h1>
-              <p className="text-sm text-muted-foreground">
-                Tenant cards. Click to open tenant view.
-              </p>
-            </div>
+            {isSuperAdmin && (
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Organisation
+              </Button>
+            )}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -159,6 +189,65 @@ export default function Organisations() {
             </Card>
           )}
         </div>
+
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Organisation</DialogTitle>
+              <DialogDescription>
+                Add a new tenant organisation. Name and slug are required. Slug will be stored lowercase with spaces replaced by hyphens.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="org-name">Organisation Name</Label>
+                <Input
+                  id="org-name"
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  placeholder="Acme Corp"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="org-slug">Slug</Label>
+                <Input
+                  id="org-slug"
+                  value={createSlug}
+                  onChange={(e) => setCreateSlug(e.target.value.replace(/\s+/g, "-").toLowerCase())}
+                  placeholder="acme-corp"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={!createName.trim() || !createSlug.trim() || createOrgMutation.isPending}
+                onClick={async () => {
+                  const name = createName.trim();
+                  const slug = createSlug.trim().toLowerCase().replace(/\s+/g, "-");
+                  if (!name || !slug) return;
+                  try {
+                    await createOrgMutation.mutateAsync({ name, slug });
+                    toast({ title: "Organisation created", description: `${name} is now available.` });
+                    setCreateOpen(false);
+                    setCreateName("");
+                    setCreateSlug("");
+                  } catch (err) {
+                    toast({
+                      title: "Failed to create organisation",
+                      description: err instanceof Error ? err.message : "Something went wrong",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                {createOrgMutation.isPending ? "Creating…" : "Create"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </PageContainer>
     </AppLayoutNew>
   );
