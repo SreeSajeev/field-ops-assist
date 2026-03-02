@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { formatIST } from '@/lib/dateUtils';
 import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useOrganisationsTable } from '@/hooks/useOrganisationsTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ const ROLE_BADGES: Record<UserRole, { label: string; className: string }> = {
   FIELD_EXECUTIVE: { label: 'Field Executive', className: 'bg-green-100 text-green-700 border-green-200' },
   ADMIN: { label: 'Admin', className: 'bg-purple-100 text-purple-700 border-purple-200' },
   SUPER_ADMIN: { label: 'Super Admin', className: 'bg-amber-100 text-amber-700 border-amber-200' },
+  CLIENT: { label: 'Client', className: 'bg-slate-100 text-slate-700 border-slate-200' },
 };
 
 const apiBase = () => import.meta.env.VITE_CRM_API_URL ?? 'http://localhost:3000';
@@ -109,6 +111,8 @@ export default function Users() {
 
   const organisationId = userProfile?.organisation_id ?? null;
 
+  const { data: organisations = [] } = useOrganisationsTable();
+
   const { data: users, isLoading, refetch } = useQuery({
     queryKey: ['users', organisationId, isSuperAdmin],
     queryFn: async () => {
@@ -127,7 +131,44 @@ export default function Users() {
 
   const isActive = (u: User) => u.is_active !== false && u.active !== false;
 
-  // Filter users
+  const orgMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (organisations as { id: string; name: string }[]).forEach((o) => m.set(o.id, o.name));
+    return m;
+  }, [organisations]);
+
+  const usersByOrgThenRole = useMemo(() => {
+    const list = users ?? [];
+    const byOrg: Record<string, User[]> = {};
+    list.forEach((u) => {
+      const key = u.organisation_id ?? '__none__';
+      if (!byOrg[key]) byOrg[key] = [];
+      byOrg[key].push(u);
+    });
+    const result: { orgId: string; orgName: string; roles: { role: UserRole; users: User[] }[] }[] = [];
+    const roleOrder: UserRole[] = ['ADMIN', 'STAFF', 'FIELD_EXECUTIVE', 'CLIENT', 'SUPER_ADMIN'];
+    const orgIds = Object.keys(byOrg).sort((a, b) => {
+      if (a === '__none__') return -1;
+      if (b === '__none__') return 1;
+      return (orgMap.get(a) ?? a).localeCompare(orgMap.get(b) ?? b);
+    });
+    orgIds.forEach((orgId) => {
+      const orgUsers = byOrg[orgId] ?? [];
+      const orgName = orgId === '__none__' ? 'Platform' : (orgMap.get(orgId) ?? orgId);
+      const roleMap: Record<string, User[]> = {};
+      orgUsers.forEach((u) => {
+        if (!roleMap[u.role]) roleMap[u.role] = [];
+        roleMap[u.role].push(u);
+      });
+      const roles = roleOrder
+        .filter((r) => (roleMap[r]?.length ?? 0) > 0)
+        .map((r) => ({ role: r, users: roleMap[r] ?? [] }));
+      result.push({ orgId, orgName, roles });
+    });
+    return result;
+  }, [users, orgMap]);
+
+  // Filter users (for non–Super Admin view)
   const filteredUsers = (users || []).filter(user => {
     const matchesSearch = !search || 
       user.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -186,63 +227,153 @@ export default function Users() {
           </AlertDescription>
         </Alert>
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
-                  <UsersIcon className="h-5 w-5 text-blue-600" />
+        {/* Summary Stats — hidden for Super Admin (they see org-grouped view) */}
+        {!isSuperAdmin && (
+          <div className="grid grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
+                    <UsersIcon className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.total}</p>
+                    <p className="text-xs text-muted-foreground">Total Users</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">Total Users</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100">
+                    <UserCheck className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.active}</p>
+                    <p className="text-xs text-muted-foreground">Active</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100">
-                  <UserCheck className="h-5 w-5 text-green-600" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100">
+                    <UserX className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.inactive}</p>
+                    <p className="text-xs text-muted-foreground">Inactive</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.active}</p>
-                  <p className="text-xs text-muted-foreground">Active</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100">
+                    <Shield className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.admins}</p>
+                    <p className="text-xs text-muted-foreground">Admins</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100">
-                  <UserX className="h-5 w-5 text-gray-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.inactive}</p>
-                  <p className="text-xs text-muted-foreground">Inactive</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100">
-                  <Shield className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.admins}</p>
-                  <p className="text-xs text-muted-foreground">Admins</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-        {/* Filters */}
+        {/* Super Admin: Organisation-grouped layout */}
+        {isSuperAdmin && (
+          <div className="space-y-6">
+            {isLoading ? (
+              <div className="flex h-48 items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  <p className="text-sm text-muted-foreground">Loading users...</p>
+                </div>
+              </div>
+            ) : (
+              usersByOrgThenRole.map(({ orgId, orgName, roles }) => (
+                <Card key={orgId} className="border shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">{orgName}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {roles.map(({ role, users: roleUsers }) => (
+                      <div key={role} className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                          <span className="uppercase tracking-wide">{ROLE_BADGES[role]?.label ?? role}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {roleUsers.length}
+                          </Badge>
+                        </div>
+                        <div className="rounded-lg border bg-muted/20 overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-muted/30">
+                                <TableHead className="font-semibold">Name</TableHead>
+                                <TableHead className="font-semibold">Email</TableHead>
+                                <TableHead className="font-semibold">Status</TableHead>
+                                <TableHead className="font-semibold">Created</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {roleUsers.map((user) => (
+                                <TableRow key={user.id} className="data-table-row">
+                                  <TableCell>
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
+                                        {user.name.charAt(0).toUpperCase()}
+                                      </div>
+                                      <span className="font-medium">{user.name}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="text-sm text-muted-foreground">{user.email}</span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <Switch
+                                        checked={isActive(user)}
+                                        disabled={statusPendingId === user.id || user.id === userProfile?.id}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            updateUserStatus(user.id, true);
+                                          } else {
+                                            setDeactivateTarget(user);
+                                          }
+                                        }}
+                                      />
+                                      <span className="text-sm text-muted-foreground">
+                                        {isActive(user) ? 'Active' : 'Inactive'}
+                                      </span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                      <Clock className="h-3.5 w-3.5" />
+                                      {formatIST(user.created_at, 'MMM d, yyyy')}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Filters — non–Super Admin only */}
+        {!isSuperAdmin && (
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -291,14 +422,17 @@ export default function Users() {
             </Button>
           )}
         </div>
+        )}
 
-        {/* Results count */}
+        {/* Results count — non–Super Admin only */}
+        {!isSuperAdmin && (
         <div className="text-sm text-muted-foreground">
           Showing {filteredUsers.length} of {stats.total} users
         </div>
+        )}
 
-        {/* Users Table */}
-        {isLoading ? (
+        {/* Users Table — non–Super Admin only */}
+        {!isSuperAdmin && (isLoading ? (
           <div className="flex h-48 items-center justify-center">
             <div className="flex flex-col items-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -403,7 +537,7 @@ export default function Users() {
             </Table>
             </div>
           </div>
-        )}
+        ))}
 
         <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
           <AlertDialogContent>

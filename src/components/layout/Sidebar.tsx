@@ -44,10 +44,25 @@ const adminNavigation = [
   { name: 'Settings', href: '/app/settings', icon: Settings },
 ];
 
-const superAdminNavigation = [
+/* Super Admin only: grouped sections for SaaS control panel */
+const platformNav = [
   { name: 'Platform Overview', href: '/app/platform', icon: LayoutDashboard },
   { name: 'Organisations', href: '/app/organisations', icon: Building2 },
+];
+
+const operationsNav = [
+  { name: 'Dashboard', href: '/app', icon: LayoutDashboard },
+  { name: 'All Tickets', href: '/app/tickets', icon: Ticket },
+  { name: 'Review Queue', href: '/app/review', icon: AlertTriangle, badge: true },
+  { name: 'Field Executives', href: '/app/field-executives', icon: Truck },
   { name: 'Service Managers', href: '/app/service-managers', icon: Shield },
+  { name: 'Raw Emails', href: '/app/emails', icon: Mail },
+];
+
+const monitoringNavOrdered = [
+  { name: 'SLA Monitor', href: '/app/sla', icon: Clock },
+  { name: 'Analytics', href: '/app/analytics', icon: BarChart3 },
+  { name: 'Audit Logs', href: '/app/audit', icon: FileText },
 ];
 
 export function Sidebar() {
@@ -78,17 +93,23 @@ export function Sidebar() {
   /* =========================
      Navigation Section
   ========================= */
+  const sectionLabelClass = 'mb-2 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground';
+
   const NavSection = ({
     title,
     items,
+    hideTitle,
   }: {
     title: string;
     items: typeof navigation;
+    hideTitle?: boolean;
   }) => (
     <>
-      <div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/40">
-        {title}
-      </div>
+      {!hideTitle && (
+        <div className={isSuperAdmin ? sectionLabelClass : 'mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/40'}>
+          {title}
+        </div>
+      )}
 
       {items.map((item) => {
         const isActive =
@@ -126,23 +147,34 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-thin px-3 py-5">
-        <NavSection title="Operations" items={navigation} />
-
-        <div className="my-4 border-t border-sidebar-border" />
-
-        <NavSection title="Monitoring" items={monitoringNav} />
-
-        {isSuperAdmin && (
+        {isSuperAdmin ? (
           <>
-            <div className="my-4 border-t border-sidebar-border" />
-            <NavSection title="Super Admin" items={superAdminNavigation} />
+            <div className={sectionLabelClass}>Platform</div>
+            <NavSection title="" items={platformNav} hideTitle />
+
+            <div className="mt-6 mb-2 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">Operations</div>
+            <NavSection title="" items={operationsNav} hideTitle />
+
+            <div className="mt-6 mb-2 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">Monitoring</div>
+            <NavSection title="" items={monitoringNavOrdered} hideTitle />
+
+            <div className="mt-6 mb-2 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">Administration</div>
+            <NavSection title="" items={adminNavigation} hideTitle />
           </>
-        )}
-
-        {isAdmin && (
+        ) : (
           <>
+            <NavSection title="Operations" items={navigation} />
+
             <div className="my-4 border-t border-sidebar-border" />
-            <NavSection title="Administration" items={adminNavigation} />
+
+            <NavSection title="Monitoring" items={monitoringNav} />
+
+            {isAdmin && (
+              <>
+                <div className="my-4 border-t border-sidebar-border" />
+                <NavSection title="Administration" items={adminNavigation} />
+              </>
+            )}
           </>
         )}
       </nav>
