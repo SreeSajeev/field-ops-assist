@@ -11,18 +11,32 @@ import { z } from 'zod';
 // User & Auth Validation
 // ============================================================
 
+/** Reject strings that could be used for XSS (HTML/script markers). */
+const safeDisplayName = z.string()
+  .trim()
+  .min(1, { message: 'Name is required' })
+  .max(100, { message: 'Name must be less than 100 characters' })
+  .refine(
+    (s) => !/[<>"'\\]|\p{C}/u.test(s),
+    { message: 'Name cannot contain <, >, quotes, backslash, or control characters' }
+  );
+
+/** Password must include uppercase, lowercase, number, and special character. */
+const passwordComplexity = z.string()
+  .min(8, { message: 'Password must be at least 8 characters' })
+  .max(72, { message: 'Password must be less than 72 characters' })
+  .refine(
+    (s) => /[a-z]/.test(s) && /[A-Z]/.test(s) && /\d/.test(s) && /[^\w\s]/.test(s),
+    { message: 'Password must include uppercase, lowercase, a number, and a special character' }
+  );
+
 export const SignUpSchema = z.object({
   email: z.string()
     .trim()
     .email({ message: 'Invalid email address' })
     .max(255, { message: 'Email must be less than 255 characters' }),
-  password: z.string()
-    .min(8, { message: 'Password must be at least 8 characters' })
-    .max(72, { message: 'Password must be less than 72 characters' }),
-  name: z.string()
-    .trim()
-    .min(1, { message: 'Name is required' })
-    .max(100, { message: 'Name must be less than 100 characters' }),
+  password: passwordComplexity,
+  name: safeDisplayName,
   role: z.enum(['STAFF', 'FIELD_EXECUTIVE', 'ADMIN', 'SUPER_ADMIN']),
 });
 
@@ -55,6 +69,17 @@ export const TicketUpdateSchema = z.object({
 
 export type TicketUpdateInput = z.infer<typeof TicketUpdateSchema>;
 
+/** Required when completing "Needs Review" – ensures key structured fields are set. */
+export const ReviewCompleteSchema = z.object({
+  category: z.string().trim().min(1, { message: 'Category is required' }).max(50),
+  issue_type: z.string().trim().min(1, { message: 'Issue type is required' }).max(100),
+  location: z.string().trim().min(1, { message: 'Location is required' }).max(255),
+  vehicle_number: z.string().trim().max(20).nullable().optional(),
+  priority: z.boolean().optional(),
+});
+
+export type ReviewCompleteInput = z.infer<typeof ReviewCompleteSchema>;
+
 export const CreateTicketSchema = z.object({
   ticket_number: z.string().min(1).max(50),
   vehicle_number: z.string().max(20).nullable().optional(),
@@ -65,6 +90,7 @@ export const CreateTicketSchema = z.object({
   source: z.enum(['EMAIL', 'MANUAL', 'SYSTEM']).default('MANUAL'),
   needs_review: z.boolean().default(false),
   confidence_score: z.number().min(0).max(100).nullable().optional(),
+  priority: z.boolean().default(false),
 });
 
 export type CreateTicketInput = z.infer<typeof CreateTicketSchema>;
@@ -108,10 +134,7 @@ export type AssignmentInput = z.infer<typeof AssignmentSchema>;
 // ============================================================
 
 export const CreateFESchema = z.object({
-  name: z.string()
-    .trim()
-    .min(1, { message: 'Name is required' })
-    .max(100, { message: 'Name must be less than 100 characters' }),
+  name: safeDisplayName,
   phone: z.string()
     .max(20, { message: 'Phone number too long' })
     .nullable()

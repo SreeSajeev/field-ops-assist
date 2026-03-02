@@ -91,6 +91,8 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 8px)",
       },
       keyframes: {
         "accordion-down": {
@@ -122,8 +124,20 @@ export default {
         "pulse-subtle": "pulse-subtle 2s ease-in-out infinite",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+      },
+      backgroundImage: {
+        "gradient-primary": "linear-gradient(135deg, hsl(285 45% 28%), hsl(285 45% 35%))",
+        "gradient-accent": "linear-gradient(135deg, hsl(32 95% 48%), hsl(32 95% 55%))",
+        "gradient-hero": "linear-gradient(135deg, hsl(285 45% 12%), hsl(285 55% 25%))",
+        "gradient-hero-subtle": "linear-gradient(135deg, hsl(285 45% 18%), hsl(285 50% 28%))",
+      },
+      boxShadow: {
+        card: "0 1px 3px 0 hsl(285 25% 10% / 0.07), 0 1px 2px -1px hsl(285 25% 10% / 0.07)",
+        glow: "0 0 20px hsl(32 95% 52% / 0.3)",
+        "glow-lg": "0 0 40px hsl(32 95% 52% / 0.25)",
+        "glow-purple": "0 0 30px hsl(285 45% 45% / 0.25)",
       },
     },
   },

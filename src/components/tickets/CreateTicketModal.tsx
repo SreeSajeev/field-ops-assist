@@ -1,11 +1,11 @@
 /**
  * CreateTicketModal.tsx
  * 
- * Modal component for Service Staff to manually create tickets.
+ * Modal component for Service Manager to manually create tickets.
  * This creates tickets in the same tickets table as email-generated tickets,
  * but with source set to 'MANUAL' to distinguish them.
  * 
- * Part of Requirement 1: Manual Ticket Creation by Service Staff
+ * Part of Requirement 1: Manual Ticket Creation by Service Manager
  */
 
 import { useState } from 'react';
@@ -29,54 +29,48 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Plus, Ticket } from 'lucide-react';
+import { Loader2, Plus, Ticket, Star } from 'lucide-react';
 import { CreateTicketSchema, CommentSchema, formatZodError } from '@/lib/validation';
 import { z } from 'zod';
+import { COMPLAINT_CATEGORIES, ISSUE_TYPES } from '@/constants/complaintCategories';
+import { useAuth } from '@/hooks/useAuth';
+import type { Database } from '@/integrations/supabase/types';
+
+export interface ClientTicketContext {
+  openedByEmail: string;
+  clientSlug: string;
+}
 
 interface CreateTicketModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When set, ticket is created as client-originated: opened_by_email and client_slug are set; priority control is hidden. */
+  clientContext?: ClientTicketContext | null;
 }
 
-// Common ticket categories based on logistics CRM domain
-const CATEGORIES = [
-  'Delivery Issue',
-  'Vehicle Breakdown',
-  'Documentation',
-  'Customer Complaint',
-  'Damage Report',
-  'Schedule Change',
-  'Other',
-];
-
-// Common issue types
-const ISSUE_TYPES = [
-  'Delayed Delivery',
-  'Missing Package',
-  'Wrong Address',
-  'Vehicle Maintenance',
-  'Flat Tire',
-  'Engine Issue',
-  'Missing Documents',
-  'Incorrect Invoice',
-  'Damaged Goods',
-  'Lost Shipment',
-  'Route Change',
-  'Other',
-];
-
-export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps) {
+export function CreateTicketModal({ open, onOpenChange, clientContext }: CreateTicketModalProps) {
   const queryClient = useQueryClient();
-  
+  const { userProfile } = useAuth();
+  const isClientMode = !!clientContext;
+
   // Form state
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [category, setCategory] = useState('');
   const [issueType, setIssueType] = useState('');
+  const [customIssueType, setCustomIssueType] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [complaintId, setComplaintId] = useState('');
+  const [priority, setPriority] = useState(false);
+
+  // When "Other" is selected, use custom text if provided; otherwise send "Other"
+  const effectiveIssueType =
+    issueType === 'Other' && customIssueType.trim()
+      ? customIssueType.trim()
+      : issueType || null;
 
   // Generate a unique ticket number
   const generateTicketNumber = () => {
@@ -95,29 +89,44 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
         ticket_number: ticketNumber,
         vehicle_number: vehicleNumber.trim() || null,
         category: category || null,
-        issue_type: issueType || null,
+        issue_type: effectiveIssueType,
         location: location.trim() || null,
         complaint_id: complaintId.trim() || null,
         source: 'MANUAL',
         needs_review: false,
         confidence_score: 100,
+        priority,
       });
-      
+
+      type TicketInsert = Database['public']['Tables']['tickets']['Insert'] & {
+        client_slug?: string;
+        organisation_id?: string;
+      };
+      const insertPayload: TicketInsert = {
+        ticket_number: validatedTicket.ticket_number,
+        vehicle_number: validatedTicket.vehicle_number,
+        category: validatedTicket.category,
+        issue_type: validatedTicket.issue_type,
+        location: validatedTicket.location,
+        complaint_id: validatedTicket.complaint_id,
+        source: validatedTicket.source,
+        needs_review: validatedTicket.needs_review,
+        confidence_score: validatedTicket.confidence_score,
+        priority: validatedTicket.priority,
+        status: 'OPEN',
+        opened_at: new Date().toISOString(),
+        ...(clientContext
+          ? {
+              opened_by_email: clientContext.openedByEmail,
+              client_slug: clientContext.clientSlug,
+            }
+          : {}),
+        ...(userProfile?.organisation_id ? { organisation_id: userProfile.organisation_id } : {}),
+      };
+
       const { data, error } = await supabase
         .from('tickets')
-        .insert({
-          ticket_number: validatedTicket.ticket_number,
-          vehicle_number: validatedTicket.vehicle_number,
-          category: validatedTicket.category,
-          issue_type: validatedTicket.issue_type,
-          location: validatedTicket.location,
-          complaint_id: validatedTicket.complaint_id,
-          source: validatedTicket.source,
-          needs_review: validatedTicket.needs_review,
-          confidence_score: validatedTicket.confidence_score,
-          status: 'OPEN',
-          opened_at: new Date().toISOString(),
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
@@ -143,10 +152,11 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
       await supabase.from('audit_logs').insert({
         entity_type: 'ticket',
         entity_id: data.id,
-        action: 'manual_ticket_created',
+        action: clientContext ? 'client_ticket_created' : 'manual_ticket_created',
         metadata: {
           ticket_number: ticketNumber,
           source: 'MANUAL',
+          ...(clientContext ? { client_slug: clientContext.clientSlug } : {}),
         },
       });
 
@@ -188,15 +198,17 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
     setVehicleNumber('');
     setCategory('');
     setIssueType('');
+    setCustomIssueType('');
     setLocation('');
     setDescription('');
     setComplaintId('');
+    setPriority(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation: at least category or issue type should be provided
+    // Basic validation: at least category or issue type should be provided (unchanged)
     if (!category && !issueType) {
       toast({
         title: 'Missing Information',
@@ -211,15 +223,16 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Ticket className="h-5 w-5 text-primary" />
-            Create New Ticket
+            {isClientMode ? 'Submit support request' : 'Create New Ticket'}
           </DialogTitle>
           <DialogDescription>
-            Manually create a service ticket. This ticket will be treated the same as 
-            email-generated tickets and can be assigned to Field Executives.
+            {isClientMode
+              ? 'Describe your issue below. Our team will review and assign a technician as needed.'
+              : 'Manually create a service ticket. This ticket will be treated the same as email-generated tickets and can be assigned to Field Executives.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -232,6 +245,7 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
               placeholder="e.g., COMP-12345"
               value={complaintId}
               onChange={(e) => setComplaintId(e.target.value)}
+              className="w-full"
             />
           </div>
 
@@ -243,19 +257,19 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
               placeholder="e.g., MH-12-AB-1234"
               value={vehicleNumber}
               onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-              className="font-mono"
+              className="w-full font-mono"
             />
           </div>
 
-          {/* Category */}
+          {/* Category — structured list from constants, "Other" at bottom */}
           <div className="space-y-2">
             <Label htmlFor="category">Category *</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category">
+              <SelectTrigger id="category" className="w-full">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((cat) => (
+                {COMPLAINT_CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
                   </SelectItem>
@@ -264,11 +278,11 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
             </Select>
           </div>
 
-          {/* Issue Type */}
+          {/* Issue Type — dropdown with custom entry when "Other" selected */}
           <div className="space-y-2">
             <Label htmlFor="issueType">Issue Type *</Label>
             <Select value={issueType} onValueChange={setIssueType}>
-              <SelectTrigger id="issueType">
+              <SelectTrigger id="issueType" className="w-full">
                 <SelectValue placeholder="Select issue type" />
               </SelectTrigger>
               <SelectContent>
@@ -279,6 +293,15 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
                 ))}
               </SelectContent>
             </Select>
+            {issueType === 'Other' && (
+              <Input
+                id="customIssueType"
+                placeholder="Specify issue type (optional)"
+                value={customIssueType}
+                onChange={(e) => setCustomIssueType(e.target.value)}
+                className="mt-1.5 w-full"
+              />
+            )}
           </div>
 
           {/* Location */}
@@ -289,8 +312,30 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
               placeholder="e.g., Mumbai, Andheri East"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
+              className="w-full"
             />
           </div>
+
+          {/* Priority (Service Manager only; clients cannot set SLA/priority) */}
+          {!isClientMode && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="priority"
+                checked={priority}
+                onCheckedChange={(checked) => setPriority(checked === true)}
+                aria-label="Mark as priority"
+              />
+              <Label
+                htmlFor="priority"
+                className="flex items-center gap-1.5 text-sm font-medium cursor-pointer"
+              >
+                <span className="inline-flex rounded-full ring-2 ring-yellow-300/50 p-0.5" aria-hidden>
+                  <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                </span>
+                Mark as priority
+              </Label>
+            </div>
+          )}
 
           {/* Description */}
           <div className="space-y-2">
@@ -301,6 +346,7 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              className="w-full"
             />
           </div>
 
@@ -317,12 +363,12 @@ export function CreateTicketModal({ open, onOpenChange }: CreateTicketModalProps
               {createTicketMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  {isClientMode ? 'Submitting...' : 'Creating...'}
                 </>
               ) : (
                 <>
                   <Plus className="mr-2 h-4 w-4" />
-                  Create Ticket
+                  {isClientMode ? 'Submit request' : 'Create Ticket'}
                 </>
               )}
             </Button>

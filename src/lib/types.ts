@@ -7,10 +7,11 @@ export type TicketStatus =
   | 'ON_SITE' 
   | 'RESOLVED_PENDING_VERIFICATION' 
   | 'RESOLVED' 
-  | 'REOPENED';
+  | 'REOPENED'
+  | 'FE_ATTEMPT_FAILED';
 
 // User role enum
-export type UserRole = 'STAFF' | 'FIELD_EXECUTIVE' | 'ADMIN' | 'SUPER_ADMIN';
+export type UserRole = 'STAFF' | 'FIELD_EXECUTIVE' | 'ADMIN' | 'SUPER_ADMIN' | 'CLIENT';
 
 // WhatsApp event types
 export type WhatsAppEventType = 'SENT' | 'CLICKED' | 'EN_ROUTE' | 'UPLOAD' | 'RESOLUTION';
@@ -77,6 +78,7 @@ export interface FieldExecutive {
   skills: Record<string, unknown> | null;
   active: boolean;
   created_at: string;
+  organisation_id?: string | null;
 }
 
 // Field Executive with stats
@@ -105,6 +107,10 @@ export interface Ticket {
   current_assignment_id: string | null;
   created_at: string;
   updated_at: string;
+  /** Informational highlight flag; defaults to false if column not yet present. */
+  priority?: boolean;
+  client_slug?: string | null;
+  organisation_id?: string | null;
 }
 
 // Ticket with assignment info
@@ -158,7 +164,18 @@ export interface User {
   email: string;
   role: UserRole;
   active: boolean;
+  is_active?: boolean;
   created_at: string;
+  organisation_id?: string | null;
+}
+
+// Organisation from database
+export interface Organisation {
+  id: string;
+  name: string;
+  slug: string;
+  created_at: string;
+  status: string;
 }
 
 // Dashboard stats
@@ -181,6 +198,11 @@ export interface TicketFilters {
   dateFrom?: string;
   dateTo?: string;
   unassignedOnly?: boolean;
+  clientSlug?: string | null;
+  /** When true, do not filter by organisation_id (e.g. Review Queue shows all NEEDS_REVIEW tickets to staff). */
+  scopeAllOrganisations?: boolean;
+  /** When set (Super Admin only), filter tickets by this organisation_id. */
+  organisationId?: string | null;
 }
 
 // Audit log entry

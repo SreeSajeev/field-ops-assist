@@ -1,332 +1,69 @@
-/**
- * FEActionPage - Field Executive Action Page for Token-Based Ticket Access
- *
- * Uses fe_action_tokens for authentication (no login required).
- 
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Upload, CheckCircle } from "lucide-react";
+
+const API_BASE = import.meta.env.VITE_CRM_API_URL ?? "http://localhost:3000";
 
 export default function FEActionPage() {
   const { tokenId } = useParams<{ tokenId: string }>();
 
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [token, setToken] = useState<any>(null);
   const [ticket, setTicket] = useState<any>(null);
   const [file, setFile] = useState<File | null>(null);
   const [remarks, setRemarks] = useState("");
-
-  
-  useEffect(() => {
-    const load = async () => {
-      try {
-        if (!tokenId) {
-          setLoading(false);
-          return;
-        }
-
-        // 1️⃣ Load FE action token
-        const { data: tokenRow, error: tokenError } = await (supabase as any)
-          .from("fe_action_tokens")
-          .select("*")
-          .eq("id", tokenId)
-          .eq("used", false)
-          .gt("expires_at", new Date().toISOString())
-          .maybeSingle();
-
-        if (tokenError || !tokenRow) {
-          toast({
-            title: "Invalid or expired link",
-            description: tokenError?.message || "Token not found or expired",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-
-        setToken(tokenRow);
-
-        // 2️⃣ Load ticket
-        const { data: ticketRow, error: ticketError } = await supabase
-          .from("tickets")
-          .select("*")
-          .eq("id", tokenRow.ticket_id)
-          .single();
-
-        if (ticketError || !ticketRow) {
-          toast({
-            title: "Ticket not found",
-            description: ticketError?.message,
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-
-        setTicket(ticketRow);
-        setLoading(false);
-      } catch (err) {
-        toast({
-          title: "Unexpected error",
-          description: "Check console for details",
-          variant: "destructive",
-        });
-        setLoading(false);
-      }
-    };
-
-    load();
-  }, [tokenId]);
-
-  
-  const handleSubmit = async () => {
-    if (!file || !token || !ticket) {
-      toast({ title: "Please upload a photo", variant: "destructive" });
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const toBase64 = (file: File) =>
-        new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-        });
-
-      const base64Image = await toBase64(file);
-
-      const actionType = token.action_type;
-
-      await supabase.from("ticket_comments").insert({
-        ticket_id: ticket.id,
-        source: "FE",
-        body:
-          actionType === "ON_SITE"
-            ? "Field Executive uploaded on-site proof"
-            : "Field Executive uploaded resolution proof",
-        attachments: {
-          image_base64: base64Image,
-          remarks,
-          action_type: actionType,
-        },
-      });
-
-      const newStatus =
-        actionType === "ON_SITE"
-          ? "ON_SITE"
-          : "RESOLVED_PENDING_VERIFICATION";
-
-      await supabase
-        .from("tickets")
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", ticket.id);
-
-      // ✅ Mark FE action token as used
-      await (supabase as any)
-        .from("fe_action_tokens")
-        .update({ used: true })
-        .eq("id", token.id);
-
-      await supabase.from("audit_logs").insert({
-        entity_type: "ticket",
-        entity_id: ticket.id,
-        action: `fe_proof_submitted_${actionType.toLowerCase()}`,
-        metadata: {
-          fe_id: token.fe_id,
-          new_status: newStatus,
-        },
-      });
-
-      setSubmitted(true);
-      toast({
-        title: "Proof submitted successfully",
-        description: "You may now close this page.",
-      });
-    } catch (err: any) {
-      toast({
-        title: "Submission failed",
-        description: err?.message || "Check console",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!token || !ticket) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <p className="text-destructive">Invalid or expired link</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center space-y-4">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-            <h2 className="text-xl font-semibold">Proof Submitted</h2>
-            <p className="text-muted-foreground">
-              You may close this page.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            {token.action_type === "ON_SITE"
-              ? "On-Site Proof Upload"
-              : "Resolution Proof Upload"}
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div className="text-sm space-y-1">
-            <div><strong>Ticket:</strong> {ticket.ticket_number}</div>
-            <div><strong>Status:</strong> {ticket.status}</div>
-          </div>
-
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-
-          <textarea
-            placeholder="Remarks (optional)"
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-          />
-
-          <Button
-            className="w-full"
-            onClick={handleSubmit}
-            disabled={submitting || !file}
-          >
-            {submitting ? "Submitting..." : "Submit Proof"}
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-*/
-//the above version works so please revert back to it if the new one has issues. The new one has some code formatting changes and some comments added for clarity, but the core logic is the same.
-
-/**
- * FEActionPage - Field Executive Action Page for Token-Based Ticket Access
- *
- * Uses fe_action_tokens for authentication (no login required).
- */
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/hooks/use-toast";
-import { Loader2, Upload, CheckCircle } from "lucide-react";
-
-export default function FEActionPage() {
-  const { tokenId } = useParams<{ tokenId: string }>();
-
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [token, setToken] = useState<any>(null);
-  const [ticket, setTicket] = useState<any>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [remarks, setRemarks] = useState("");
+  const [resolutionOutcome, setResolutionOutcome] = useState<"SUCCESS" | "FAILED">("SUCCESS");
+  const [failureReason, setFailureReason] = useState("");
+  const [submitPending, setSubmitPending] = useState(false);
 
   /* ================= LOAD TOKEN + TICKET ================= */
   useEffect(() => {
     const load = async () => {
-      try {
-        if (!tokenId) {
-          setLoading(false);
-          return;
-        }
+      if (!tokenId) {
+        setLoading(false);
+        return;
+      }
 
-        // 1️⃣ Load FE action token
+      try {
+        // 🔥 Force ANY to avoid TS relational inference crash
         const { data: tokenRow, error: tokenError } = await (supabase as any)
           .from("fe_action_tokens")
           .select("*")
           .eq("id", tokenId)
           .eq("used", false)
           .gt("expires_at", new Date().toISOString())
-          .maybeSingle();
+          .single();
 
         if (tokenError || !tokenRow) {
-          toast({
-            title: "Invalid or expired link",
-            description: tokenError?.message || "Token not found or expired",
-            variant: "destructive",
-          });
+          console.error("TOKEN ERROR:", tokenError);
           setLoading(false);
           return;
         }
 
         setToken(tokenRow);
 
-        // 2️⃣ Load ticket
-        const { data: ticketRow, error: ticketError } = await supabase
+        const { data: ticketRow, error: ticketError } = await (supabase as any)
           .from("tickets")
           .select("*")
           .eq("id", tokenRow.ticket_id)
           .single();
 
         if (ticketError || !ticketRow) {
-          toast({
-            title: "Ticket not found",
-            description: ticketError?.message,
-            variant: "destructive",
-          });
+          console.error("TICKET ERROR:", ticketError);
           setLoading(false);
           return;
         }
 
         setTicket(ticketRow);
-        setLoading(false);
-      } catch {
-        toast({
-          title: "Unexpected error",
-          description: "Check console for details",
-          variant: "destructive",
-        });
+      } catch (err) {
+        console.error("LOAD FAILED:", err);
+      } finally {
         setLoading(false);
       }
     };
@@ -334,66 +71,96 @@ export default function FEActionPage() {
     load();
   }, [tokenId]);
 
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
+
   /* ================= SUBMIT PROOF ================= */
   const handleSubmit = async () => {
-    if (!file || !token || !ticket) {
-      toast({ title: "Please upload a photo", variant: "destructive" });
+    if (!token || !ticket) {
+      toast({ title: "Missing token or ticket" });
       return;
     }
 
-    setSubmitting(true);
+    const isResolution = token.action_type === "RESOLUTION";
 
+    if (isResolution) {
+      if (resolutionOutcome === "FAILED") {
+        if (!failureReason.trim()) {
+          toast({ title: "Please provide a reason for failure", variant: "destructive" });
+          return;
+        }
+      } else {
+        if (!file) {
+          toast({ title: "Please upload a photo for resolution proof" });
+          return;
+        }
+      }
+    } else {
+      if (!file) {
+        toast({ title: "Please upload a photo" });
+        return;
+      }
+    }
+
+    setSubmitPending(true);
     try {
-      /* 1️⃣ Upload image to Supabase Storage */
-      const fileExt = file.name.split(".").pop();
-      const filePath = `tickets/${ticket.id}/${token.action_type}/${Date.now()}-${file.name}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("Ticket_Uploads")
-        .upload(filePath, file, {
-          upsert: false,
+      if (isResolution) {
+        const body: Record<string, unknown> = {
+          token: token.id,
+          outcome: resolutionOutcome,
+        };
+        if (resolutionOutcome === "FAILED") {
+          body.failure_reason = failureReason.trim();
+        } else {
+          const base64Image = await toBase64(file!);
+          body.attachments = { image_base64: base64Image, remarks, action_type: "RESOLUTION" };
+        }
+        const res = await fetch(`${API_BASE}/fe/proof`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
         });
-
-      if (uploadError) {
-        throw uploadError;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data?.error ?? "Submission failed");
+        }
+        setSubmitted(true);
+        toast({
+          title: resolutionOutcome === "FAILED" ? "Failed attempt recorded" : "Proof submitted successfully",
+          description: "You may now close this page.",
+        });
+        return;
       }
 
-      const { data: publicUrlData } = supabase.storage
-        .from("Ticket_Uploads")
-        .getPublicUrl(filePath);
+      /* ON_SITE: existing Supabase flow */
+      const base64Image = await toBase64(file!);
+      const { error: commentError } = await (supabase as any)
+        .from("ticket_comments")
+        .insert({
+          ticket_id: ticket.id,
+          source: "FE",
+          body: "Field Executive uploaded on-site proof",
+          attachments: {
+            image_base64: base64Image,
+            remarks,
+            action_type: token.action_type,
+          },
+        });
 
-      const imageUrl = publicUrlData.publicUrl;
+      if (commentError) throw commentError;
 
-      /* 2️⃣ Insert ticket comment with image URL */
-      await supabase.from("ticket_comments").insert({
-        ticket_id: ticket.id,
-        source: "FE",
-        body:
-          token.action_type === "ON_SITE"
-            ? "Field Executive uploaded on-site proof"
-            : "Field Executive uploaded resolution proof",
-        attachments: {
-          image_url: imageUrl,
-          remarks,
-          action_type: token.action_type,
-        },
-      });
-
-      /* 3️⃣ Update ticket status */
-      const newStatus =
-        token.action_type === "ON_SITE"
-          ? "ON_SITE"
-          : "RESOLVED_PENDING_VERIFICATION";
-
-      await supabase
+      const { error: statusError } = await (supabase as any)
         .from("tickets")
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ status: "ON_SITE" })
         .eq("id", ticket.id);
 
-      /* 4️⃣ Mark FE action token as used */
+      if (statusError) throw statusError;
+
       await (supabase as any)
         .from("fe_action_tokens")
         .update({ used: true })
@@ -405,90 +172,110 @@ export default function FEActionPage() {
         description: "You may now close this page.",
       });
     } catch (err: any) {
+      console.error("SUBMIT FAILED:", err);
       toast({
         title: "Submission failed",
-        description: err?.message || "Check console",
+        description: err?.message,
         variant: "destructive",
       });
     } finally {
-      setSubmitting(false);
+      setSubmitPending(false);
     }
   };
 
   /* ================= UI ================= */
+
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <div className="p-8 text-center">Loading…</div>;
   }
 
   if (!token || !ticket) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <p className="text-destructive">Invalid or expired link</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <div className="p-8 text-center">Invalid or expired link</div>;
   }
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center space-y-4">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-            <h2 className="text-xl font-semibold">Proof Submitted</h2>
-            <p className="text-muted-foreground">
-              You may close this page.
-            </p>
-          </CardContent>
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="p-6 text-center">
+          <h2 className="text-lg font-semibold text-green-600">
+            Proof Submitted
+          </h2>
+          <p className="text-sm text-muted-foreground mt-2">
+            You may close this page.
+          </p>
         </Card>
       </div>
     );
   }
 
+  const isResolution = token.action_type === "RESOLUTION";
+
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            {token.action_type === "ON_SITE"
-              ? "On-Site Proof Upload"
-              : "Resolution Proof Upload"}
+          <CardTitle>
+            {isResolution ? "Resolution Proof Upload" : "On-Site Proof Upload"}
           </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="text-sm space-y-1">
-            <div><strong>Ticket:</strong> {ticket.ticket_number}</div>
-            <div><strong>Status:</strong> {ticket.status}</div>
+          <div className="text-sm">
+            <strong>Ticket:</strong> {ticket.ticket_number}
           </div>
 
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
+          {isResolution && (
+            <>
+              <div className="space-y-2">
+                <Label>Outcome</Label>
+                <RadioGroup
+                  value={resolutionOutcome}
+                  onValueChange={(v) => setResolutionOutcome(v as "SUCCESS" | "FAILED")}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="SUCCESS" id="outcome-success" />
+                    <Label htmlFor="outcome-success" className="font-normal cursor-pointer">Success (issue resolved)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="FAILED" id="outcome-failed" />
+                    <Label htmlFor="outcome-failed" className="font-normal cursor-pointer">Failed (could not resolve)</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              {resolutionOutcome === "FAILED" && (
+                <div className="space-y-2">
+                  <Label htmlFor="failure-reason">Reason for failure *</Label>
+                  <textarea
+                    id="failure-reason"
+                    className="w-full border rounded p-2 text-sm min-h-[80px]"
+                    placeholder="Required: explain why the issue could not be resolved"
+                    value={failureReason}
+                    onChange={(e) => setFailureReason(e.target.value)}
+                  />
+                </div>
+              )}
+            </>
+          )}
 
-          <textarea
-            placeholder="Remarks (optional)"
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-          />
+          {(!isResolution || resolutionOutcome === "SUCCESS") && (
+            <>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
+              <textarea
+                className="w-full border rounded p-2 text-sm"
+                placeholder={isResolution ? "Optional remarks" : "Optional remarks"}
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+              />
+            </>
+          )}
 
-          <Button
-            className="w-full"
-            onClick={handleSubmit}
-            disabled={submitting || !file}
-          >
-            {submitting ? "Submitting..." : "Submit Proof"}
+          <Button className="w-full" onClick={handleSubmit} disabled={submitPending}>
+            {submitPending ? "Submitting…" : isResolution && resolutionOutcome === "FAILED" ? "Report Failed Attempt" : "Submit Proof"}
           </Button>
         </CardContent>
       </Card>

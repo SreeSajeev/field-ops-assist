@@ -1,10 +1,10 @@
 /**
  * CreateFEModal.tsx
  * 
- * Modal component for Service Staff to create new Field Executives.
+ * Modal component for Service Manager to create new Field Executives.
  * Creates records in the existing field_executives table.
  * 
- * Part of Requirement 4: Service Staff Ability to Create Field Executives
+ * Part of Requirement 4: Service Manager Ability to Create Field Executives
  */
 
 import { useState } from 'react';
@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, UserPlus, X } from 'lucide-react';
 import { CreateFESchema, formatZodError } from '@/lib/validation';
@@ -51,7 +52,8 @@ const SKILL_OPTIONS = [
 
 export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
   const queryClient = useQueryClient();
-  
+  const { organisationId } = useAuth();
+
   // Form state
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -88,6 +90,7 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
           base_location: validated.base_location,
           skills: validated.skills,
           active: validated.active,
+          ...(organisationId ? { organisation_id: organisationId } : {}),
         })
         .select()
         .single();
@@ -165,7 +168,7 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-primary" />
@@ -187,6 +190,7 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              className="w-full"
             />
           </div>
 
@@ -199,6 +203,7 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               type="tel"
+              className="w-full"
             />
           </div>
 
@@ -210,6 +215,7 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
               placeholder="e.g., Mumbai, Andheri"
               value={baseLocation}
               onChange={(e) => setBaseLocation(e.target.value)}
+              className="w-full"
             />
             <p className="text-xs text-muted-foreground">
               Used for location-based ticket assignment recommendations

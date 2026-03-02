@@ -9,16 +9,20 @@ import {
   Ticket, 
   Clock, 
   CheckCircle2,
-  Wrench
+  Wrench,
+  Pencil
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface FECardProps {
   executive: FieldExecutiveWithStats;
   onClick?: (fe: FieldExecutiveWithStats) => void;
+  onEdit?: (fe: FieldExecutiveWithStats) => void;
+  canEdit?: boolean;
 }
 
-export function FECard({ executive, onClick }: FECardProps) {
+export function FECard({ executive, onClick, onEdit, canEdit }: FECardProps) {
   const skills = executive.skills as { categories?: string[] } | null;
   const skillsList = skills?.categories || [];
 
@@ -58,15 +62,31 @@ export function FECard({ executive, onClick }: FECardProps) {
               </div>
             </div>
           </div>
-          <Badge 
-            variant={executive.active ? 'default' : 'secondary'}
-            className={cn(
-              'text-xs',
-              executive.active && 'bg-green-500/10 text-green-600 border-green-200'
+          <div className="flex items-center gap-2">
+            {canEdit && onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(executive);
+                }}
+                aria-label="Edit field executive"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
             )}
-          >
-            {executive.active ? 'Active' : 'Inactive'}
-          </Badge>
+            <Badge 
+              variant={executive.active ? 'default' : 'secondary'}
+              className={cn(
+                'text-xs',
+                executive.active && 'bg-green-500/10 text-green-600 border-green-200'
+              )}
+            >
+              {executive.active ? 'Active' : 'Inactive'}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       

@@ -6,7 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { EmailStatusLifecycle } from './EmailStatusLifecycle';
 import { ConfidenceScore } from '@/components/tickets/ConfidenceScore';
-import { format } from 'date-fns';
+import { formatIST } from '@/lib/dateUtils';
 import { 
   Mail, 
   Calendar, 
@@ -137,7 +137,7 @@ export function EmailDetailSheet({
                     Received
                   </div>
                   <p className="text-sm font-medium">
-                    {format(new Date(email.received_at), 'MMM d, yyyy HH:mm:ss')}
+                    {formatIST(email.received_at, 'MMM d, yyyy HH:mm:ss')}
                   </p>
                 </div>
                 {email.thread_id && (

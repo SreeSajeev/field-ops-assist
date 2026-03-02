@@ -87,26 +87,6 @@ export function TicketFiltersBar({ filters, onFiltersChange }: TicketFiltersBarP
           ))}
         </SelectContent>
       </Select>
-
-      {/* Needs Review toggle */}
-      <Select
-        value={filters.needsReview === undefined ? 'all' : filters.needsReview ? 'yes' : 'no'}
-        onValueChange={(value) => 
-          onFiltersChange({ 
-            ...filters, 
-            needsReview: value === 'all' ? undefined : value === 'yes'
-          })
-        }
-      >
-        <SelectTrigger className="w-[150px]">
-          <SelectValue placeholder="Review Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Tickets</SelectItem>
-          <SelectItem value="yes">Needs Review</SelectItem>
-          <SelectItem value="no">Reviewed</SelectItem>
-        </SelectContent>
-      </Select>
     </div>
   );
 }

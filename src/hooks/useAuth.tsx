@@ -385,13 +385,10 @@ export function useUserRole() {
   const { userProfile } = useAuth();
   return userProfile?.role ?? null;
 }
-*/
-
-import {
+*/import {
   createContext,
   useContext,
   useEffect,
-  useRef,
   useState,
   ReactNode,
 } from "react";
@@ -409,6 +406,9 @@ interface UserProfile {
   email: string;
   role: UserRole;
   active: boolean;
+  client_slug: string | null;
+  /** Super Admin: null. All other roles: must be set or access is blocked. */
+  organisation_id: string | null;
 }
 
 interface AuthContextType {
@@ -421,12 +421,17 @@ interface AuthContextType {
     email: string,
     password: string,
     name: string,
-    role: UserRole
+    role: UserRole,
+    organisationId?: string | null
   ) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isFieldExecutive: boolean;
   isServiceStaff: boolean;
   isAdmin: boolean;
+  isClient: boolean;
+  clientSlug: string | null;
+  /** Current user's organisation_id (null for Super Admin). */
+  organisationId: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -438,7 +443,8 @@ const parseUserRole = (role: string): UserRole | null => {
     role === "STAFF" ||
     role === "FIELD_EXECUTIVE" ||
     role === "ADMIN" ||
-    role === "SUPER_ADMIN"
+    role === "SUPER_ADMIN" ||
+    role === "CLIENT"
   ) {
     return role;
   }
@@ -453,89 +459,118 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isMounted = useRef(true);
-
-  /* ---------- PROFILE RESOLUTION ---------- */
+  /* ---------- PROFILE FETCH ---------- */
 
   const resolveUserProfile = async (
     authUser: User
-  ): Promise<UserProfile | null> => {
+  ): Promise<{ profile: UserProfile | null; deactivated: boolean }> => {
     const { data, error } = await supabase
       .from("users")
-      .select("id, name, email, role, active")
+      .select("id, name, email, role, active, is_active, client_slug, organisation_id")
       .eq("auth_id", authUser.id)
       .maybeSingle();
 
-    if (error || !data) {
-      console.error("User profile missing:", error);
-      return null;
+    if (error || !data) return { profile: null, deactivated: false };
+
+    if (data.is_active === false) {
+      return { profile: null, deactivated: true };
     }
 
-    const parsedRole = parseUserRole(data.role);
-    if (!parsedRole) {
-      console.error("Invalid role in DB:", data.role);
-      return null;
+    const role = parseUserRole(data.role);
+    if (!role) return { profile: null, deactivated: false };
+
+    const isSuperAdmin = role === "SUPER_ADMIN";
+    if (!isSuperAdmin && (data.organisation_id == null || data.organisation_id === "")) {
+      return { profile: null, deactivated: false };
     }
 
     return {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      role: parsedRole,
-      active: data.active,
+      profile: {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role,
+        active: data.active,
+        client_slug: data.client_slug ?? null,
+        organisation_id: data.organisation_id ?? null,
+      },
+      deactivated: false,
     };
   };
 
-  /* ---------- INITIAL BOOTSTRAP ---------- */
+  /* ---------- HYDRATION ---------- */
 
   useEffect(() => {
-    isMounted.current = true;
+    let cancelled = false;
 
-    const bootstrap = async () => {
-      setLoading(true);
+    const hydrate = async (sess: Session | null) => {
+      if (cancelled) return;
 
-      const { data } = await supabase.auth.getSession();
-      const activeSession = data.session ?? null;
+      setSession(sess);
+      setUser(sess?.user ?? null);
 
-      if (!isMounted.current) return;
+      if (sess?.user) {
+        let result = await resolveUserProfile(sess.user);
 
-      setSession(activeSession);
-      setUser(activeSession?.user ?? null);
+        if (result.deactivated) {
+          await supabase.auth.signOut();
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.setItem("auth_deactivated", "1");
+          }
+          if (!cancelled) {
+            setUser(null);
+            setSession(null);
+            setUserProfile(null);
+          }
+          if (!cancelled) setLoading(false);
+          return;
+        }
 
-      if (activeSession?.user) {
-        const profile = await resolveUserProfile(activeSession.user);
-        if (isMounted.current) setUserProfile(profile);
+        // Auto-create profile for newly confirmed users (no row in public.users yet)
+        if (!result.profile && sess.user.email) {
+          const role =
+            parseUserRole(sess.user.user_metadata?.role as string) || "STAFF";
+          const organisationId = sess.user.user_metadata?.organisation_id as string | undefined;
+          const payload: Record<string, unknown> = {
+            auth_id: sess.user.id,
+            email: sess.user.email,
+            name: (sess.user.user_metadata?.name as string)?.trim() || sess.user.email,
+            role,
+            active: true,
+          };
+          if (organisationId && role !== "SUPER_ADMIN") payload.organisation_id = organisationId;
+          const { error: insertError } = await supabase.from("users").insert(payload);
+          if (!insertError) {
+            result = await resolveUserProfile(sess.user);
+          }
+          if (insertError?.code === "23505") {
+            result = await resolveUserProfile(sess.user);
+          }
+        }
+
+        if (!cancelled) setUserProfile(result.profile);
       } else {
         setUserProfile(null);
       }
 
-      if (isMounted.current) setLoading(false);
+      if (!cancelled) setLoading(false);
     };
 
-    bootstrap();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      if (!isMounted.current) return;
-
-      setLoading(true);
-      setSession(newSession ?? null);
-      setUser(newSession?.user ?? null);
-
-      if (newSession?.user) {
-        const profile = await resolveUserProfile(newSession.user);
-        if (isMounted.current) setUserProfile(profile);
-      } else {
-        setUserProfile(null);
-      }
-
-      if (isMounted.current) setLoading(false);
+    // ✅ INITIAL SESSION (CRITICAL FIX)
+    supabase.auth.getSession().then(({ data }) => {
+      hydrate(data.session ?? null);
     });
 
+    // ✅ ALL FUTURE AUTH CHANGES (INCLUDING REFRESH)
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (_event, newSession) => {
+        hydrate(newSession ?? null);
+      }
+    );
+
     return () => {
-      isMounted.current = false;
-      subscription.unsubscribe();
+      cancelled = true;
+      listener.subscription.unsubscribe();
     };
   }, []);
 
@@ -546,7 +581,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: email.trim(),
       password,
     });
-
     return { error: error as Error | null };
   };
 
@@ -554,21 +588,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     name: string,
-    role: UserRole
-  ): Promise<{ error: Error | null }> => {
+    role: UserRole,
+    organisationId?: string | null
+  ) => {
     try {
       SignUpSchema.parse({ email, password, name, role });
+
+      const metadata: Record<string, unknown> = { name, role };
+      if (organisationId && role !== "SUPER_ADMIN") metadata.organisation_id = organisationId;
 
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          data: { name, role },
+          data: metadata,
+          emailRedirectTo: window.location.origin,
         },
       });
 
-      if (error) return { error };
-      return { error: null };
+      return { error: error as Error | null };
     } catch (err) {
       if (err instanceof z.ZodError) {
         return { error: new Error(formatZodError(err)) };
@@ -577,18 +615,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  /**
-   * 🔥 HARD LOGOUT (production safe)
-   */
   const signOut = async () => {
     await supabase.auth.signOut();
-
-    // Clear local state
     setUser(null);
     setSession(null);
     setUserProfile(null);
-
-    // Force full reset (prevents guard loops)
     window.location.href = "/";
   };
 
@@ -598,6 +629,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isServiceStaff = userProfile?.role === "STAFF";
   const isAdmin =
     userProfile?.role === "ADMIN" || userProfile?.role === "SUPER_ADMIN";
+  const isClient = userProfile?.role === "CLIENT";
+  const clientSlug = userProfile?.client_slug ?? null;
+  const organisationId = userProfile?.organisation_id ?? null;
 
   return (
     <AuthContext.Provider
@@ -612,6 +646,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isFieldExecutive,
         isServiceStaff,
         isAdmin,
+        isClient,
+        clientSlug,
+        organisationId,
       }}
     >
       {children}
@@ -622,9 +659,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 /* ================= HOOK ================= */
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used within AuthProvider");
   }
-  return context;
+  return ctx;
 }

@@ -17,7 +17,7 @@ import {
   AlertTriangle,
   Info
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatIST } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -115,7 +115,7 @@ export function FEDetailSheet({
                   </div>
                   <p className="text-sm font-medium">
                     {executive.created_at 
-                      ? format(new Date(executive.created_at), 'MMM d, yyyy')
+                      ? formatIST(executive.created_at, 'MMM d, yyyy')
                       : '—'
                     }
                   </p>

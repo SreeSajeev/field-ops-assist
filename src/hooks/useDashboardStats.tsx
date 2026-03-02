@@ -1,37 +1,59 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardStats } from '@/lib/types';
+import { getStartOfDayIST, todayIST } from '@/lib/dateUtils';
+import { useAuth } from '@/hooks/useAuth';
 
-export function useDashboardStats() {
+export function useDashboardStats(clientSlug?: string | null, organisationIdOverride?: string | null) {
+  const { userProfile } = useAuth();
+  const organisationId = userProfile?.organisation_id ?? null;
+  const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
+
   return useQuery({
-    queryKey: ['dashboard-stats'],
+    queryKey: ['dashboard-stats', clientSlug ?? 'all', organisationId, isSuperAdmin, organisationIdOverride],
     queryFn: async (): Promise<DashboardStats> => {
-      // Get all tickets
-      const { data: tickets, error: ticketsError } = await supabase
+      let ticketsQuery = supabase
         .from('tickets')
-        .select('status, confidence_score, needs_review, created_at');
+        .select('id, status, confidence_score, created_at');
+
+      if (!isSuperAdmin && organisationId) {
+        ticketsQuery = ticketsQuery.eq('organisation_id', organisationId);
+      }
+      if (isSuperAdmin && organisationIdOverride != null && organisationIdOverride !== '') {
+        ticketsQuery = ticketsQuery.eq('organisation_id', organisationIdOverride);
+      }
+      if (clientSlug != null && clientSlug !== '') {
+        ticketsQuery = ticketsQuery.eq('client_slug', clientSlug);
+      }
+
+      const { data: tickets, error: ticketsError } = await ticketsQuery;
 
       if (ticketsError) throw ticketsError;
 
-      // Get SLA breaches
-      const { data: slaData, error: slaError } = await supabase
+      let slaQuery = supabase
         .from('sla_tracking')
-        .select('assignment_breached, onsite_breached, resolution_breached');
+        .select('ticket_id, assignment_breached, onsite_breached, resolution_breached');
+
+      if (clientSlug != null && clientSlug !== '' && tickets?.length) {
+        const ticketIds = tickets.map((t: { id: string }) => t.id);
+        slaQuery = slaQuery.in('ticket_id', ticketIds);
+      }
+
+      const { data: slaData, error: slaError } = await slaQuery;
 
       if (slaError) throw slaError;
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const startOfTodayIST = getStartOfDayIST(todayIST());
 
       const totalTickets = tickets?.length || 0;
       const openTickets = tickets?.filter(t => t.status === 'OPEN').length || 0;
-      const needsReviewCount = tickets?.filter(t => t.needs_review).length || 0;
+      const needsReviewCount = tickets?.filter(t => t.status === 'NEEDS_REVIEW').length || 0;
       const assignedTickets = tickets?.filter(t => t.status === 'ASSIGNED').length || 0;
       
       const resolvedToday = tickets?.filter(t => {
         if (t.status !== 'RESOLVED') return false;
         const createdDate = new Date(t.created_at);
-        return createdDate >= today;
+        return createdDate >= startOfTodayIST;
       }).length || 0;
 
       const scoresWithValues = tickets?.filter(t => t.confidence_score !== null) || [];
@@ -39,7 +61,7 @@ export function useDashboardStats() {
         ? scoresWithValues.reduce((sum, t) => sum + (t.confidence_score || 0), 0) / scoresWithValues.length
         : 0;
 
-      const slaBreaches = slaData?.filter(s => 
+      const slaBreaches = slaData?.filter((s: { assignment_breached?: boolean; onsite_breached?: boolean; resolution_breached?: boolean }) =>
         s.assignment_breached || s.onsite_breached || s.resolution_breached
       ).length || 0;
 

@@ -174,8 +174,13 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
       setSelectedFE(null);
       setOverrideReason('');
     } catch (error) {
-      // Error is handled by the mutation's onError
       setConfirmDialogOpen(false);
+      const message = error instanceof Error ? error.message : "Assignment failed";
+      toast({
+        variant: "destructive",
+        title: "Assignment failed",
+        description: message,
+      });
     }
   };
 
@@ -183,7 +188,7 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh]">
+      <DialogContent className="w-full max-w-lg md:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Truck className="h-5 w-5" />

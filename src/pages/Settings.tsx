@@ -1,4 +1,5 @@
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +21,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { APP_NAME } from '@/lib/constants';
 
 interface ConfigItem {
   key: string;
@@ -137,7 +139,8 @@ export default function Settings() {
   };
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -273,7 +276,7 @@ export default function Settings() {
             >
               <ConfigRow 
                 label="Platform Version" 
-                value="LogiCRM v1.0.0"
+                value={`${APP_NAME} v1.0.0`}
                 type="text"
                 systemControlled
               />
@@ -329,6 +332,7 @@ export default function Settings() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </PageContainer>
+    </AppLayoutNew>
   );
 }

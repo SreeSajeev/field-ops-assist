@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { EmailsTable } from '@/components/emails/EmailsTable';
 import { EmailDetailSheet } from '@/components/emails/EmailDetailSheet';
 import { useRawEmails } from '@/hooks/useRawEmails';
@@ -86,7 +87,8 @@ export default function RawEmails() {
   }, {} as Record<EmailProcessingStatus, number>);
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -174,6 +176,7 @@ export default function RawEmails() {
           onCreateTicket={handleCreateTicket}
         />
       </div>
-    </DashboardLayout>
+    </PageContainer>
+    </AppLayoutNew>
   );
 }

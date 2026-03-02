@@ -1,16 +1,27 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FieldExecutive, FieldExecutiveWithStats } from '@/lib/types';
+import { useAuth } from '@/hooks/useAuth';
 
-export function useFieldExecutives(activeOnly = true) {
+export function useFieldExecutives(activeOnly = true, organisationIdOverride?: string | null) {
+  const { userProfile } = useAuth();
+  const organisationId = userProfile?.organisation_id ?? null;
+  const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
+
   return useQuery({
-    queryKey: ['field-executives', activeOnly],
+    queryKey: ['field-executives', activeOnly, organisationId, isSuperAdmin, organisationIdOverride],
     queryFn: async () => {
       let query = supabase
         .from('field_executives')
         .select('*')
         .order('name', { ascending: true });
 
+      if (!isSuperAdmin && organisationId) {
+        query = query.eq('organisation_id', organisationId);
+      }
+      if (isSuperAdmin && organisationIdOverride != null && organisationIdOverride !== '') {
+        query = query.eq('organisation_id', organisationIdOverride);
+      }
       if (activeOnly) {
         query = query.eq('active', true);
       }
@@ -40,19 +51,29 @@ export function useFieldExecutive(feId: string) {
   });
 }
 
-export function useFieldExecutivesWithStats() {
+export function useFieldExecutivesWithStats(organisationIdOverride?: string | null) {
+  const { userProfile } = useAuth();
+  const organisationId = userProfile?.organisation_id ?? null;
+  const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
+
   return useQuery({
-    queryKey: ['field-executives-with-stats'],
+    queryKey: ['field-executives-with-stats', organisationId, isSuperAdmin, organisationIdOverride],
     queryFn: async () => {
-      // Fetch all field executives
-      const { data: executives, error: feError } = await supabase
+      let feQuery = supabase
         .from('field_executives')
         .select('*')
         .order('name', { ascending: true });
+      if (!isSuperAdmin && organisationId) {
+        feQuery = feQuery.eq('organisation_id', organisationId);
+      }
+      if (isSuperAdmin && organisationIdOverride != null && organisationIdOverride !== '') {
+        feQuery = feQuery.eq('organisation_id', organisationIdOverride);
+      }
+      const { data: executives, error: feError } = await feQuery;
 
       if (feError) throw feError;
 
-      // Fetch all ticket assignments to calculate stats
+      // Fetch ticket assignments (for stats) - scope by org via tickets if needed
       const { data: assignments, error: assignError } = await supabase
         .from('ticket_assignments')
         .select(`

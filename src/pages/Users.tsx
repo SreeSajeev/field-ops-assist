@@ -1,13 +1,26 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { formatIST } from '@/lib/dateUtils';
+import { AppLayoutNew } from '@/components/layout/AppLayoutNew';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Table,
   TableBody,
@@ -35,31 +48,84 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { User, UserRole } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 const ROLE_BADGES: Record<UserRole, { label: string; className: string }> = {
-  STAFF: { label: 'Service Staff', className: 'bg-blue-100 text-blue-700 border-blue-200' },
+  STAFF: { label: 'Service Manager', className: 'bg-blue-100 text-blue-700 border-blue-200' },
   FIELD_EXECUTIVE: { label: 'Field Executive', className: 'bg-green-100 text-green-700 border-green-200' },
   ADMIN: { label: 'Admin', className: 'bg-purple-100 text-purple-700 border-purple-200' },
   SUPER_ADMIN: { label: 'Super Admin', className: 'bg-amber-100 text-amber-700 border-amber-200' },
 };
 
+const apiBase = () => import.meta.env.VITE_CRM_API_URL ?? 'http://localhost:3000';
+
 export default function Users() {
+  const { userProfile, session } = useAuth();
+  const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
+  const [statusPendingId, setStatusPendingId] = useState<string | null>(null);
+
+  const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
+
+  const updateUserStatus = async (userId: string, isActive: boolean) => {
+    const token = session?.access_token;
+    if (!token) {
+      toast({ title: 'Not signed in', variant: 'destructive' });
+      return;
+    }
+    setStatusPendingId(userId);
+    try {
+      const res = await fetch(`${apiBase()}/admin/users/${userId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ is_active: isActive }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error ?? 'Failed to update status');
+      }
+      toast({
+        title: isActive ? 'User activated' : 'User deactivated',
+        description: isActive ? 'They can sign in again.' : 'They will lose access immediately.',
+      });
+      refetch();
+    } catch (err) {
+      toast({
+        title: 'Update failed',
+        description: err instanceof Error ? err.message : 'Something went wrong',
+        variant: 'destructive',
+      });
+    } finally {
+      setStatusPendingId(null);
+      setDeactivateTarget(null);
+    }
+  };
+
+  const organisationId = userProfile?.organisation_id ?? null;
 
   const { data: users, isLoading, refetch } = useQuery({
-    queryKey: ['users'],
+    queryKey: ['users', organisationId, isSuperAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
-
+      if (!isSuperAdmin && organisationId) {
+        query = query.eq('organisation_id', organisationId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as User[];
     },
   });
+
+  const isActive = (u: User) => u.is_active !== false && u.active !== false;
 
   // Filter users
   const filteredUsers = (users || []).filter(user => {
@@ -69,8 +135,8 @@ export default function Users() {
     
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'active' && user.active) ||
-      (statusFilter === 'inactive' && !user.active);
+      (statusFilter === 'active' && isActive(user)) ||
+      (statusFilter === 'inactive' && !isActive(user));
 
     return matchesSearch && matchesRole && matchesStatus;
   });
@@ -78,13 +144,14 @@ export default function Users() {
   // Calculate stats
   const stats = {
     total: users?.length || 0,
-    active: users?.filter(u => u.active).length || 0,
-    inactive: users?.filter(u => !u.active).length || 0,
+    active: users?.filter(u => isActive(u)).length || 0,
+    inactive: users?.filter(u => !isActive(u)).length || 0,
     admins: users?.filter(u => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN').length || 0,
   };
 
   return (
-    <DashboardLayout>
+    <AppLayoutNew>
+      <PageContainer>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -193,7 +260,7 @@ export default function Users() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="STAFF">Service Staff</SelectItem>
+              <SelectItem value="STAFF">Service Manager</SelectItem>
               <SelectItem value="ADMIN">Admin</SelectItem>
               <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
             </SelectContent>
@@ -253,6 +320,7 @@ export default function Users() {
           </div>
         ) : (
           <div className="rounded-xl border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">
@@ -292,31 +360,77 @@ export default function Users() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {user.active ? (
-                        <Badge className="bg-green-100 text-green-700 border-green-200 gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                          Active
-                        </Badge>
+                      {isSuperAdmin ? (
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={isActive(user)}
+                            disabled={statusPendingId === user.id || user.id === userProfile?.id}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                updateUserStatus(user.id, true);
+                              } else {
+                                setDeactivateTarget(user);
+                              }
+                            }}
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            {isActive(user) ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
                       ) : (
-                        <Badge variant="outline" className="text-muted-foreground gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                          Inactive
-                        </Badge>
+                        isActive(user) ? (
+                          <Badge className="bg-green-100 text-green-700 border-green-200 gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                            Inactive
+                          </Badge>
+                        )
                       )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Clock className="h-3.5 w-3.5" />
-                        {format(new Date(user.created_at), 'MMM d, yyyy')}
+                        {formatIST(user.created_at, 'MMM d, yyyy')}
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         )}
+
+        <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Deactivate user?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {deactivateTarget && (
+                  <>
+                    <strong>{deactivateTarget.name}</strong> will lose access immediately and cannot sign in until
+                    reactivated. Are you sure?
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deactivateTarget && updateUserStatus(deactivateTarget.id, false)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Deactivate
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-    </DashboardLayout>
+    </PageContainer>
+    </AppLayoutNew>
   );
 }

@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import React from "react";
 
-/* ================= LOADING ================= */
+/* ================= LOADING UI ================= */
 
 function AuthLoading() {
   return (
@@ -22,16 +22,17 @@ interface GuardProps {
 
 /* ================= BASE AUTH ================= */
 /**
- * Blocks unauthenticated users.
- * NEVER decides role routing.
+ * Authenticated users only.
+ * Loading allowed ONLY while user is unresolved.
  */
 export function RequireAuth({ fallback }: GuardProps) {
   const { user, loading } = useAuth();
 
-  if (loading) return fallback ?? <AuthLoading />;
+  if (loading && !user) {
+    return fallback ?? <AuthLoading />;
+  }
 
   if (!user) {
-    // Always send to public landing
     return <Navigate to="/" replace />;
   }
 
@@ -40,34 +41,63 @@ export function RequireAuth({ fallback }: GuardProps) {
 
 /* ================= STAFF ONLY ================= */
 /**
- * Allows STAFF / ADMIN
- * Blocks FIELD_EXECUTIVE
+ * STAFF / ADMIN only.
+ * FE and CLIENT are explicitly redirected.
  */
 export function RequireStaff({ fallback }: GuardProps) {
-  const { user, loading, isFieldExecutive } = useAuth();
+  const { user, loading, isFieldExecutive, isClient } = useAuth();
 
-  if (loading) return fallback ?? <AuthLoading />;
+  if (loading && !user) {
+    return fallback ?? <AuthLoading />;
+  }
 
   if (!user) {
     return <Navigate to="/" replace />;
   }
 
   if (isFieldExecutive) {
-    // FE should never land here
     return <Navigate to="/" replace />;
+  }
+
+  if (isClient) {
+    return <Navigate to="/app/client" replace />;
   }
 
   return <Outlet />;
 }
 
+/* ================= CLIENT ONLY ================= */
+/**
+ * CLIENT only. Redirect non-CLIENT to /app.
+ */
+export function RequireClient({ children, fallback }: GuardProps & { children?: React.ReactNode }) {
+  const { user, loading, userProfile } = useAuth();
+
+  if (loading && !user) {
+    return (fallback ?? <AuthLoading />) as React.ReactElement;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (userProfile?.role !== "CLIENT") {
+    return <Navigate to="/app" replace />;
+  }
+
+  return children as React.ReactElement;
+}
+
 /* ================= FE ONLY ================= */
 /**
- * Allows only FIELD_EXECUTIVE
+ * FIELD_EXECUTIVE only.
  */
 export function RequireFE({ fallback }: GuardProps) {
   const { user, loading, isFieldExecutive } = useAuth();
 
-  if (loading) return fallback ?? <AuthLoading />;
+  if (loading && !user) {
+    return fallback ?? <AuthLoading />;
+  }
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -82,12 +112,14 @@ export function RequireFE({ fallback }: GuardProps) {
 
 /* ================= ADMIN ONLY ================= */
 /**
- * Allows ADMIN / SUPER_ADMIN
+ * ADMIN / SUPER_ADMIN only.
  */
 export function RequireAdmin({ fallback }: GuardProps) {
   const { user, loading, isAdmin } = useAuth();
 
-  if (loading) return fallback ?? <AuthLoading />;
+  if (loading && !user) {
+    return fallback ?? <AuthLoading />;
+  }
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -95,6 +127,28 @@ export function RequireAdmin({ fallback }: GuardProps) {
 
   if (!isAdmin) {
     return <Navigate to="/" replace />;
+  }
+
+  return <Outlet />;
+}
+
+/* ================= SUPER ADMIN ONLY ================= */
+/**
+ * SUPER_ADMIN only. Used for SaaS super-admin dashboard.
+ */
+export function RequireSuperAdmin({ fallback }: GuardProps) {
+  const { user, loading, userProfile } = useAuth();
+
+  if (loading && !user) {
+    return fallback ?? <AuthLoading />;
+  }
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (userProfile?.role !== "SUPER_ADMIN") {
+    return <Navigate to="/app" replace />;
   }
 
   return <Outlet />;
