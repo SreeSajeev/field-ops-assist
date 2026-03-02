@@ -46,7 +46,16 @@ const adminNavigation = [
   { name: 'Settings', href: '/app/settings', icon: Settings },
 ];
 
-/* Tenant Admin (ADMIN role) only: org configuration */
+/* Tenant Admin (ADMIN role) only: clean demo dashboard nav — no Platform/Organisations/Service Managers */
+const tenantAdminNav = [
+  { name: 'Dashboard', href: '/app/tenant-admin', icon: LayoutDashboard },
+  { name: 'Users', href: '/app/users', icon: Users },
+  { name: 'Field Executives', href: '/app/field-executives', icon: Truck },
+  { name: 'Ticket Settings', href: '/app/ticket-settings', icon: Sliders },
+  { name: 'Settings', href: '/app/settings', icon: Settings },
+];
+
+/* Legacy: full configuration nav (used for non-ADMIN staff with config) */
 const configurationNav = [
   { name: 'Users', href: '/app/users', icon: Users },
   { name: 'Ticket Settings', href: '/app/ticket-settings', icon: Sliders },
@@ -173,6 +182,9 @@ export function Sidebar() {
             <div className="mt-6 mb-2 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">Administration</div>
             <NavSection title="" items={adminNavigation} hideTitle />
           </>
+        ) : isTenantAdmin ? (
+          /* ADMIN only: Dashboard, Users, Field Executives, Ticket Settings, Settings — no clutter */
+          <NavSection title="" items={tenantAdminNav} hideTitle />
         ) : (
           <>
             <NavSection title="Operations" items={navigation} />
@@ -180,13 +192,6 @@ export function Sidebar() {
             <div className="my-4 border-t border-sidebar-border" />
 
             <NavSection title="Monitoring" items={monitoringNav} />
-
-            {isTenantAdmin && (
-              <>
-                <div className="my-4 border-t border-sidebar-border" />
-                <NavSection title="Configuration" items={configurationNav} />
-              </>
-            )}
 
             {isAdmin && !isTenantAdmin && (
               <>

@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -56,6 +57,7 @@ import {
   Clock,
   Info,
   Plus,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { User, UserRole } from '@/lib/types';
@@ -90,9 +92,32 @@ export default function Users() {
   const [addUserRole, setAddUserRole] = useState<UserRole>('STAFF');
   const [addUserOrgId, setAddUserOrgId] = useState('');
   const [addUserSubmitting, setAddUserSubmitting] = useState(false);
+  const [assignOrgTarget, setAssignOrgTarget] = useState<User | null>(null);
+  const [assignOrgId, setAssignOrgId] = useState('');
+  const [assignOrgSubmitting, setAssignOrgSubmitting] = useState(false);
 
   const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
   const isTenantAdmin = userProfile?.role === 'ADMIN';
+
+  const assignUserToOrg = async () => {
+    if (!assignOrgTarget || !assignOrgId) return;
+    setAssignOrgSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ organisation_id: assignOrgId })
+        .eq('id', assignOrgTarget.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['users', organisationId, isSuperAdmin] });
+      toast({ title: 'Organisation assigned', description: `${assignOrgTarget.name} can now access their organisation.` });
+      setAssignOrgTarget(null);
+      setAssignOrgId('');
+    } catch (err) {
+      toast({ title: 'Failed to assign', description: err instanceof Error ? err.message : 'Error', variant: 'destructive' });
+    } finally {
+      setAssignOrgSubmitting(false);
+    }
+  };
 
   const updateUserStatus = async (userId: string, isActive: boolean) => {
     const token = session?.access_token;
@@ -355,6 +380,9 @@ export default function Users() {
                                 <TableHead className="font-semibold">Email</TableHead>
                                 <TableHead className="font-semibold">Status</TableHead>
                                 <TableHead className="font-semibold">Created</TableHead>
+                                {orgId === '__none__' && (
+                                  <TableHead className="font-semibold text-right">Actions</TableHead>
+                                )}
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -395,6 +423,21 @@ export default function Users() {
                                       {formatIST(user.created_at, 'MMM d, yyyy')}
                                     </div>
                                   </TableCell>
+                                  {orgId === '__none__' && (
+                                    <TableCell className="text-right">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setAssignOrgTarget(user);
+                                          setAssignOrgId('');
+                                        }}
+                                      >
+                                        <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                                        Assign to org
+                                      </Button>
+                                    </TableCell>
+                                  )}
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -693,6 +736,44 @@ export default function Users() {
                 }}
               >
                 {addUserSubmitting ? 'Creating…' : 'Add User'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!assignOrgTarget} onOpenChange={(open) => !open && (setAssignOrgTarget(null), setAssignOrgId(''))}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Assign to organisation</DialogTitle>
+              <DialogDescription>
+                {assignOrgTarget
+                  ? `${assignOrgTarget.name} (${assignOrgTarget.email}) has no organisation. Choose one so they can access the app.`
+                  : ''}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Organisation</Label>
+                <Select value={assignOrgId} onValueChange={setAssignOrgId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select organisation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(organisations as { id: string; name: string; slug?: string }[]).map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name} {org.slug ? `(${org.slug})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setAssignOrgTarget(null); setAssignOrgId(''); }}>
+                Cancel
+              </Button>
+              <Button disabled={!assignOrgId || assignOrgSubmitting} onClick={assignUserToOrg}>
+                {assignOrgSubmitting ? 'Saving…' : 'Assign'}
               </Button>
             </DialogFooter>
           </DialogContent>
