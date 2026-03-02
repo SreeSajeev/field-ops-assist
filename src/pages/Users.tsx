@@ -711,7 +711,7 @@ export default function Users() {
                   const selectedOrganisationId = isSuperAdmin ? addUserOrgId : organisationId ?? undefined;
                   setAddUserSubmitting(true);
                   try {
-                    const { error } = await signUp(
+                    const { data: signUpData, error } = await signUp(
                       addUserEmail.trim(),
                       addUserPassword,
                       addUserName.trim(),
@@ -722,7 +722,28 @@ export default function Users() {
                       toast({ title: 'Failed to add user', description: error.message, variant: 'destructive' });
                       return;
                     }
+                    // Step 3 for Field Executive: insert into field_executives (Step 1 auth + Step 2 users done in signUp)
+                    if (addUserRole === 'FIELD_EXECUTIVE' && signUpData?.userId && selectedOrganisationId) {
+                      const { error: feErr } = await (supabase as any)
+                        .from('field_executives')
+                        .insert({
+                          user_id: signUpData.userId,
+                          organisation_id: selectedOrganisationId,
+                          name: addUserName.trim() || addUserEmail.trim(),
+                          active: true,
+                        });
+                      if (feErr) {
+                        toast({ title: 'User created; FE link failed', description: feErr.message, variant: 'destructive' });
+                      }
+                    }
                     queryClient.invalidateQueries({ queryKey: ['users', organisationId, isSuperAdmin] });
+                    if (addUserRole === 'STAFF' || addUserRole === 'ADMIN') {
+                      queryClient.invalidateQueries({ queryKey: ['service-managers'] });
+                    }
+                    if (addUserRole === 'FIELD_EXECUTIVE') {
+                      queryClient.invalidateQueries({ queryKey: ['field-executives'] });
+                      queryClient.invalidateQueries({ queryKey: ['field-executives-with-stats'] });
+                    }
                     toast({ title: 'User created', description: 'They can sign in with the email and password.' });
                     setAddUserOpen(false);
                     setAddUserName('');

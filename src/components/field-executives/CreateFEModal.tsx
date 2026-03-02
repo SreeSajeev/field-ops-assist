@@ -111,10 +111,12 @@ export function CreateFEModal({ open, onOpenChange }: CreateFEModalProps) {
       return data;
     },
     onSuccess: (data) => {
-      // Invalidate queries to refresh FE lists
+      // Invalidate queries to refresh FE lists and dashboard stats
       queryClient.invalidateQueries({ queryKey: ['field-executives'] });
       queryClient.invalidateQueries({ queryKey: ['field-executives-with-stats'] });
-      
+      if (organisationId) {
+        queryClient.invalidateQueries({ queryKey: ['users-org-overview', organisationId] });
+      }
       toast({
         title: 'Field Executive Created',
         description: `${data.name} has been added and is now available for ticket assignment.`,

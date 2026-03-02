@@ -186,11 +186,11 @@ export default function App() {
               {/* ========================= */}
               <Route element={<RequireSuperAdmin />}>
                 <Route path="/super-admin" element={<SuperAdminDashboard />} />
+                <Route path="/app/super-admin" element={<SuperAdminDashboard />} />
                 <Route path="/super-admin/org/:clientSlug" element={<SuperAdminOrgView />} />
                 <Route path="/app/platform" element={<PlatformOverview />} />
                 <Route path="/app/organisations" element={<Organisations />} />
                 <Route path="/app/tenant/:orgId" element={<TenantView />} />
-                <Route path="/app/service-managers" element={<ServiceManagers />} />
               </Route>
 
               {/* ========================= */}
@@ -246,6 +246,7 @@ export default function App() {
                   path="/app/field-executives"
                   element={<FieldExecutives />}
                 />
+                <Route path="/app/service-managers" element={<ServiceManagers />} />
                 <Route path="/app/sla" element={<SLAMonitor />} />
                 <Route path="/app/audit" element={<AuditLogs />} />
                 <Route path="/app/analytics" element={<Analytics />} />

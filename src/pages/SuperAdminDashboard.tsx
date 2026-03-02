@@ -69,6 +69,7 @@ export default function SuperAdminDashboard() {
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
   const [createOrgName, setCreateOrgName] = useState("");
   const [createOrgSlug, setCreateOrgSlug] = useState("");
+  const [createOrgEmail, setCreateOrgEmail] = useState("");
 
   const [addUserOpen, setAddUserOpen] = useState(false);
   const [addUserName, setAddUserName] = useState("");
@@ -77,6 +78,13 @@ export default function SuperAdminDashboard() {
   const [addUserRole, setAddUserRole] = useState<UserRole>("STAFF");
   const [addUserOrgId, setAddUserOrgId] = useState<string>("");
   const [addUserSubmitting, setAddUserSubmitting] = useState(false);
+
+  const [createAdminOpen, setCreateAdminOpen] = useState(false);
+  const [createAdminName, setCreateAdminName] = useState("");
+  const [createAdminEmail, setCreateAdminEmail] = useState("");
+  const [createAdminPassword, setCreateAdminPassword] = useState("");
+  const [createAdminOrgId, setCreateAdminOrgId] = useState<string>("");
+  const [createAdminSubmitting, setCreateAdminSubmitting] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: organisations = [], isLoading: orgsLoading } = useOrganisationsTable();
@@ -220,6 +228,10 @@ export default function SuperAdminDashboard() {
                   <Button size="sm" onClick={() => setCreateOrgOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create Organisation
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setCreateAdminOpen(true)}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Create Organisation Admin
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setAddUserOpen(true)}>
                     <UserPlus className="h-4 w-4 mr-2" />
@@ -402,6 +414,16 @@ export default function SuperAdminDashboard() {
                   placeholder="e.g. sreemarketing"
                 />
               </div>
+              <div className="grid gap-2">
+                <Label htmlFor="org-email">Email (optional)</Label>
+                <Input
+                  id="org-email"
+                  type="email"
+                  value={createOrgEmail}
+                  onChange={(e) => setCreateOrgEmail(e.target.value)}
+                  placeholder="org@example.com"
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateOrgOpen(false)}>
@@ -411,11 +433,16 @@ export default function SuperAdminDashboard() {
                 disabled={!createOrgName.trim() || !createOrgSlug.trim() || createOrgMutation.isPending}
                 onClick={async () => {
                   try {
-                    await createOrgMutation.mutateAsync({ name: createOrgName.trim(), slug: createOrgSlug.trim().toLowerCase().replace(/\s+/g, "-") });
+                    await createOrgMutation.mutateAsync({
+                      name: createOrgName.trim(),
+                      slug: createOrgSlug.trim().toLowerCase().replace(/\s+/g, "-"),
+                      email: createOrgEmail.trim() || undefined,
+                    });
                     toast({ title: "Organisation created" });
                     setCreateOrgOpen(false);
                     setCreateOrgName("");
                     setCreateOrgSlug("");
+                    setCreateOrgEmail("");
                   } catch (err) {
                     toast({
                       title: "Failed to create organisation",
@@ -426,6 +453,97 @@ export default function SuperAdminDashboard() {
                 }}
               >
                 {createOrgMutation.isPending ? "Creating…" : "Create"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Organisation Admin modal — ADMIN role, linked to org */}
+        <Dialog open={createAdminOpen} onOpenChange={setCreateAdminOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Organisation Admin</DialogTitle>
+              <DialogDescription>
+                Create a tenant admin linked to an organisation. They will manage only that organisation.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="admin-name">Name</Label>
+                <Input
+                  id="admin-name"
+                  value={createAdminName}
+                  onChange={(e) => setCreateAdminName(e.target.value)}
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="admin-email">Email</Label>
+                <Input
+                  id="admin-email"
+                  type="email"
+                  value={createAdminEmail}
+                  onChange={(e) => setCreateAdminEmail(e.target.value)}
+                  placeholder="admin@example.com"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="admin-password">Password</Label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  value={createAdminPassword}
+                  onChange={(e) => setCreateAdminPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Organisation</Label>
+                <Select value={createAdminOrgId} onValueChange={setCreateAdminOrgId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select organisation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organisations.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>{org.name} ({org.slug})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateAdminOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={!createAdminName.trim() || !createAdminEmail.trim() || !createAdminPassword || !createAdminOrgId || createAdminSubmitting}
+                onClick={async () => {
+                  setCreateAdminSubmitting(true);
+                  try {
+                    const { error } = await signUp(
+                      createAdminEmail.trim(),
+                      createAdminPassword,
+                      createAdminName.trim(),
+                      "ADMIN",
+                      createAdminOrgId
+                    );
+                    if (error) {
+                      toast({ title: "Failed to create admin", description: error.message, variant: "destructive" });
+                      return;
+                    }
+                    queryClient.invalidateQueries({ queryKey: ["users"] });
+                    toast({ title: "Organisation Admin created. They can sign in with the email and password." });
+                    setCreateAdminOpen(false);
+                    setCreateAdminName("");
+                    setCreateAdminEmail("");
+                    setCreateAdminPassword("");
+                    setCreateAdminOrgId("");
+                  } finally {
+                    setCreateAdminSubmitting(false);
+                  }
+                }}
+              >
+                {createAdminSubmitting ? "Creating…" : "Create Admin"}
               </Button>
             </DialogFooter>
           </DialogContent>

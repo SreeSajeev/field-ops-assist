@@ -9,8 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganisationsTable } from "@/hooks/useOrganisationsTable";
 import { useToast } from "@/hooks/use-toast";
 import { Sliders, Clock, ListOrdered, Plus, X, RefreshCw } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const CONFIG_KEY_PREFIX = "org_";
 const CONFIG_KEY_SUFFIX = "_ticket_config";
@@ -45,12 +53,17 @@ export default function TicketSettings() {
   const queryClient = useQueryClient();
   const organisationId = userProfile?.organisation_id ?? null;
   const isAdmin = userProfile?.role === "ADMIN";
+  const isSuperAdmin = userProfile?.role === "SUPER_ADMIN";
 
+  const [superAdminOrgId, setSuperAdminOrgId] = useState<string>("");
   const [localConfig, setLocalConfig] = useState<OrgTicketConfig>(defaultConfig);
   const [newCategory, setNewCategory] = useState("");
   const [newIssueType, setNewIssueType] = useState("");
 
-  const configKey = organisationId ? getConfigKey(organisationId) : null;
+  const { data: organisations = [] } = useOrganisationsTable();
+  const effectiveOrgId = isSuperAdmin ? (superAdminOrgId || null) : organisationId;
+  const configKey = effectiveOrgId ? getConfigKey(effectiveOrgId) : null;
+  const readOnly = isSuperAdmin;
 
   const { data: configRow, isLoading } = useQuery({
     queryKey: ["configurations", configKey],
@@ -138,7 +151,7 @@ export default function TicketSettings() {
     setLocalConfig((c) => ({ ...c, issueTypes: c.issueTypes.filter((x) => x !== item) }));
   };
 
-  if (!organisationId) {
+  if (!isSuperAdmin && !organisationId) {
     return (
       <AppLayoutNew>
         <PageContainer>
@@ -148,7 +161,7 @@ export default function TicketSettings() {
     );
   }
 
-  if (!isAdmin) {
+  if (!isSuperAdmin && !isAdmin) {
     return (
       <AppLayoutNew>
         <PageContainer>
@@ -162,7 +175,7 @@ export default function TicketSettings() {
     <AppLayoutNew>
       <PageContainer>
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary/90 to-primary">
                 <Sliders className="h-5 w-5 text-primary-foreground" />
@@ -170,17 +183,40 @@ export default function TicketSettings() {
               <div>
                 <h1 className="text-2xl font-bold">Ticket Settings</h1>
                 <p className="text-sm text-muted-foreground">
-                  Categories, issue types, and SLA hours for your organisation
+                  {readOnly ? "View ticket configuration for an organisation (read-only)" : "Categories, issue types, and SLA hours for your organisation"}
                 </p>
               </div>
             </div>
-            <Button onClick={handleSave} disabled={upsertMutation.isPending}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${upsertMutation.isPending ? "animate-spin" : ""}`} />
-              {upsertMutation.isPending ? "Saving…" : "Save"}
-            </Button>
+            {isSuperAdmin && (
+              <Select value={superAdminOrgId || "none"} onValueChange={(v) => setSuperAdminOrgId(v === "none" ? "" : v)}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Select organisation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Select organisation</SelectItem>
+                  {(organisations as { id: string; name: string; slug?: string }[]).map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name} {org.slug ? `(${org.slug})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {!readOnly && (
+              <Button onClick={handleSave} disabled={upsertMutation.isPending}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${upsertMutation.isPending ? "animate-spin" : ""}`} />
+                {upsertMutation.isPending ? "Saving…" : "Save"}
+              </Button>
+            )}
           </div>
 
-          {isLoading ? (
+          {!effectiveOrgId ? (
+            isSuperAdmin ? (
+              <p className="text-sm text-muted-foreground">Select an organisation to view its ticket configuration.</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            )
+          ) : isLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : (
             <div className="space-y-6">
@@ -190,7 +226,9 @@ export default function TicketSettings() {
                     <ListOrdered className="h-5 w-5" />
                     Categories & Issue Types
                   </CardTitle>
-                  <CardDescription>Add or remove categories and issue types for tickets in your organisation.</CardDescription>
+                  <CardDescription>
+                    {readOnly ? "Categories and issue types for this organisation." : "Add or remove categories and issue types for tickets in your organisation."}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
@@ -199,23 +237,27 @@ export default function TicketSettings() {
                       {localConfig.categories.map((item) => (
                         <Badge key={item} variant="secondary" className="gap-1">
                           {item}
-                          <button type="button" onClick={() => removeCategory(item)} className="ml-1 rounded hover:bg-muted" aria-label={`Remove ${item}`}>
-                            <X className="h-3 w-3" />
-                          </button>
+                          {!readOnly && (
+                            <button type="button" onClick={() => removeCategory(item)} className="ml-1 rounded hover:bg-muted" aria-label={`Remove ${item}`}>
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
                         </Badge>
                       ))}
                     </div>
-                    <div className="flex gap-2">
-                      <Input
-                        value={newCategory}
-                        onChange={(e) => setNewCategory(e.target.value)}
-                        placeholder="New category"
-                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCategory())}
-                      />
-                      <Button type="button" variant="outline" size="sm" onClick={addCategory}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {!readOnly && (
+                      <div className="flex gap-2">
+                        <Input
+                          value={newCategory}
+                          onChange={(e) => setNewCategory(e.target.value)}
+                          placeholder="New category"
+                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCategory())}
+                        />
+                        <Button type="button" variant="outline" size="sm" onClick={addCategory}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Issue Types</Label>
@@ -223,23 +265,27 @@ export default function TicketSettings() {
                       {localConfig.issueTypes.map((item) => (
                         <Badge key={item} variant="secondary" className="gap-1">
                           {item}
-                          <button type="button" onClick={() => removeIssueType(item)} className="ml-1 rounded hover:bg-muted" aria-label={`Remove ${item}`}>
-                            <X className="h-3 w-3" />
-                          </button>
+                          {!readOnly && (
+                            <button type="button" onClick={() => removeIssueType(item)} className="ml-1 rounded hover:bg-muted" aria-label={`Remove ${item}`}>
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
                         </Badge>
                       ))}
                     </div>
-                    <div className="flex gap-2">
-                      <Input
-                        value={newIssueType}
-                        onChange={(e) => setNewIssueType(e.target.value)}
-                        placeholder="New issue type"
-                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addIssueType())}
-                      />
-                      <Button type="button" variant="outline" size="sm" onClick={addIssueType}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {!readOnly && (
+                      <div className="flex gap-2">
+                        <Input
+                          value={newIssueType}
+                          onChange={(e) => setNewIssueType(e.target.value)}
+                          placeholder="New issue type"
+                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addIssueType())}
+                        />
+                        <Button type="button" variant="outline" size="sm" onClick={addIssueType}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -250,7 +296,9 @@ export default function TicketSettings() {
                     <Clock className="h-5 w-5" />
                     SLA Settings
                   </CardTitle>
-                  <CardDescription>Configure SLA targets (hours) for assignment, on-site, and resolution.</CardDescription>
+                  <CardDescription>
+                    {readOnly ? "SLA targets (hours) for this organisation." : "Configure SLA targets (hours) for assignment, on-site, and resolution."}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-2">
@@ -259,6 +307,8 @@ export default function TicketSettings() {
                       id="sla-assignment"
                       type="number"
                       min={1}
+                      readOnly={readOnly}
+                      disabled={readOnly}
                       value={localConfig.sla.assignmentHours}
                       onChange={(e) =>
                         setLocalConfig((c) => ({
@@ -274,6 +324,8 @@ export default function TicketSettings() {
                       id="sla-onsite"
                       type="number"
                       min={1}
+                      readOnly={readOnly}
+                      disabled={readOnly}
                       value={localConfig.sla.onsiteHours}
                       onChange={(e) =>
                         setLocalConfig((c) => ({
@@ -289,6 +341,8 @@ export default function TicketSettings() {
                       id="sla-resolution"
                       type="number"
                       min={1}
+                      readOnly={readOnly}
+                      disabled={readOnly}
                       value={localConfig.sla.resolutionHours}
                       onChange={(e) =>
                         setLocalConfig((c) => ({

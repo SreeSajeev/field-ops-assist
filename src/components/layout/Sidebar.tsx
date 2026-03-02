@@ -46,11 +46,12 @@ const adminNavigation = [
   { name: 'Settings', href: '/app/settings', icon: Settings },
 ];
 
-/* Tenant Admin (ADMIN role) only: clean demo dashboard nav — no Platform/Organisations/Service Managers */
+/* Tenant Admin (ADMIN role) only: Dashboard, Users, FEs, Service Managers, Ticket Settings, Settings */
 const tenantAdminNav = [
   { name: 'Dashboard', href: '/app/tenant-admin', icon: LayoutDashboard },
   { name: 'Users', href: '/app/users', icon: Users },
   { name: 'Field Executives', href: '/app/field-executives', icon: Truck },
+  { name: 'Service Managers', href: '/app/service-managers', icon: Shield },
   { name: 'Ticket Settings', href: '/app/ticket-settings', icon: Sliders },
   { name: 'Settings', href: '/app/settings', icon: Settings },
 ];

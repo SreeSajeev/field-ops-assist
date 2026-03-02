@@ -34,6 +34,7 @@ export default function Organisations() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createSlug, setCreateSlug] = useState("");
+  const [createEmail, setCreateEmail] = useState("");
 
   const { data: organisations = [], isLoading: orgsLoading } = useOrganisationsTable();
   const createOrgMutation = useCreateOrganisation();
@@ -217,6 +218,16 @@ export default function Organisations() {
                   placeholder="acme-corp"
                 />
               </div>
+              <div className="grid gap-2">
+                <Label htmlFor="org-email">Email (optional)</Label>
+                <Input
+                  id="org-email"
+                  type="email"
+                  value={createEmail}
+                  onChange={(e) => setCreateEmail(e.target.value)}
+                  placeholder="org@example.com"
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateOpen(false)}>
@@ -229,11 +240,12 @@ export default function Organisations() {
                   const slug = createSlug.trim().toLowerCase().replace(/\s+/g, "-");
                   if (!name || !slug) return;
                   try {
-                    await createOrgMutation.mutateAsync({ name, slug });
+                    await createOrgMutation.mutateAsync({ name, slug, email: createEmail.trim() || undefined });
                     toast({ title: "Organisation created", description: `${name} is now available.` });
                     setCreateOpen(false);
                     setCreateName("");
                     setCreateSlug("");
+                    setCreateEmail("");
                   } catch (err) {
                     toast({
                       title: "Failed to create organisation",

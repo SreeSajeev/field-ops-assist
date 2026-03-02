@@ -22,18 +22,24 @@ export function useOrganisationsTable() {
 
 /**
  * Create a new organisation. SuperAdmin only.
+ * Optional email: included in insert when provided (requires organisations.email column in DB).
  */
 export function useCreateOrganisation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { name: string; slug: string }) => {
-      const { data, error } = await supabase
+    mutationFn: async (payload: { name: string; slug: string; email?: string }) => {
+      const slug = payload.slug.trim().toLowerCase().replace(/\s+/g, "-");
+      const insert: Record<string, unknown> = {
+        name: payload.name.trim(),
+        slug,
+        status: "active",
+      };
+      if (payload.email != null && payload.email.trim() !== "") {
+        insert.email = payload.email.trim();
+      }
+      const { data, error } = await (supabase as any)
         .from("organisations")
-        .insert({
-          name: payload.name.trim(),
-          slug: payload.slug.trim().toLowerCase().replace(/\s+/g, "-"),
-          status: "active",
-        })
+        .insert(insert)
         .select("id, name, slug, created_at, status")
         .single();
       if (error) throw error;
