@@ -14,6 +14,8 @@ import {
   Shield,
   ChevronRight,
   Building2,
+  Sliders,
+  ListOrdered,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/constants';
@@ -44,6 +46,15 @@ const adminNavigation = [
   { name: 'Settings', href: '/app/settings', icon: Settings },
 ];
 
+/* Tenant Admin (ADMIN role) only: org configuration */
+const configurationNav = [
+  { name: 'Users', href: '/app/users', icon: Users },
+  { name: 'Ticket Settings', href: '/app/ticket-settings', icon: Sliders },
+  { name: 'SLA Settings', href: '/app/ticket-settings', icon: Clock },
+  { name: 'Categories & Issue Types', href: '/app/ticket-settings', icon: ListOrdered },
+  { name: 'Settings', href: '/app/settings', icon: Settings },
+];
+
 /* Super Admin only: grouped sections for SaaS control panel */
 const platformNav = [
   { name: 'Platform Overview', href: '/app/platform', icon: LayoutDashboard },
@@ -69,6 +80,7 @@ export function Sidebar() {
   const location = useLocation();
   const { signOut, user, userProfile, isAdmin } = useAuth();
   const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
+  const isTenantAdmin = isAdmin && !isSuperAdmin;
 
   /* =========================
      Role Display
@@ -169,7 +181,14 @@ export function Sidebar() {
 
             <NavSection title="Monitoring" items={monitoringNav} />
 
-            {isAdmin && (
+            {isTenantAdmin && (
+              <>
+                <div className="my-4 border-t border-sidebar-border" />
+                <NavSection title="Configuration" items={configurationNav} />
+              </>
+            )}
+
+            {isAdmin && !isTenantAdmin && (
               <>
                 <div className="my-4 border-t border-sidebar-border" />
                 <NavSection title="Administration" items={adminNavigation} />

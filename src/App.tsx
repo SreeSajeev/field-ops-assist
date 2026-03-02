@@ -128,6 +128,7 @@ import AuditLogs from "@/pages/AuditLogs";
 import Analytics from "@/pages/Analytics";
 import Users from "@/pages/Users";
 import Settings from "@/pages/Settings";
+import TicketSettings from "@/pages/TicketSettings";
 import NotFound from "@/pages/NotFound";
 
 // FE pages
@@ -248,6 +249,7 @@ export default function App() {
                 <Route path="/app/analytics" element={<Analytics />} />
                 <Route path="/app/users" element={<Users />} />
                 <Route path="/app/settings" element={<Settings />} />
+                <Route path="/app/ticket-settings" element={<TicketSettings />} />
               </Route>
 
               {/* ========================= */}
