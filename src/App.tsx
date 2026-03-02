@@ -129,6 +129,7 @@ import Analytics from "@/pages/Analytics";
 import Users from "@/pages/Users";
 import Settings from "@/pages/Settings";
 import TicketSettings from "@/pages/TicketSettings";
+import TenantAdminDashboard from "@/pages/TenantAdminDashboard";
 import NotFound from "@/pages/NotFound";
 
 // FE pages
@@ -233,6 +234,7 @@ export default function App() {
               {/* ========================= */}
               <Route element={<RequireStaff />}>
                 <Route path="/app" element={<Dashboard />} />
+                <Route path="/app/tenant-admin" element={<TenantAdminDashboard />} />
                 <Route path="/app/tickets" element={<TicketsList />} />
                 <Route
                   path="/app/tickets/:ticketId"
