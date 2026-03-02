@@ -423,7 +423,7 @@ interface AuthContextType {
     name: string,
     role: UserRole,
     organisationId?: string | null
-  ) => Promise<{ error: Error | null }>;
+  ) => Promise<{ data?: { user: { id: string }; userId?: string }; error: Error | null }>;
   signOut: () => Promise<void>;
   isFieldExecutive: boolean;
   isServiceStaff: boolean;
@@ -590,14 +590,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: string,
     role: UserRole,
     organisationId?: string | null
-  ) => {
+  ): Promise<{ data?: { user: { id: string }; userId?: string }; error: Error | null }> => {
     try {
       SignUpSchema.parse({ email, password, name, role });
 
       const metadata: Record<string, unknown> = { name, role };
       if (organisationId && role !== "SUPER_ADMIN") metadata.organisation_id = organisationId;
 
-      const { error } = await supabase.auth.signUp({
+      const { data: authData, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
@@ -606,7 +606,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
 
-      return { error: error as Error | null };
+      if (error) return { error: error as Error | null };
+
+      // Always insert into public.users for ADMIN, STAFF, FIELD_EXECUTIVE so they appear in Users page
+      const insertRoles: UserRole[] = ["ADMIN", "STAFF", "FIELD_EXECUTIVE"];
+      if (authData?.user && insertRoles.includes(role)) {
+        const payload: Record<string, unknown> = {
+          auth_id: authData.user.id,
+          email: email.trim(),
+          name: (name || "").trim() || email.trim(),
+          role,
+          active: true,
+          is_active: true,
+        };
+        if (organisationId && role !== "SUPER_ADMIN") payload.organisation_id = organisationId;
+        const { data: inserted, error: insertErr } = await (supabase as any)
+          .from("users")
+          .insert(payload)
+          .select("id")
+          .single();
+        if (insertErr && insertErr.code !== "23505") {
+          return { error: insertErr as Error };
+        }
+        return { data: { user: authData.user, userId: inserted?.id ?? authData.user.id }, error: null };
+      }
+
+      return { data: authData?.user ? { user: authData.user } : undefined, error: null };
     } catch (err) {
       if (err instanceof z.ZodError) {
         return { error: new Error(formatZodError(err)) };
@@ -616,11 +641,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Proceed to clear state and redirect even if signOut fails (e.g. network)
+    }
     setUser(null);
     setSession(null);
     setUserProfile(null);
-    window.location.href = "/";
+    window.location.replace("/");
   };
 
   /* ---------- DERIVED ROLES ---------- */

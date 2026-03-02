@@ -104,9 +104,9 @@ function matchesBreachType(sla: SLAWithTicket, breachType: string): boolean {
 }
 
 function getWorstStatus(sla: SLAWithTicket): SLAStatus {
-  const a = getSLAStatus(sla.assignment_deadline, sla.assignment_breached, sla.ticket.status).status;
-  const b = getSLAStatus(sla.onsite_deadline, sla.onsite_breached, sla.ticket.status).status;
-  const c = getSLAStatus(sla.resolution_deadline, sla.resolution_breached, sla.ticket.status).status;
+  const a = getSLAStatus(sla.assignment_deadline, !!sla.assignment_breached, sla.ticket.status).status;
+  const b = getSLAStatus(sla.onsite_deadline, !!sla.onsite_breached, sla.ticket.status).status;
+  const c = getSLAStatus(sla.resolution_deadline, !!sla.resolution_breached, sla.ticket.status).status;
   if (a === 'breached' || b === 'breached' || c === 'breached') return 'breached';
   if (a === 'at-risk' || b === 'at-risk' || c === 'at-risk') return 'at-risk';
   if (a === 'paused' || b === 'paused' || c === 'paused') return 'paused';
@@ -197,7 +197,7 @@ export default function SLAMonitor() {
   const [filter, setFilter] = useState<'all' | 'at-risk' | 'breached'>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [breachTypeFilter, setBreachTypeFilter] = useState<string>('all');
-  const [feFilter, setFeFilter] = useState<string>('');
+  const [feFilter, setFeFilter] = useState<string>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [page, setPage] = useState(1);
@@ -213,6 +213,8 @@ export default function SLAMonitor() {
       if (slaError) throw slaError;
 
       const ticketIds = slaRecords?.map((s) => s.ticket_id) || [];
+      if (ticketIds.length === 0) return [];
+
       const { data: tickets, error: ticketsError } = await supabase.from('tickets').select('*').in('id', ticketIds);
 
       if (ticketsError) throw ticketsError;
@@ -302,7 +304,7 @@ export default function SLAMonitor() {
 
       if (filterState.status !== 'all' && ticket.status !== filterState.status) continue;
       if (!matchesBreachType(sla, filterState.breachType)) continue;
-      if (filterState.feId && sla.feId !== filterState.feId) continue;
+      if (filterState.feId && filterState.feId !== 'all' && sla.feId !== filterState.feId) continue;
       const rowCreatedAt = (sla as SLATracking).created_at;
       if (!inDateRange(rowCreatedAt, filterState.startDate, filterState.endDate)) continue;
 
@@ -622,12 +624,12 @@ export default function SLAMonitor() {
             </SelectContent>
           </Select>
           {uniqueFEOptions.length > 0 && (
-            <Select value={feFilter} onValueChange={setFeFilter}>
+            <Select value={feFilter || 'all'} onValueChange={setFeFilter}>
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="FE" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All FEs</SelectItem>
+                <SelectItem value="all">All FEs</SelectItem>
                 {uniqueFEOptions.map((opt) => (
                   <SelectItem key={opt.feId} value={opt.feId}>
                     {opt.feName}
@@ -696,13 +698,13 @@ export default function SLAMonitor() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <CountdownTimer deadline={sla.assignment_deadline} breached={sla.assignment_breached} ticketStatus={sla.ticket.status} />
+                        <CountdownTimer deadline={sla.assignment_deadline} breached={!!sla.assignment_breached} ticketStatus={sla.ticket.status} />
                       </TableCell>
                       <TableCell>
-                        <CountdownTimer deadline={sla.onsite_deadline} breached={sla.onsite_breached} ticketStatus={sla.ticket.status} />
+                        <CountdownTimer deadline={sla.onsite_deadline} breached={!!sla.onsite_breached} ticketStatus={sla.ticket.status} />
                       </TableCell>
                       <TableCell>
-                        <CountdownTimer deadline={sla.resolution_deadline} breached={sla.resolution_breached} ticketStatus={sla.ticket.status} />
+                        <CountdownTimer deadline={sla.resolution_deadline} breached={!!sla.resolution_breached} ticketStatus={sla.ticket.status} />
                       </TableCell>
                       <TableCell>
                         <Link to={`/app/tickets/${sla.ticket_id}`} className="inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary">

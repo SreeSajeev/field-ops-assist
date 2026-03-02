@@ -62,7 +62,8 @@ export default function TenantAdminDashboard() {
     queryKey: ['organisation', organisationId],
     enabled: Boolean(organisationId),
     queryFn: async () => {
-      const { data, error } = await supabase
+      // organisations table exists in DB but may not be in generated Supabase types
+      const { data, error } = await (supabase as any)
         .from('organisations')
         .select('id, name, slug')
         .eq('id', organisationId!)
@@ -76,12 +77,12 @@ export default function TenantAdminDashboard() {
     queryKey: ['users-org-overview', organisationId],
     enabled: Boolean(organisationId),
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('users')
         .select('id, role')
         .eq('organisation_id', organisationId!);
       if (error) throw error;
-      return data as { id: string; role: string }[];
+      return (data ?? []) as { id: string; role: string }[];
     },
   });
 
@@ -89,12 +90,13 @@ export default function TenantAdminDashboard() {
     queryKey: ['tenant-clients-overview', organisationId],
     enabled: Boolean(organisationId),
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('tickets')
         .select('client_slug')
         .eq('organisation_id', organisationId!);
       if (error) throw error;
-      const slugs = [...new Set((data ?? []).map((t: { client_slug?: string | null }) => t.client_slug).filter(Boolean))] as string[];
+      const rows = (data ?? []) as { client_slug?: string | null }[];
+      const slugs = [...new Set(rows.map((t) => t.client_slug).filter(Boolean))] as string[];
       return slugs;
     },
   });
@@ -145,7 +147,8 @@ export default function TenantAdminDashboard() {
         return;
       }
       queryClient.invalidateQueries({ queryKey: ['users-org-overview', organisationId] });
-      queryClient.invalidateQueries({ queryKey: ['users', organisationId, false] });
+      queryClient.invalidateQueries({ queryKey: ['users', organisationId] });
+      queryClient.invalidateQueries({ queryKey: ['service-managers', organisationId] });
       toast({ title: 'Service Manager created', description: 'They can sign in with the email and password.' });
       setAddStaffOpen(false);
       setAddStaffName('');
