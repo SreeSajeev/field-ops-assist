@@ -70,7 +70,9 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
                   )}
                 </div>
                 <span className="text-xs text-muted-foreground truncate">
-                  {ticket.issue_type || ticket.category || 'Unclassified'}
+                  {ticket.short_description
+                    ? ticket.short_description.slice(0, 60) + (ticket.short_description.length > 60 ? '…' : '')
+                    : ticket.issue_type || ticket.category || 'Unclassified'}
                 </span>
               </div>
             </div>
@@ -138,7 +140,8 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
               <TableCell>{ticket.issue_type || '—'}</TableCell>
               <TableCell>
                 <MapPin className="inline h-3 w-3 mr-1" />
-                {ticket.location || '—'}
+                {(ticket.short_description || ticket.location || '—').slice(0, 80)}
+                {((ticket.short_description || ticket.location)?.length ?? 0) > 80 ? '…' : ''}
               </TableCell>
               <TableCell>
                 {formatIST(ticket.opened_at, 'MMM d, HH:mm')}
