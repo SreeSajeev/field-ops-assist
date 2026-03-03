@@ -39,6 +39,12 @@ export default function FETicketView() {
         <p>Status: {ticketQuery.data.status}</p>
         <p>Location: {ticketQuery.data.location ?? "Not specified"}</p>
         <p>Issue Type: {ticketQuery.data.issue_type ?? "—"}</p>
+        {ticketQuery.data.short_description && (
+          <div className="pt-2 border-t mt-2">
+            <p className="text-xs text-muted-foreground">Details</p>
+            <p className="text-sm whitespace-pre-wrap break-words">{ticketQuery.data.short_description}</p>
+          </div>
+        )}
       </Card>
 
       {/* Action Token */}
