@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   Star,
   ClipboardCheck,
+  FileText,
 } from "lucide-react";
 
 import { AppLayoutNew } from "@/components/layout/AppLayoutNew";
@@ -439,6 +440,15 @@ export default function TicketDetail() {
                       />
                       <Label htmlFor="review-priority">Priority</Label>
                     </div>
+                    {ticket.short_description && (
+                      <div className="sm:col-span-2 flex items-start gap-2">
+                        <FileText className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="text-sm text-muted-foreground">Details</p>
+                          <p className="font-medium whitespace-pre-wrap break-words text-sm">{ticket.short_description}</p>
+                        </div>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>
@@ -446,6 +456,15 @@ export default function TicketDetail() {
                     <Info label="Category" value={ticket.category} />
                     <Info label="Issue Type" value={ticket.issue_type} />
                     <IconInfo icon={MapPin} label="Location" value={ticket.location} />
+                    {ticket.short_description && (
+                      <div className="sm:col-span-2 flex items-start gap-2">
+                        <FileText className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="text-sm text-muted-foreground">Details</p>
+                          <p className="font-medium whitespace-pre-wrap break-words">{ticket.short_description}</p>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
                 {!canCompleteReview && (
