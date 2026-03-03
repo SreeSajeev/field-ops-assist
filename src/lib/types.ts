@@ -99,6 +99,8 @@ export interface Ticket {
   category: string | null;
   issue_type: string | null;
   location: string | null;
+  /** Brief summary from remarks or email body; may be absent for older tickets. */
+  short_description?: string | null;
   opened_by_email: string | null;
   opened_at: string;
   confidence_score: number | null;
