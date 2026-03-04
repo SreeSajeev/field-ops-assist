@@ -11,7 +11,6 @@ import { FieldExecutive, FieldExecutiveWithStats } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Truck, 
   Search, 
@@ -20,7 +19,6 @@ import {
   Users,
   CheckCircle2,
   AlertCircle,
-  Info,
   UserPlus
 } from 'lucide-react';
 import {
@@ -94,19 +92,19 @@ export default function FieldExecutives() {
       <PageContainer>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80">
               <Truck className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">Field Executives</h1>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold break-words">Field Executives</h1>
               <p className="text-muted-foreground text-sm">
                 Team profiles, skills, and workload visibility
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-2 shrink-0">
             <Button 
               variant="outline" 
               size="sm"
@@ -127,44 +125,35 @@ export default function FieldExecutives() {
           </div>
         </div>
 
-        {/* Info Alert */}
-        <Alert className="bg-blue-50 border-blue-200">
-          <Info className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-sm text-blue-800">
-            <strong>View-only page:</strong> This page shows FE profiles and workload. 
-            Ticket assignments are made from the <strong>Ticket Detail</strong> page to ensure proper workflow control.
-          </AlertDescription>
-        </Alert>
-
         {/* Summary Stats */}
-        <div className="grid grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl border bg-card">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="w-full min-w-0 p-4 md:p-6 rounded-xl border bg-card shadow-sm">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Users className="h-4 w-4" />
               Total Active
             </div>
-            <p className="text-2xl font-bold">{totalActive}</p>
+            <p className="text-2xl font-bold break-words">{totalActive}</p>
           </div>
-          <div className="p-4 rounded-xl border bg-card">
+          <div className="w-full min-w-0 p-4 md:p-6 rounded-xl border bg-card shadow-sm">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               Available Now
             </div>
-            <p className="text-2xl font-bold text-green-600">{availableFEs}</p>
+            <p className="text-2xl font-bold text-green-600 break-words">{availableFEs}</p>
           </div>
-          <div className="p-4 rounded-xl border bg-card">
+          <div className="w-full min-w-0 p-4 md:p-6 rounded-xl border bg-card shadow-sm">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               High Workload
             </div>
-            <p className="text-2xl font-bold text-amber-600">{highWorkload}</p>
+            <p className="text-2xl font-bold text-amber-600 break-words">{highWorkload}</p>
           </div>
-          <div className="p-4 rounded-xl border bg-card">
+          <div className="w-full min-w-0 p-4 md:p-6 rounded-xl border bg-card shadow-sm">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Users className="h-4 w-4 text-muted-foreground" />
               Inactive
             </div>
-            <p className="text-2xl font-bold text-muted-foreground">{totalInactive}</p>
+            <p className="text-2xl font-bold text-muted-foreground break-words">{totalInactive}</p>
           </div>
         </div>
 
@@ -185,7 +174,7 @@ export default function FieldExecutives() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
@@ -226,7 +215,7 @@ export default function FieldExecutives() {
 
         {/* Grid of FE Cards */}
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[...Array(6)].map((_, i) => (
               <FECardSkeleton key={i} />
             ))}
@@ -245,7 +234,7 @@ export default function FieldExecutives() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredExecutives.map((fe) => (
               <FECard
                 key={fe.id}

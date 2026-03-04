@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -417,7 +416,7 @@ export default function SLAMonitor() {
               <Clock className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">SLA Monitor</h1>
+              <h1 className="text-2xl font-semibold">SLA Monitor</h1>
               <p className="text-muted-foreground text-sm">Real-time SLA tracking with countdown timers</p>
             </div>
           </div>
@@ -433,17 +432,9 @@ export default function SLAMonitor() {
           </div>
         </div>
 
-        <Alert className="bg-blue-50 border-blue-200">
-          <Info className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-sm text-blue-800">
-            <strong>SLA Timer Rules:</strong> Timers automatically pause when tickets are in{' '}
-            <strong>NEEDS_REVIEW</strong> or <strong>PENDING_VERIFICATION</strong> status. Timers resume upon assignment confirmation or FE action.
-          </AlertDescription>
-        </Alert>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-          <Card>
-            <CardContent className="pt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
+          <Card className="w-full">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center">
                   <XCircle className="h-5 w-5 text-red-600" />
@@ -455,8 +446,8 @@ export default function SLAMonitor() {
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="w-full">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center">
                   <TrendingUp className="h-5 w-5 text-amber-600" />
@@ -469,8 +460,8 @@ export default function SLAMonitor() {
             </CardContent>
           </Card>
           {byFE.length > 0 && (
-            <Card>
-              <CardContent className="pt-6">
+            <Card className="w-full">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex items-center gap-3">
                   <Users className="h-5 w-5 text-violet-600" />
                   <div>
@@ -482,8 +473,8 @@ export default function SLAMonitor() {
             </Card>
           )}
           {byCategory.length > 0 && (
-            <Card>
-              <CardContent className="pt-6">
+            <Card className="w-full">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex items-center gap-3">
                   <Tag className="h-5 w-5 text-sky-600" />
                   <div>
@@ -495,8 +486,8 @@ export default function SLAMonitor() {
             </Card>
           )}
           {byPriority.length > 0 && (
-            <Card>
-              <CardContent className="pt-6">
+            <Card className="w-full">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex items-center gap-3">
                   <Star className="h-5 w-5 text-amber-500" />
                   <div>
@@ -507,8 +498,8 @@ export default function SLAMonitor() {
               </CardContent>
             </Card>
           )}
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="w-full">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center gap-3">
                 <Timer className="h-5 w-5 text-muted-foreground" />
                 <div>
@@ -520,9 +511,9 @@ export default function SLAMonitor() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="pt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          <Card className="w-full">
+            <CardContent className="p-4 md:p-6">
               <div className="text-center">
                 <Timer className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-2xl font-bold">{filteredRows.length}</p>
@@ -530,8 +521,8 @@ export default function SLAMonitor() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-green-200 bg-green-50/50">
-            <CardContent className="pt-6">
+          <Card className="w-full border-green-200 bg-green-50/50">
+            <CardContent className="p-4 md:p-6">
               <div className="text-center">
                 <CheckCircle className="h-6 w-6 mx-auto mb-2 text-green-600" />
                 <p className="text-2xl font-bold text-green-600">{onTrack}</p>
@@ -539,8 +530,8 @@ export default function SLAMonitor() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-blue-200 bg-blue-50/50">
-            <CardContent className="pt-6">
+          <Card className="w-full border-blue-200 bg-blue-50/50">
+            <CardContent className="p-4 md:p-6">
               <div className="text-center">
                 <Pause className="h-6 w-6 mx-auto mb-2 text-blue-600" />
                 <p className="text-2xl font-bold text-blue-600">{paused}</p>
@@ -548,8 +539,8 @@ export default function SLAMonitor() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-amber-200 bg-amber-50/50">
-            <CardContent className="pt-6">
+          <Card className="w-full border-amber-200 bg-amber-50/50">
+            <CardContent className="p-4 md:p-6">
               <div className="text-center">
                 <AlertTriangle className="h-6 w-6 mx-auto mb-2 text-amber-600" />
                 <p className="text-2xl font-bold text-amber-600">{atRisk}</p>
@@ -557,8 +548,8 @@ export default function SLAMonitor() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-red-200 bg-red-50/50">
-            <CardContent className="pt-6">
+          <Card className="w-full border-red-200 bg-red-50/50">
+            <CardContent className="p-4 md:p-6">
               <div className="text-center">
                 <XCircle className="h-6 w-6 mx-auto mb-2 text-red-600" />
                 <p className="text-2xl font-bold text-red-600">{breached}</p>
@@ -603,7 +594,7 @@ export default function SLAMonitor() {
               <SelectValue placeholder="Ticket status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="OPEN">OPEN</SelectItem>
               <SelectItem value="RESOLVED">RESOLVED</SelectItem>
               <SelectItem value="ASSIGNED">ASSIGNED</SelectItem>

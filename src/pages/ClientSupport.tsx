@@ -39,7 +39,7 @@ export default function ClientSupport() {
               <HelpCircle className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                 Support
               </h1>
               <p className="text-sm text-muted-foreground">

@@ -87,8 +87,8 @@ export default function Dashboard() {
         <div className="relative z-10 w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
           <div className="flex flex-col gap-4 md:gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">Dashboard</h1>
-              <p className="mt-1 text-sm text-muted-foreground md:text-base">Welcome back. Here&apos;s your operations overview.</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">Dashboard</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Welcome back. Here&apos;s your operations overview.</p>
             </div>
             <div
               className="dashboard-welcome-stats flex items-center gap-4 rounded-xl p-4 md:rounded-2xl"
@@ -122,16 +122,16 @@ export default function Dashboard() {
       {/* OverviewMetrics — 4 cards in reference style */}
       <section className="pb-6 md:pb-8">
         <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
-          <h2 className="mb-4 text-xl font-bold tracking-tight text-foreground md:text-2xl">Service Overview</h2>
+          <h2 className="mb-4 text-lg font-semibold text-foreground">Service Overview</h2>
           <div
-            className="dashboard-overview-section rounded-xl p-4 md:rounded-2xl md:p-5"
+            className="dashboard-overview-section rounded-xl p-6 md:rounded-2xl md:p-6"
             style={{
               background: "linear-gradient(135deg, hsl(285 15% 97%) 0%, hsl(30 5% 98%) 100%)",
               border: "1px solid hsl(270 15% 88% / 0.5)",
               boxShadow: "0 1px 3px hsl(285 25% 10% / 0.05), inset 0 1px 0 hsl(0 0% 100% / 0.7)",
             }}
           >
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label="Total Tickets"
                 value={statsLoading ? "—" : stats?.totalTickets ?? 0}
@@ -221,7 +221,7 @@ export default function Dashboard() {
                   style={{ borderBottom: "1px solid hsl(270 15% 88% / 0.7)", background: "linear-gradient(135deg, hsl(285 20% 96%), hsl(270 10% 94%))" }}
                 >
                   <div>
-                    <h2 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">Recent Tickets</h2>
+                    <h2 className="text-lg font-semibold text-foreground">Recent Tickets</h2>
                     <p className="mt-0.5 text-sm text-muted-foreground">Latest service requests</p>
                   </div>
                   <Link to="/app/tickets">
@@ -231,7 +231,7 @@ export default function Dashboard() {
                     </Button>
                   </Link>
                 </div>
-                <div className="bg-card">
+                <div className="bg-card p-6">
                   <TicketsTable tickets={(recentTickets || []).slice(0, 8)} loading={ticketsLoading} compact />
                 </div>
               </div>

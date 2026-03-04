@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { RawEmailWithParsed } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,7 @@ interface EmailsTableProps {
   onCreateTicket?: (email: RawEmailWithParsed) => void;
 }
 
-export function EmailsTable({ 
+function EmailsTableComponent({ 
   emails, 
   loading, 
   onViewEmail,
@@ -177,3 +178,5 @@ export function EmailsTable({
     </div>
   );
 }
+
+export const EmailsTable = memo(EmailsTableComponent);

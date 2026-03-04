@@ -90,6 +90,7 @@ const App = () => (
 
 export default App;
 */
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -119,23 +120,36 @@ import Organisations from "@/pages/Organisations";
 import TenantView from "@/pages/TenantView";
 import ServiceManagers from "@/pages/ServiceManagers";
 import TicketsList from "@/pages/TicketsList";
-import TicketDetail from "@/pages/TicketDetail";
 import ReviewQueue from "@/pages/ReviewQueue";
 import RawEmails from "@/pages/RawEmails";
 import FieldExecutives from "@/pages/FieldExecutives";
 import SLAMonitor from "@/pages/SLAMonitor";
-import AuditLogs from "@/pages/AuditLogs";
-import Analytics from "@/pages/Analytics";
-import Users from "@/pages/Users";
 import Settings from "@/pages/Settings";
 import TicketSettings from "@/pages/TicketSettings";
 import TenantAdminDashboard from "@/pages/TenantAdminDashboard";
 import NotFound from "@/pages/NotFound";
 
+// Lazy-loaded heavy pages (improves initial load)
+const TicketDetail = lazy(() => import("@/pages/TicketDetail"));
+const AuditLogs = lazy(() => import("@/pages/AuditLogs"));
+const Analytics = lazy(() => import("@/pages/Analytics"));
+const Users = lazy(() => import("@/pages/Users"));
+
 // FE pages
 import FEMyTickets from "@/pages/FEMyTickets";
 import FETicketView from "@/pages/FETicketView";
 import FEActionPage from "@/pages/FEActionPage";
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -224,7 +238,9 @@ export default function App() {
                 path="/app/client/tickets/:ticketId"
                 element={
                   <RequireClient>
-                    <TicketDetail />
+                    <Suspense fallback={<PageLoader />}>
+                      <TicketDetail />
+                    </Suspense>
                   </RequireClient>
                 }
               />
@@ -238,7 +254,11 @@ export default function App() {
                 <Route path="/app/tickets" element={<TicketsList />} />
                 <Route
                   path="/app/tickets/:ticketId"
-                  element={<TicketDetail />}
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <TicketDetail />
+                    </Suspense>
+                  }
                 />
                 <Route path="/app/review" element={<ReviewQueue />} />
                 <Route path="/app/emails" element={<RawEmails />} />
@@ -248,9 +268,30 @@ export default function App() {
                 />
                 <Route path="/app/service-managers" element={<ServiceManagers />} />
                 <Route path="/app/sla" element={<SLAMonitor />} />
-                <Route path="/app/audit" element={<AuditLogs />} />
-                <Route path="/app/analytics" element={<Analytics />} />
-                <Route path="/app/users" element={<Users />} />
+                <Route
+                  path="/app/audit"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AuditLogs />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/app/analytics"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <Analytics />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/app/users"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <Users />
+                    </Suspense>
+                  }
+                />
                 <Route path="/app/settings" element={<Settings />} />
                 <Route path="/app/ticket-settings" element={<TicketSettings />} />
               </Route>

@@ -97,7 +97,7 @@ export default function RawEmails() {
               <Mail className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Raw Emails</h1>
+              <h1 className="text-2xl font-semibold">Raw Emails</h1>
               <p className="text-muted-foreground text-sm">
                 Inbound emails from Postmark webhook • Immutable archive
               </p>

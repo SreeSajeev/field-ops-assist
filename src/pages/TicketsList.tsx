@@ -24,8 +24,8 @@ export default function TicketsList() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">All Tickets</h1>
-            <p className="text-muted-foreground">Manage and track all service tickets</p>
+            <h1 className="text-2xl font-semibold">All Tickets</h1>
+            <p className="text-sm text-muted-foreground">Manage and track all service tickets</p>
           </div>
           {/* Requirement 1: Manual Ticket Creation Button */}
           <Button onClick={() => setCreateModalOpen(true)} className="gap-2">

@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 /**
  * Standard page content container matching sahaya-operations-suite.
@@ -11,7 +12,7 @@ interface PageContainerProps {
 
 export function PageContainer({ children, className = '' }: PageContainerProps) {
   return (
-    <div className={`w-full space-y-6 px-3 md:mx-auto md:max-w-7xl md:space-y-10 md:px-6 ${className}`.trim()}>
+    <div className={cn('w-full min-w-0 space-y-6 px-3 pt-6 md:mx-auto md:max-w-7xl md:space-y-10 md:px-6 md:pt-8', className)}>
       {children}
     </div>
   );

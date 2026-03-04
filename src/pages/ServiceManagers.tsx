@@ -182,7 +182,7 @@ export default function ServiceManagers() {
                 <Shield className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Service Managers</h1>
+                <h1 className="text-2xl font-semibold">Service Managers</h1>
                 <p className="text-sm text-muted-foreground">
                   {isSuperAdmin ? "Staff and Admin users across the platform" : "Staff and Admin in your organisation"}
                 </p>

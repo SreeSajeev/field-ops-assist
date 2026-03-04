@@ -149,7 +149,7 @@ const WelcomeSection = ({ stats, loading }: { stats: { totalTickets?: number; op
     <div className="relative z-10 w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Welcome back</h1>
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Welcome back</h1>
           <p className="mt-1 text-sm text-muted-foreground">Track your service requests with full transparency and SLA visibility.</p>
         </div>
         <div

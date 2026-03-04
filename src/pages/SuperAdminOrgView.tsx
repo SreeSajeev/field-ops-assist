@@ -77,12 +77,12 @@ export default function SuperAdminOrgView() {
           </div>
 
           <div>
-            <h1 className="text-2xl font-bold">{displayName}</h1>
+            <h1 className="text-2xl font-semibold">{displayName}</h1>
             <p className="text-sm text-muted-foreground">Organization: {slug}</p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-            <Card>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <Card className="w-full">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Total

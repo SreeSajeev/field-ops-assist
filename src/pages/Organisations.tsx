@@ -117,7 +117,7 @@ export default function Organisations() {
                 <Building2 className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Organisations</h1>
+                <h1 className="text-2xl font-semibold">Organisations</h1>
                 <p className="text-sm text-muted-foreground">
                   Tenant cards. Click to open tenant view.
                 </p>
