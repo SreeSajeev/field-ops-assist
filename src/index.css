@@ -187,9 +187,9 @@
     }
   }
 
-  /* Status badge variants */
+  /* Status badge variants - consistent height and alignment in tables */
   .status-badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide;
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide;
   }
 
   .status-open {

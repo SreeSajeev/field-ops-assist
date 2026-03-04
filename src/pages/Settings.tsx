@@ -149,7 +149,7 @@ export default function Settings() {
               <SettingsIcon className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Settings</h1>
+              <h1 className="text-2xl font-semibold">Settings</h1>
               <p className="text-muted-foreground text-sm">
                 System configuration and operational parameters
               </p>

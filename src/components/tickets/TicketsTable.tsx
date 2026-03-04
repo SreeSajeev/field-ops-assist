@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { formatIST } from '@/lib/dateUtils';
 import { Ticket } from '@/lib/types';
@@ -22,7 +23,7 @@ interface TicketsTableProps {
   compact?: boolean;
 }
 
-export function TicketsTable({ tickets, loading, compact = false }: TicketsTableProps) {
+function TicketsTableComponent({ tickets, loading, compact = false }: TicketsTableProps) {
   if (loading) {
     return (
       <div className="flex h-48 items-center justify-center">
@@ -55,7 +56,7 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
           <Link
             key={ticket.id}
             to={`/app/tickets/${ticket.id}`}
-            className="flex items-center justify-between py-3 px-1 hover:bg-muted/50 rounded-lg transition-colors group"
+            className="flex items-center justify-between py-3 px-4 hover:bg-muted/40 hover:shadow-sm rounded-lg transition-all duration-200 ease-in-out group"
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="flex flex-col min-w-0">
@@ -88,13 +89,13 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
-      <div className="overflow-x-auto">
+      <div className="p-6 overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-10">Priority</TableHead>
             <TableHead>Ticket #</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Status</TableHead>
             <TableHead>Confidence</TableHead>
             <TableHead>Vehicle</TableHead>
             <TableHead>Issue Type</TableHead>
@@ -107,7 +108,10 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
           {tickets.map((ticket, idx) => (
             <TableRow
               key={ticket.id}
-              className={cn(idx % 2 === 0 ? 'bg-background' : 'bg-muted/20')}
+              className={cn(
+                'transition-colors duration-150 ease-in-out hover:bg-muted/40 hover:shadow-sm',
+                idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'
+              )}
             >
               <TableCell className="text-center">
                 {ticket.priority === true ? (
@@ -126,8 +130,10 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
                   {ticket.ticket_number}
                 </Link>
               </TableCell>
-              <TableCell>
-                <StatusBadge status={ticket.status} />
+              <TableCell className="text-right">
+                <span className="inline-flex items-center justify-end">
+                  <StatusBadge status={ticket.status} />
+                </span>
               </TableCell>
               <TableCell>
                 <ConfidenceScore score={getDisplayConfidenceScore(ticket)} size="sm" />
@@ -162,3 +168,5 @@ export function TicketsTable({ tickets, loading, compact = false }: TicketsTable
     </div>
   );
 }
+
+export const TicketsTable = memo(TicketsTableComponent);

@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Collapsible,
   CollapsibleContent,
@@ -30,7 +29,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Lock,
-  Shield,
   User,
   Ticket,
   Truck,
@@ -323,7 +321,7 @@ export default function AuditLogs() {
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Audit Logs</h1>
+              <h1 className="text-2xl font-semibold">Audit Logs</h1>
               <p className="text-muted-foreground text-sm">Complete system activity timeline • Read-only archive</p>
             </div>
           </div>
@@ -343,47 +341,37 @@ export default function AuditLogs() {
           </div>
         </div>
 
-        <Alert className="bg-slate-50 border-slate-200">
-          <div className="flex items-center gap-2">
-            <Lock className="h-4 w-4 text-slate-600" />
-            <Shield className="h-4 w-4 text-slate-600" />
-          </div>
-          <AlertDescription className="text-sm text-slate-800 ml-2">
-            <strong>System Immutable:</strong> Audit logs are permanently recorded and cannot be altered, edited, or deleted by any user role.
-          </AlertDescription>
-        </Alert>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+          <Card className="w-full">
+            <CardContent className="p-4 md:p-6">
               <div className="text-center">
-                <p className="text-2xl font-bold">{logs?.length ?? 0}</p>
+                <p className="text-2xl font-bold break-words">{logs?.length ?? 0}</p>
                 <p className="text-xs text-muted-foreground">This page</p>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="w-full">
+            <CardContent className="p-4 md:p-6">
               <div className="text-center">
-                <p className="text-2xl font-bold">{entityTypes.length}</p>
+                <p className="text-2xl font-bold break-words">{entityTypes.length}</p>
                 <p className="text-xs text-muted-foreground">Entity types</p>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="w-full">
+            <CardContent className="p-4 md:p-6">
               <div className="text-center">
-                <p className="text-2xl font-bold">{aggregations.actionFrequency[0]?.count ?? 0}</p>
+                <p className="text-2xl font-bold break-words">{aggregations.actionFrequency[0]?.count ?? 0}</p>
                 <p className="text-xs text-muted-foreground truncate" title={aggregations.actionFrequency[0]?.name}>
                   Top action
                 </p>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="w-full">
+            <CardContent className="p-4 md:p-6">
               <div className="text-center">
-                <p className="text-2xl font-bold">{aggregations.topUser ? aggregations.topUser.count : '—'}</p>
+                <p className="text-2xl font-bold break-words">{aggregations.topUser ? aggregations.topUser.count : '—'}</p>
                 <p className="text-xs text-muted-foreground">Most active user (page)</p>
               </div>
             </CardContent>

@@ -19,7 +19,7 @@ export function MobileSidebarWrapper() {
   return (
     <>
       {/* Mobile-only header: fixed, does not occupy layout flow. */}
-      <div className="flex md:hidden h-14 items-center justify-between border-b bg-white px-4 fixed top-0 left-0 right-0 z-30">
+      <div className="flex md:hidden h-14 items-center justify-between border-b bg-background px-4 fixed top-0 left-0 right-0 z-30">
         <img src="/sahaya-logo.png" alt="Sahaya" className="h-8 w-auto object-contain" />
         <button
           type="button"
@@ -45,7 +45,7 @@ export function MobileSidebarWrapper() {
             aria-hidden
           />
           <div
-            className="fixed left-0 top-0 bottom-0 z-50 w-56 bg-sidebar shadow-lg md:hidden overflow-y-auto"
+            className="fixed left-0 top-0 bottom-0 z-50 w-56 max-h-screen bg-sidebar shadow-lg md:hidden overflow-y-auto"
             role="dialog"
             aria-label="Menu"
           >

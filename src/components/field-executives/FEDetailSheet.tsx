@@ -14,8 +14,7 @@ import {
   CheckCircle2,
   User,
   Wrench,
-  AlertTriangle,
-  Info
+  AlertTriangle
 } from 'lucide-react';
 import { formatIST } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
@@ -78,14 +77,6 @@ export function FEDetailSheet({
 
         <ScrollArea className="h-[calc(100vh-120px)]">
           <div className="px-6 py-4 space-y-6">
-            {/* Info Alert */}
-            <Alert className="bg-blue-50 border-blue-200">
-              <Info className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-sm text-blue-800">
-                This is a <strong>view-only</strong> profile page. Ticket assignments are made from the Ticket Detail page.
-              </AlertDescription>
-            </Alert>
-
             {/* Contact Information */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">

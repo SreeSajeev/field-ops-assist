@@ -241,7 +241,7 @@ export default function TenantView() {
                 <Building2 className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">{org.name}</h1>
+                <h1 className="text-2xl font-semibold">{org.name}</h1>
                 <p className="text-sm text-muted-foreground">{org.slug}</p>
                 <Badge variant={org.status === "active" ? "default" : "secondary"} className="mt-1">
                   {org.status}

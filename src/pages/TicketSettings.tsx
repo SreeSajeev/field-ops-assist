@@ -181,7 +181,7 @@ export default function TicketSettings() {
                 <Sliders className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Ticket Settings</h1>
+                <h1 className="text-2xl font-semibold">Ticket Settings</h1>
                 <p className="text-sm text-muted-foreground">
                   {readOnly ? "View ticket configuration for an organisation (read-only)" : "Categories, issue types, and SLA hours for your organisation"}
                 </p>

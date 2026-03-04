@@ -132,7 +132,7 @@ export default function SuperAdminDashboard() {
               <Shield className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Super Admin</h1>
+              <h1 className="text-2xl font-semibold">Super Admin</h1>
               <p className="text-sm text-muted-foreground">
                 Global overview and SaaS management
               </p>

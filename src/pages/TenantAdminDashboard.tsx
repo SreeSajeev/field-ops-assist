@@ -169,7 +169,7 @@ export default function TenantAdminDashboard() {
               <LayoutDashboard className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Tenant Admin Dashboard</h1>
+              <h1 className="text-2xl font-semibold">Tenant Admin Dashboard</h1>
               <p className="text-sm text-muted-foreground">
                 Manage your organisation — users, field executives, tickets, and settings
               </p>

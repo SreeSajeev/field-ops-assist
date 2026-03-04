@@ -145,7 +145,7 @@ export default function PlatformOverview() {
               <LayoutDashboard className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Platform Overview</h1>
+              <h1 className="text-2xl font-semibold">Platform Overview</h1>
               <p className="text-sm text-muted-foreground">
                 Multi-tenant SaaS control panel
               </p>

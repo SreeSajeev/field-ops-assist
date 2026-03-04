@@ -248,7 +248,7 @@ export default function Users() {
               <UsersIcon className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Users</h1>
+              <h1 className="text-2xl font-semibold">Users</h1>
               <p className="text-muted-foreground text-sm">
                 {isTenantAdmin ? 'Manage users in your organisation' : 'System user management and role overview'}
               </p>
@@ -484,7 +484,7 @@ export default function Users() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
