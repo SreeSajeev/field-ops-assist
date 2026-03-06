@@ -8,6 +8,74 @@ import {
 
 export const router = express.Router();
 
+/* ASSIGN TICKET TO FIELD EXECUTIVE */
+router.post("/:id/assign", async (req, res) => {
+  const { id: ticketId } = req.params;
+  const { feId, override_reason: overrideReason } = req.body || {};
+
+  if (!ticketId || !feId) {
+    return res.status(400).json({ error: "ticket id and feId are required" });
+  }
+
+  const { data: ticket, error: ticketError } = await supabase
+    .from("tickets")
+    .select("id, status")
+    .eq("id", ticketId)
+    .single();
+
+  if (ticketError || !ticket) {
+    return res.status(404).json({ error: "Ticket not found" });
+  }
+
+  const allowedStatuses = ["OPEN", "REOPENED", "FE_ATTEMPT_FAILED"];
+  if (!allowedStatuses.includes(ticket.status)) {
+    return res.status(400).json({
+      error: `Ticket cannot be assigned in status ${ticket.status}. Allowed: ${allowedStatuses.join(", ")}`,
+    });
+  }
+
+  const { data: fe, error: feError } = await supabase
+    .from("field_executives")
+    .select("id")
+    .eq("id", feId)
+    .single();
+
+  if (feError || !fe) {
+    return res.status(400).json({ error: "Field executive not found" });
+  }
+
+  const { data: assignment, error: assignError } = await supabase
+    .from("ticket_assignments")
+    .insert({
+      ticket_id: ticketId,
+      fe_id: feId,
+      override_reason: overrideReason && String(overrideReason).trim() ? String(overrideReason).trim() : null,
+    })
+    .select("id")
+    .single();
+
+  if (assignError) {
+    console.error("ticket_assignments insert error:", assignError);
+    return res.status(500).json({ error: "Failed to create assignment" });
+  }
+
+  const { error: updateError } = await supabase
+    .from("tickets")
+    .update({
+      current_assignment_id: assignment.id,
+      status: "ASSIGNED",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", ticketId);
+
+  if (updateError) {
+    console.error("tickets update error:", updateError);
+    return res.status(500).json({ error: "Failed to update ticket" });
+  }
+
+  return res.json({ success: true, assignmentId: assignment.id });
+});
+
 /* ON-SITE TOKEN */
 router.post("/:id/on-site-token", async (req, res) => {
   const { id } = req.params;

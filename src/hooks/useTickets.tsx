@@ -251,8 +251,9 @@ export function useAssignTicket() {
       }
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, { ticketId }) => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
       queryClient.invalidateQueries({ queryKey: ["ticket-assignments"] });
       queryClient.invalidateQueries({ queryKey: ["fe-active-tokens"] });
       toast({ title: "Ticket assigned" });
