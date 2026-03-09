@@ -48,7 +48,6 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
   const { data: fieldExecutives, isLoading } = useFieldExecutivesWithStats();
   const assignTicket = useAssignTicket();
   const [selectedFE, setSelectedFE] = useState<string | null>(null);
-  const [overrideReason, setOverrideReason] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
@@ -142,11 +141,6 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
   const handleAssignClick = () => {
     if (!selectedFE) return;
 
-    const needsOverride = !isRecommended(selectedFE) && !overrideReason;
-    if (needsOverride) {
-      return; // UI will show warning
-    }
-
     // Show confirmation dialog (Requirement 3)
     setConfirmDialogOpen(true);
   };
@@ -159,7 +153,6 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
       await assignTicket.mutateAsync({
         ticketId: ticket.id,
         feId: selectedFE,
-        overrideReason: isRecommended(selectedFE) ? undefined : overrideReason
       });
 
       // Show success toast (Requirement 3)
@@ -172,7 +165,6 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
       setConfirmDialogOpen(false);
       onOpenChange(false);
       setSelectedFE(null);
-      setOverrideReason('');
     } catch (error) {
       setConfirmDialogOpen(false);
       const message = error instanceof Error ? error.message : "Assignment failed";
@@ -323,22 +315,12 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
 
           {/* Override Reason (only if selecting non-recommended) */}
           {selectedFE && !selectedIsRecommended && (
-            <div className="space-y-2">
-              <Label htmlFor="override-reason" className="flex items-center gap-2 text-warning">
-                <AlertTriangle className="h-4 w-4" />
-                Override Reason Required
-              </Label>
-              <Textarea
-                id="override-reason"
-                placeholder="Please explain why you're selecting a non-recommended field executive..."
-                value={overrideReason}
-                onChange={(e) => setOverrideReason(e.target.value)}
-                className="min-h-[80px]"
-              />
-              <p className="text-xs text-muted-foreground">
-                This will be logged for audit purposes.
-              </p>
-            </div>
+            <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription>
+                This field executive is not in the top recommendations, but you can still assign freely.
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* Actions */}
@@ -350,8 +332,7 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
               onClick={handleAssignClick}
               disabled={
                 !selectedFE || 
-                assignTicket.isPending || 
-                (!selectedIsRecommended && !overrideReason)
+                assignTicket.isPending
               }
             >
               {assignTicket.isPending ? (
@@ -382,7 +363,6 @@ export function FEAssignmentModal({ ticket, open, onOpenChange }: FEAssignmentMo
             skillMatch: selectedFEObject.skillMatch,
           }}
           isRecommended={isRecommended(selectedFE!)}
-          overrideReason={overrideReason}
           onConfirm={handleConfirmAssign}
           isPending={assignTicket.isPending}
         />

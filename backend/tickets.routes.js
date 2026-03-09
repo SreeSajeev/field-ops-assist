@@ -11,7 +11,7 @@ export const router = express.Router();
 /* ASSIGN TICKET TO FIELD EXECUTIVE */
 router.post("/:id/assign", async (req, res) => {
   const { id: ticketId } = req.params;
-  const { feId, override_reason: overrideReason } = req.body || {};
+  const { feId } = req.body || {};
 
   if (!ticketId || !feId) {
     return res.status(400).json({ error: "ticket id and feId are required" });
@@ -49,7 +49,6 @@ router.post("/:id/assign", async (req, res) => {
     .insert({
       ticket_id: ticketId,
       fe_id: feId,
-      override_reason: overrideReason && String(overrideReason).trim() ? String(overrideReason).trim() : null,
     })
     .select("id")
     .single();

@@ -212,11 +212,9 @@ export function useAssignTicket() {
     mutationFn: async ({
       ticketId,
       feId,
-      overrideReason,
     }: {
       ticketId: string;
       feId: string;
-      overrideReason?: string;
     }) => {
       let res: Response;
       try {
@@ -225,10 +223,6 @@ export function useAssignTicket() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             feId,
-            override_reason:
-              overrideReason != null && String(overrideReason).trim() !== ""
-                ? String(overrideReason).trim()
-                : undefined,
           }),
         });
       } catch (err) {

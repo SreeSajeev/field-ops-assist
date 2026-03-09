@@ -124,7 +124,6 @@ export type CommentInput = z.infer<typeof CommentSchema>;
 export const AssignmentSchema = z.object({
   ticketId: z.string().uuid({ message: 'Invalid ticket ID' }),
   feId: z.string().uuid({ message: 'Invalid Field Executive ID' }),
-  overrideReason: z.string().max(500, { message: 'Override reason too long' }).nullable().optional(),
 });
 
 export type AssignmentInput = z.infer<typeof AssignmentSchema>;

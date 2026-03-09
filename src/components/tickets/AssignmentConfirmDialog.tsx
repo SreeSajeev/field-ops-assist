@@ -27,7 +27,6 @@ interface AssignmentConfirmDialogProps {
   ticket: TicketType;
   fieldExecutive: FieldExecutive & { locationMatch?: boolean; skillMatch?: boolean };
   isRecommended: boolean;
-  overrideReason?: string;
   onConfirm: () => void;
   isPending: boolean;
 }
@@ -38,7 +37,6 @@ export function AssignmentConfirmDialog({
   ticket,
   fieldExecutive,
   isRecommended,
-  overrideReason,
   onConfirm,
   isPending,
 }: AssignmentConfirmDialogProps) {
@@ -117,13 +115,6 @@ export function AssignmentConfirmDialog({
                 </div>
               </div>
 
-              {/* Override reason if applicable */}
-              {!isRecommended && overrideReason && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <p className="text-xs text-amber-800 font-medium mb-1">Override Reason:</p>
-                  <p className="text-sm text-amber-700">{overrideReason}</p>
-                </div>
-              )}
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
