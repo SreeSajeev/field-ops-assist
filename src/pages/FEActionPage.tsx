@@ -14,6 +14,7 @@ export default function FEActionPage() {
 
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [token, setToken] = useState<any>(null);
   const [ticket, setTicket] = useState<any>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -31,6 +32,7 @@ export default function FEActionPage() {
       }
 
       try {
+        setLoadError(null);
         // 🔥 Force ANY to avoid TS relational inference crash
         const { data: tokenRow, error: tokenError } = await (supabase as any)
           .from("fe_action_tokens")
@@ -42,6 +44,7 @@ export default function FEActionPage() {
 
         if (tokenError || !tokenRow) {
           console.error("TOKEN ERROR:", tokenError);
+          setLoadError("Invalid or expired link");
           setLoading(false);
           return;
         }
@@ -56,6 +59,7 @@ export default function FEActionPage() {
 
         if (ticketError || !ticketRow) {
           console.error("TICKET ERROR:", ticketError);
+          setLoadError("Unable to load ticket details.\nPlease contact the support team.");
           setLoading(false);
           return;
         }
@@ -63,6 +67,7 @@ export default function FEActionPage() {
         setTicket(ticketRow);
       } catch (err) {
         console.error("LOAD FAILED:", err);
+        setLoadError("Unable to load ticket details.\nPlease contact the support team.");
       } finally {
         setLoading(false);
       }
@@ -189,8 +194,42 @@ export default function FEActionPage() {
     return <div className="p-8 text-center">Loading…</div>;
   }
 
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Unable to load</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {String(loadError)
+              .split("\n")
+              .map((line, idx) => (
+                <p key={idx} className="text-sm text-muted-foreground">
+                  {line}
+                </p>
+              ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!token || !ticket) {
-    return <div className="p-8 text-center">Invalid or expired link</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Invalid or expired link</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Please request a new link from the support team.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (submitted) {
@@ -209,6 +248,11 @@ export default function FEActionPage() {
   }
 
   const isResolution = token.action_type === "RESOLUTION";
+  const issueDescription =
+    (ticket.remarks && String(ticket.remarks).trim()) ||
+    (ticket.short_description && String(ticket.short_description).trim()) ||
+    (ticket.description && String(ticket.description).trim()) ||
+    "";
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -220,9 +264,76 @@ export default function FEActionPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="text-sm">
-            <strong>Ticket:</strong> {ticket.ticket_number}
+          {/* ================= Ticket Details ================= */}
+          <div className="rounded-lg border bg-white p-4 shadow-sm space-y-4">
+            <div className="space-y-0.5">
+              <div className="text-xs text-muted-foreground">Ticket Details</div>
+              <div className="text-base font-semibold">
+                Ticket {ticket.ticket_number ?? "N/A"}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {ticket.vehicle_number && (
+                <div className="space-y-0.5">
+                  <div className="text-xs text-muted-foreground">Vehicle</div>
+                  <div className="text-sm font-medium">{ticket.vehicle_number}</div>
+                </div>
+              )}
+              {ticket.category && (
+                <div className="space-y-0.5">
+                  <div className="text-xs text-muted-foreground">Category</div>
+                  <div className="text-sm font-medium">{ticket.category}</div>
+                </div>
+              )}
+              {ticket.issue_type && (
+                <div className="space-y-0.5">
+                  <div className="text-xs text-muted-foreground">Issue Type</div>
+                  <div className="text-sm font-medium">{ticket.issue_type}</div>
+                </div>
+              )}
+              {ticket.location && (
+                <div className="space-y-0.5">
+                  <div className="text-xs text-muted-foreground">Location</div>
+                  <div className="text-sm font-medium">{ticket.location}</div>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t pt-4 space-y-3">
+              <div className="space-y-0.5">
+                <div className="text-xs text-muted-foreground">Issue Description</div>
+                <div className="text-sm font-medium whitespace-pre-wrap">
+                  {issueDescription || "No issue description provided."}
+                </div>
+              </div>
+
+              {(ticket.opened_by_email || ticket.contact_number) && (
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground">Reported By</div>
+                  {ticket.opened_by_email && (
+                    <div className="text-sm font-medium break-words">{ticket.opened_by_email}</div>
+                  )}
+                  {ticket.contact_number && (
+                    <div className="text-sm font-medium">Contact: {ticket.contact_number}</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
+
+          <div className="h-px bg-border" />
+
+          {/* ================= Proof Upload ================= */}
+          <div className="rounded-lg border bg-white p-4 shadow-sm space-y-4">
+            <div className="space-y-0.5">
+              <div className="text-xs text-muted-foreground">
+                Upload {isResolution ? "Resolution" : "On-Site"} Proof
+              </div>
+              <div className="text-sm font-medium">
+                {isResolution ? "Resolution proof upload" : "On-site proof upload"}
+              </div>
+            </div>
 
           {isResolution && (
             <>
@@ -277,6 +388,7 @@ export default function FEActionPage() {
           <Button className="w-full" onClick={handleSubmit} disabled={submitPending}>
             {submitPending ? "Submitting…" : isResolution && resolutionOutcome === "FAILED" ? "Report Failed Attempt" : "Submit Proof"}
           </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
