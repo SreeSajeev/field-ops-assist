@@ -157,13 +157,13 @@ export function Sidebar() {
   return (
     <div className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Logo + Branding */}
-      <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-5">
+      <Link to="/" className="flex h-16 items-center gap-3 border-b border-sidebar-border px-5">
         <img src="/sahaya-logo.png" alt={APP_NAME} className="h-8 w-auto flex-shrink-0" />
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-bold text-sidebar-foreground">{APP_NAME}</span>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-primary/70">BY PARISKQ</span>
         </div>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-thin px-3 py-5">

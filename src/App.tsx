@@ -108,6 +108,7 @@ import {
 
 // Pages
 import SahayaLanding from "@/pages/SahayaLanding";
+import EnquiryPage from "@/pages/EnquiryPage";
 import Index from "@/pages/Index";
 import Dashboard from "@/pages/Dashboard";
 import ClientDashboard from "@/pages/ClientDashboard";
@@ -177,6 +178,9 @@ export default function App() {
 
               {/* Login + role-based redirect */}
               <Route path="/login" element={<Index />} />
+
+              {/* Public enquiry / request demo */}
+              <Route path="/enquiry" element={<EnquiryPage />} />
 
               {/* Token-based FE action (NO LOGIN REQUIRED) */}
               <Route

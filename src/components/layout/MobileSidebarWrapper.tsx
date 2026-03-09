@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 
@@ -20,7 +20,9 @@ export function MobileSidebarWrapper() {
     <>
       {/* Mobile-only header: fixed, does not occupy layout flow. */}
       <div className="flex md:hidden h-14 items-center justify-between border-b bg-background px-4 fixed top-0 left-0 right-0 z-30">
-        <img src="/sahaya-logo.png" alt="Sahaya" className="h-8 w-auto object-contain" />
+        <Link to="/" className="flex items-center shrink-0">
+          <img src="/sahaya-logo.png" alt="Sahaya" className="h-8 w-auto object-contain" />
+        </Link>
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
