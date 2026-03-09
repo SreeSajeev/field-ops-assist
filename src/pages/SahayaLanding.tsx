@@ -139,8 +139,11 @@ function Header() {
   }, []);
 
   const navLinks = [
-    { label: "Features", href: "#modules" },
+    { label: "About", href: "#about" },
+    { label: "Integrity Chain", href: "#integrity-chain" },
+    { label: "Modules", href: "#modules" },
     { label: "Pricing", href: "#pricing" },
+    { label: "Demo", href: "/enquiry", external: true },
   ];
 
   return (
@@ -159,19 +162,22 @@ function Header() {
         </Link>
 
         <nav className="hidden lg:flex items-center">
-          {navLinks.map((item) => (
-            <a key={item.label} href={item.href} className="px-3.5 py-1.5 text-[13px] font-medium text-white/60 hover:text-white/90 transition-colors duration-150">
-              {item.label}
-            </a>
-          ))}
+          {navLinks.map((item) =>
+            item.external ? (
+              <Link key={item.label} to={item.href} className="px-3.5 py-1.5 text-[13px] font-medium text-white/60 hover:text-white/90 transition-colors duration-150">
+                {item.label}
+              </Link>
+            ) : (
+              <a key={item.label} href={item.href} className="px-3.5 py-1.5 text-[13px] font-medium text-white/60 hover:text-white/90 transition-colors duration-150">
+                {item.label}
+              </a>
+            )
+          )}
         </nav>
 
-        <div className="hidden lg:flex items-center gap-3">
-          <OutlineButton dark asLink to="/enquiry" className="text-[13px]" style={{ padding: "8px 18px" }}>
-            Request Demo
-          </OutlineButton>
+        <div className="hidden lg:flex items-center">
           <PrimaryButton asLink to="/login" className="text-[13px]" style={{ padding: "8px 18px" }}>
-            Login <ArrowRight className="h-3.5 w-3.5" />
+            Login
           </PrimaryButton>
         </div>
 
@@ -183,17 +189,20 @@ function Header() {
       {mobileOpen && (
         <div style={{ background: "hsl(285 45% 12% / 0.97)", borderTop: "1px solid hsl(285 35% 22% / 0.5)" }}>
           <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col gap-0.5">
-            {navLinks.map((item) => (
-              <a key={item.label} href={item.href} className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-all" onClick={() => setMobileOpen(false)}>
-                {item.label}
-              </a>
-            ))}
-            <div className="pt-3 mt-1 border-t border-white/8 flex flex-col gap-2">
-              <OutlineButton dark asLink to="/enquiry" className="w-full justify-center">
-                Request Demo
-              </OutlineButton>
+            {navLinks.map((item) =>
+              item.external ? (
+                <Link key={item.label} to={item.href} className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-all" onClick={() => setMobileOpen(false)}>
+                  {item.label}
+                </Link>
+              ) : (
+                <a key={item.label} href={item.href} className="px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-all" onClick={() => setMobileOpen(false)}>
+                  {item.label}
+                </a>
+              )
+            )}
+            <div className="pt-3 mt-1 border-t border-white/8">
               <PrimaryButton asLink to="/login" className="w-full justify-center">
-                Login <ArrowRight className="h-4 w-4" />
+                Login
               </PrimaryButton>
             </div>
           </div>
@@ -237,8 +246,7 @@ function HeroSection() {
               Sahaya transforms inbound service emails into structured, SLA-tracked, and auditable workflows with proof at every step of the lifecycle. From ticket creation to on-site verification and final closure, every action is traceable, accountable, and measurable. No dropped tickets. No unverified resolutions. No operational blind spots.
             </p>
             <div className="flex flex-wrap gap-3 mb-8">
-              <PrimaryButton asLink to="/login">Login <ArrowRight className="h-4 w-4" /></PrimaryButton>
-              <OutlineButton dark asLink to="/enquiry">Request Demo</OutlineButton>
+              <PrimaryButton asLink to="/enquiry">Request Demo <ArrowRight className="h-4 w-4" /></PrimaryButton>
             </div>
             <div className="flex flex-wrap gap-5 pt-6" style={{ borderTop: "1px solid hsl(285 35% 30% / 0.5)" }}>
               {["100% Structured Workflows", "Real-Time SLA Tracking", "Audit-Ready Traceability"].map((item) => (
