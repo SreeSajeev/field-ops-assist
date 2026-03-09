@@ -308,7 +308,9 @@ export default function TenantView() {
                     <CardTitle className="text-sm font-medium text-muted-foreground">SLA Breaches</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold">{statsLoading ? "—" : stats?.slaBreaches ?? 0}</p>
+                    <p className="text-2xl font-bold">
+                      {statsLoading ? "—" : (stats?.totalTickets ?? 0) > 0 ? (stats?.slaBreaches ?? 0) : "—"}
+                    </p>
                   </CardContent>
                 </Card>
               </div>

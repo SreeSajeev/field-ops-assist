@@ -165,9 +165,9 @@ export default function SuperAdminDashboard() {
               <Gauge className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{slaCompliancePct}%</p>
+              <p className="text-2xl font-bold">{totalSla > 0 ? `${slaCompliancePct}%` : "—"}</p>
               <p className="text-xs text-muted-foreground">
-                {totalSla} tracked · {slaBreaches} breached
+                {totalSla > 0 ? `${totalSla} tracked · ${slaBreaches} breached` : "No tickets tracked"}
               </p>
             </CardContent>
           </Card>

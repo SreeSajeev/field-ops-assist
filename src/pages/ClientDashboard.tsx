@@ -140,7 +140,15 @@ export const ClientHeader = () => {
 
 // ─── Welcome Section ─────────────────────────────────────────────────────────
 
-const WelcomeSection = ({ stats, loading }: { stats: { totalTickets?: number; openTickets?: number; slaBreaches?: number } | null; loading: boolean }) => (
+const WelcomeSection = ({
+  clientDisplayName,
+  stats,
+  loading,
+}: {
+  clientDisplayName: string;
+  stats: { totalTickets?: number; openTickets?: number; slaBreaches?: number } | null;
+  loading: boolean;
+}) => (
   <section className="relative overflow-hidden py-8">
     <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, hsl(285 30% 96%) 0%, hsl(30 5% 98%) 100%)" }} />
     <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.025) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.025) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
@@ -149,7 +157,7 @@ const WelcomeSection = ({ stats, loading }: { stats: { totalTickets?: number; op
     <div className="relative z-10 w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Welcome back</h1>
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Welcome back, {clientDisplayName}</h1>
           <p className="mt-1 text-sm text-muted-foreground">Track your service requests with full transparency and SLA visibility.</p>
         </div>
         <div
@@ -171,7 +179,9 @@ const WelcomeSection = ({ stats, loading }: { stats: { totalTickets?: number; op
           </div>
           <div className="h-8 w-px" style={{ background: "hsl(270 15% 88% / 0.6)" }} />
           <div className="px-3 text-center">
-            <div className="text-xl font-bold" style={{ color: "hsl(32 95% 48%)" }}>{(stats?.slaBreaches ?? 0) === 0 ? "On track" : "Alert"}</div>
+            <div className="text-xl font-bold" style={{ color: "hsl(32 95% 48%)" }}>
+              {(stats?.totalTickets ?? 0) > 0 ? ((stats?.slaBreaches ?? 0) === 0 ? "On track" : "Alert") : "—"}
+            </div>
             <div className="text-[11px] text-muted-foreground whitespace-nowrap font-medium">SLA</div>
           </div>
         </div>
@@ -592,28 +602,7 @@ export default function ClientDashboard() {
     <div className="min-h-screen" style={{ background: "hsl(30 5% 98%)" }}>
       <ClientHeader />
       <main className="pt-14">
-        {/* Welcome back — enterprise-style greeting card at top */}
-        <section className="pt-6 pb-2">
-          <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
-            <div
-              className="rounded-2xl px-6 py-5"
-              style={{
-                background: "linear-gradient(135deg, hsl(285 25% 97%), hsl(0 0% 100%))",
-                border: "1px solid hsl(270 15% 88% / 0.8)",
-                boxShadow: "0 4px 16px hsl(285 25% 10% / 0.06), 0 1px 3px hsl(285 25% 10% / 0.04), inset 0 1px 0 hsl(0 0% 100% / 0.8)",
-              }}
-            >
-              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                Welcome back, {clientDisplayName}
-              </h1>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                Track your service requests with full transparency and SLA visibility.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <WelcomeSection stats={stats} loading={statsLoading} />
+        <WelcomeSection clientDisplayName={clientDisplayName} stats={stats} loading={statsLoading} />
         <GradientDivider />
         <section className="pb-8">
           <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
@@ -622,7 +611,7 @@ export default function ClientDashboard() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <MetricCard label="Active Tickets" value={statsLoading ? "—" : stats?.openTickets ?? 0} desc="Currently in progress" icon={Ticket} variant="primary" />
                 <MetricCard label="Resolved" value={statsLoading ? "—" : (stats?.totalTickets ?? 0) - (stats?.openTickets ?? 0)} desc="Successfully completed" icon={CheckCircle2} variant="default" />
-                <MetricCard label="SLA Compliance" value={(stats?.slaBreaches ?? 0) === 0 ? "On track" : "Alert"} desc="Phase-based tracking" icon={Clock} variant="accent" />
+                <MetricCard label="SLA Compliance" value={(stats?.totalTickets ?? 0) > 0 ? ((stats?.slaBreaches ?? 0) === 0 ? "On track" : "Alert") : "—"} desc="Phase-based tracking" icon={Clock} variant="accent" />
                 <MetricCard label="Total Requests" value={statsLoading ? "—" : stats?.totalTickets ?? 0} desc="All time" icon={BarChart3} variant="default" />
               </div>
             </div>

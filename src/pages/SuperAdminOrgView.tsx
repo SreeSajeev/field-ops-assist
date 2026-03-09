@@ -39,6 +39,7 @@ export default function SuperAdminOrgView() {
   ).length;
   const resolvedCount = tickets.filter((t) => t.status === "RESOLVED").length;
 
+  const totalTickets = stats?.totalTickets ?? 0;
   const slaBreaches = stats?.slaBreaches ?? 0;
 
   if (!slug) {
@@ -150,10 +151,10 @@ export default function SuperAdminOrgView() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">
-                  {slaBreaches === 0 ? "On track" : "Alert"}
+                  {totalTickets > 0 ? (slaBreaches === 0 ? "On track" : "Alert") : "—"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {slaBreaches} breached
+                  {totalTickets > 0 ? `${slaBreaches} breached` : "No tickets"}
                 </p>
               </CardContent>
             </Card>
