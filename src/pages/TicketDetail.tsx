@@ -52,6 +52,10 @@ export default function TicketDetail() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
   const isClient = userProfile?.role === "CLIENT";
+  const canPerformActions =
+    userProfile?.role === "ADMIN" ||
+    userProfile?.role === "STAFF" ||
+    userProfile?.role === "SUPER_ADMIN";
 
   const queryClient = useQueryClient();
   const { data: ticket, isLoading } = useTicket(ticketId ?? "");
@@ -161,7 +165,7 @@ export default function TicketDetail() {
   };
 
   const generateToken = async (type: "ON_SITE" | "RESOLUTION") => {
-    if (!ticket || !currentAssignment?.fe_id) return;
+    if (isClient || !ticket || !currentAssignment?.fe_id) return;
 
     const apiBase = import.meta.env.VITE_CRM_API_URL ?? "http://localhost:3000";
 
@@ -251,6 +255,7 @@ export default function TicketDetail() {
   };
 
   const handleClose = async (verificationRemarks: string, resolutionCategory: string) => {
+    if (isClient) return;
     setClosePending(true);
     const apiBase =
       import.meta.env.VITE_CRM_API_URL ?? "http://localhost:3000";
@@ -328,37 +333,45 @@ export default function TicketDetail() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {(ticket.status === "OPEN" || ticket.status === "FE_ATTEMPT_FAILED") && (
-              <Button onClick={() => setAssignModalOpen(true)}>
-                <User className="mr-2 h-4 w-4" />
-                Assign Field Executive
-              </Button>
-            )}
-            {ticket.status === "NEEDS_REVIEW" && (
-              <Button onClick={handleApprove}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Approve & Open
-              </Button>
-            )}
+          {canPerformActions && (
+            <div className="flex flex-wrap items-center gap-2">
+              {(ticket.status === "OPEN" || ticket.status === "FE_ATTEMPT_FAILED") && (
+                <Button onClick={() => setAssignModalOpen(true)}>
+                  <User className="mr-2 h-4 w-4" />
+                  Assign Field Executive
+                </Button>
+              )}
+              {ticket.status === "NEEDS_REVIEW" && (
+                <Button onClick={handleApprove}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Approve & Open
+                </Button>
+              )}
 
-            {isPendingVerification && (
-              <Button
-                onClick={() => setCloseDialogOpen(true)}
-                className="bg-green-600 hover:bg-green-700"
-                disabled={closePending}
-              >
-                {closePending ? "Closing…" : "Verify & Close"}
-              </Button>
-            )}
+              {isPendingVerification && (
+                <Button
+                  onClick={() => setCloseDialogOpen(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={closePending}
+                >
+                  {closePending ? "Closing…" : "Verify & Close"}
+                </Button>
+              )}
 
-            {isResolved && (
-              <Badge className="bg-green-100 text-green-800">
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Resolved
-              </Badge>
-            )}
-          </div>
+              {isResolved && (
+                <Badge className="bg-green-100 text-green-800">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Resolved
+                </Badge>
+              )}
+            </div>
+          )}
+          {isResolved && !canPerformActions && (
+            <Badge className="bg-green-100 text-green-800">
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Resolved
+            </Badge>
+          )}
         </div>
 
         {/* MAIN GRID */}
@@ -575,36 +588,40 @@ export default function TicketDetail() {
                 <span className="text-sm text-muted-foreground">
                   {ticket.priority === true ? "Marked as priority" : "Normal"}
                 </span>
-                <Switch
-                  checked={ticket.priority === true}
-                  onCheckedChange={(checked) => {
-                    updateTicket.mutate(
-                      { ticketId: ticket.id, updates: { priority: checked } },
-                      {
-                        onError: (err) =>
-                          toast({
-                            title: "Failed to update priority",
-                            description: err.message,
-                            variant: "destructive",
-                          }),
-                      }
-                    );
-                  }}
-                  disabled={updateTicket.isPending}
-                  aria-label="Toggle priority"
-                />
+                {canPerformActions && (
+                  <Switch
+                    checked={ticket.priority === true}
+                    onCheckedChange={(checked) => {
+                      updateTicket.mutate(
+                        { ticketId: ticket.id, updates: { priority: checked } },
+                        {
+                          onError: (err) =>
+                            toast({
+                              title: "Failed to update priority",
+                              description: err.message,
+                              variant: "destructive",
+                            }),
+                        }
+                      );
+                    }}
+                    disabled={updateTicket.isPending}
+                    aria-label="Toggle priority"
+                  />
+                )}
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Parsing Confidence</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ConfidenceScore score={getDisplayConfidenceScore(ticket)} size="lg" />
-              </CardContent>
-            </Card>
+            {canPerformActions && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Parsing Confidence</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ConfidenceScore score={getDisplayConfidenceScore(ticket)} size="lg" />
+                </CardContent>
+              </Card>
+            )}
 
-            {ticket.status === "ON_SITE" && (
+            {canPerformActions && ticket.status === "ON_SITE" && (
               <Button onClick={() => generateToken("RESOLUTION")} className="w-full">
                 Generate Resolution Token
               </Button>
@@ -641,12 +658,15 @@ export default function TicketDetail() {
       )}
       
 
-      <FEAssignmentModal
-        ticket={ticket}
-        open={assignModalOpen}
-        onOpenChange={setAssignModalOpen}
-      />
+      {canPerformActions && (
+        <FEAssignmentModal
+          ticket={ticket}
+          open={assignModalOpen}
+          onOpenChange={setAssignModalOpen}
+        />
+      )}
 
+      {canPerformActions && (
       <CloseTicketDialog
         ticket={ticket}
         open={closeDialogOpen}
@@ -654,6 +674,7 @@ export default function TicketDetail() {
         onConfirm={handleClose}
         isPending={closePending}
       />
+      )}
     </PageContainer>
   );
   return isClient ? detailContent : <AppLayoutNew>{detailContent}</AppLayoutNew>;

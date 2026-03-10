@@ -128,6 +128,7 @@ export function useTicketAssignments(ticketId: string) {
 ===================================================== */
 export function useUpdateTicket() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: async ({
@@ -137,6 +138,9 @@ export function useUpdateTicket() {
       ticketId: string;
       updates: Partial<Ticket>;
     }) => {
+      if (userProfile?.role === "CLIENT") {
+        throw new Error("Not allowed for client");
+      }
       const { data, error } = await supabase
         .from("tickets")
         .update({
@@ -163,6 +167,7 @@ export function useUpdateTicket() {
 ===================================================== */
 export function useUpdateTicketStatus() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: async ({
@@ -172,6 +177,9 @@ export function useUpdateTicketStatus() {
       ticketId: string;
       status: TicketStatus;
     }) => {
+      if (userProfile?.role === "CLIENT") {
+        throw new Error("Not allowed for client");
+      }
       const { data, error } = await supabase
         .from("tickets")
         .update({
@@ -206,6 +214,7 @@ export function useUpdateTicketStatus() {
 ===================================================== */
 export function useAssignTicket() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAuth();
   const apiBase = import.meta.env.VITE_CRM_API_URL ?? "http://localhost:3000";
 
   return useMutation({
@@ -216,6 +225,9 @@ export function useAssignTicket() {
       ticketId: string;
       feId: string;
     }) => {
+      if (userProfile?.role === "CLIENT") {
+        throw new Error("Not allowed for client");
+      }
       let res: Response;
       try {
         res = await fetch(`${apiBase}/tickets/${ticketId}/assign`, {
