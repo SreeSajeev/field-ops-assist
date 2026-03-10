@@ -96,6 +96,7 @@ export default function Users() {
   const [assignOrgTarget, setAssignOrgTarget] = useState<User | null>(null);
   const [assignOrgId, setAssignOrgId] = useState('');
   const [assignOrgSubmitting, setAssignOrgSubmitting] = useState(false);
+  const [approvalPendingId, setApprovalPendingId] = useState<string | null>(null);
 
   const isSuperAdmin = userProfile?.role === 'SUPER_ADMIN';
   const isTenantAdmin = userProfile?.role === 'ADMIN';
@@ -117,6 +118,42 @@ export default function Users() {
       toast({ title: 'Failed to assign', description: err instanceof Error ? err.message : 'Error', variant: 'destructive' });
     } finally {
       setAssignOrgSubmitting(false);
+    }
+  };
+
+  const handleApproveUser = async (userId: string) => {
+    setApprovalPendingId(userId);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ approval_status: 'approved', is_active: true, active: true })
+        .eq('id', userId);
+      if (error) throw error;
+      toast({ title: 'User approved', description: 'They can now sign in.' });
+      refetch();
+      refetchPending();
+    } catch (err) {
+      toast({ title: 'Failed to approve', description: err instanceof Error ? err.message : 'Error', variant: 'destructive' });
+    } finally {
+      setApprovalPendingId(null);
+    }
+  };
+
+  const handleRejectUser = async (userId: string) => {
+    setApprovalPendingId(userId);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ approval_status: 'rejected' })
+        .eq('id', userId);
+      if (error) throw error;
+      toast({ title: 'Request rejected', description: 'The user cannot sign in.' });
+      refetch();
+      refetchPending();
+    } catch (err) {
+      toast({ title: 'Failed to reject', description: err instanceof Error ? err.message : 'Error', variant: 'destructive' });
+    } finally {
+      setApprovalPendingId(null);
     }
   };
 
@@ -175,6 +212,21 @@ export default function Users() {
       if (error) throw error;
       return data as User[];
     },
+  });
+
+  const { data: pendingUsers = [], refetch: refetchPending } = useQuery({
+    queryKey: ['users-pending', organisationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('approval_status', 'pending')
+        .eq('organisation_id', organisationId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as User[];
+    },
+    enabled: isTenantAdmin && !!organisationId,
   });
 
   const isActive = (u: User) => u.is_active !== false && u.active !== false;
@@ -289,6 +341,71 @@ export default function Users() {
             )}
           </AlertDescription>
         </Alert>
+
+        {/* Pending User Requests — Organisation admins only */}
+        {isTenantAdmin && organisationId && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Pending User Requests
+              </CardTitle>
+              <CardDescription>
+                Users who signed up and are waiting for your approval to access the platform.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {pendingUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No pending requests.</p>
+              ) : (
+                <div className="rounded-lg border bg-muted/20 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30">
+                        <TableHead className="font-semibold">Name</TableHead>
+                        <TableHead className="font-semibold">Email</TableHead>
+                        <TableHead className="font-semibold">Role</TableHead>
+                        <TableHead className="font-semibold text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingUsers.map((u) => (
+                        <TableRow key={u.id}>
+                          <TableCell className="font-medium">{u.name}</TableCell>
+                          <TableCell>{u.email}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className={cn(ROLE_BADGES[u.role]?.className)}>
+                              {ROLE_BADGES[u.role]?.label ?? u.role}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleApproveUser(u.id)}
+                                disabled={approvalPendingId === u.id}
+                              >
+                                {approvalPendingId === u.id ? '…' : 'Approve'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleRejectUser(u.id)}
+                                disabled={approvalPendingId === u.id}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Summary Stats — hidden for Super Admin (they see org-grouped view) */}
         {!isSuperAdmin && (

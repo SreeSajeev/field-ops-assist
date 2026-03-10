@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,16 +12,58 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Link } from 'react-router-dom';
-import { Truck, Mail, ArrowRight, CheckCircle } from 'lucide-react';
+import { Truck, Mail, ArrowRight, CheckCircle, UserPlus, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
+type Tab = 'signin' | 'signup';
+
 /**
- * Login only — no open signup. Users are created by Super Admin or Organisation Admin.
+ * Login and public signup. Signup creates a pending account; admin must approve before login.
  */
 export function LoginForm() {
-  const { signIn } = useAuth();
+  const { signIn, signUpPublic } = useAuth();
+  const [tab, setTab] = useState<Tab>('signin');
   const [loading, setLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [signupRole, setSignupRole] = useState<'STAFF' | 'FIELD_EXECUTIVE'>('STAFF');
+  const [signupOrgId, setSignupOrgId] = useState('');
+  const [statusMessage, setStatusMessage] = useState<{ type: 'pending' | 'rejected' | 'inactive'; message: string } | null>(null);
+
+  const { data: organisations = [] } = useQuery({
+    queryKey: ['organisations-login'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organisations')
+        .select('id, name')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+
+  useEffect(() => {
+    if (typeof sessionStorage === 'undefined') return;
+    const approval = sessionStorage.getItem('auth_approval_status');
+    const deactivated = sessionStorage.getItem('auth_deactivated');
+    sessionStorage.removeItem('auth_approval_status');
+    sessionStorage.removeItem('auth_deactivated');
+    if (approval === 'pending') {
+      setStatusMessage({ type: 'pending', message: 'Your account is awaiting approval from your organisation administrator.' });
+    } else if (approval === 'rejected') {
+      setStatusMessage({ type: 'rejected', message: 'Your account request was rejected. Contact your organisation administrator if you believe this is an error.' });
+    } else if (deactivated === '1') {
+      setStatusMessage({ type: 'inactive', message: 'Your account has been deactivated. Contact your organisation administrator to reactivate.' });
+    }
+  }, []);
 
   /* =========================
      HANDLERS
@@ -28,23 +72,74 @@ export function LoginForm() {
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-
+    setStatusMessage(null);
     const formData = new FormData(e.currentTarget);
     const email = (formData.get('email') as string)?.trim();
     const password = formData.get('password') as string;
-
     const { error } = await signIn(email ?? '', password);
-
     if (error) {
-      toast({
-        title: 'Sign in failed',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Sign in failed', description: error.message, variant: 'destructive' });
     }
-
     setLoading(false);
   };
+
+  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    const name = (formData.get('signup-name') as string)?.trim();
+    const email = (formData.get('signup-email') as string)?.trim();
+    const password = formData.get('signup-password') as string;
+    if (!name || !email || !password || !signupOrgId) {
+      toast({ title: 'Please fill all fields including organisation', variant: 'destructive' });
+      setLoading(false);
+      return;
+    }
+    const { error } = await signUpPublic(name, email, password, signupRole, signupOrgId);
+    if (error) {
+      toast({ title: 'Sign up failed', description: error.message, variant: 'destructive' });
+      setLoading(false);
+      return;
+    }
+    setSignupSuccess(true);
+    setLoading(false);
+  };
+
+  if (signupSuccess) {
+    return (
+      <div className="grid min-h-screen w-full lg:grid-cols-2">
+        <div className="relative hidden min-h-screen flex-col justify-between overflow-hidden bg-gradient-to-br from-[#3b124d] via-[#4a1659] to-[#5a1a6d] p-12 text-white lg:flex">
+          <div className="pointer-events-none absolute inset-0 opacity-40" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.06) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.06) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
+          <div className="relative z-10 flex items-center gap-4">
+            <img src="/sahaya-logo.png" alt="Sahaya Logo" className="h-12 w-auto" />
+            <div>
+              <h1 className="text-2xl font-bold">Sahaya</h1>
+              <p className="text-sm tracking-wide text-orange-300">Service Operations Platform</p>
+            </div>
+          </div>
+          <div className="relative z-10" />
+        </div>
+        <div className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100/80 p-6">
+          <Card className="relative z-10 w-full max-w-md">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <CardTitle className="text-xl">Account request submitted</CardTitle>
+              <CardDescription className="text-base">
+                Your organisation administrator must approve your account before you can access the platform.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" className="w-full" asChild>
+                <Link to="/login">Back to sign in</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-2">
@@ -118,51 +213,103 @@ export function LoginForm() {
       <div className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100/80 p-6">
         <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: "radial-gradient(hsl(285 45% 45% / 0.04) 1.5px, transparent 1.5px)", backgroundSize: "28px 28px" }} />
         <Card className="relative z-10 w-full max-w-md border border-gray-200/80 bg-white/95 backdrop-blur-sm shadow-[0_4px_24px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.06)] transition-shadow duration-300">
-          <CardHeader className="text-center">
+          <CardHeader className="text-center pb-2">
             <div className="lg:hidden mb-4 flex flex-col items-center">
-              <img
-                src="/sahaya-logo.png"
-                alt="Sahaya"
-                className="h-12"
-              />
+              <img src="/sahaya-logo.png" alt="Sahaya" className="h-12" />
             </div>
-            <CardTitle className="text-2xl">
-              Welcome to Sahaya
-            </CardTitle>
+            <CardTitle className="text-2xl">Welcome to Sahaya</CardTitle>
             <CardDescription>
-              Sign in with your email and password
+              {tab === 'signin' ? 'Sign in with your email and password' : 'Create an account (pending admin approval)'}
             </CardDescription>
+            <div className="flex gap-2 mt-4 border-b">
+              <button
+                type="button"
+                onClick={() => { setTab('signin'); setStatusMessage(null); }}
+                className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${tab === 'signin' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTab('signup'); setStatusMessage(null); }}
+                className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${tab === 'signup' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+              >
+                Sign Up
+              </button>
+            </div>
           </CardHeader>
 
-          <CardContent>
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div>
-                <Label htmlFor="signin-email">Email</Label>
-                <Input id="signin-email" name="email" type="email" autoComplete="email" required />
-              </div>
-              <div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Link
-                    to="/forgot-password"
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
+          <CardContent className="space-y-4">
+            {statusMessage && (
+              <Alert variant={statusMessage.type === 'rejected' || statusMessage.type === 'inactive' ? 'destructive' : 'default'} className="bg-amber-50 border-amber-200">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{statusMessage.message}</AlertDescription>
+              </Alert>
+            )}
+
+            {tab === 'signin' ? (
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div>
+                  <Label htmlFor="signin-email">Email</Label>
+                  <Input id="signin-email" name="email" type="email" autoComplete="email" required />
                 </div>
-                <Input
-                  id="signin-password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Signing in…' : 'Sign In'}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </form>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="signin-password">Password</Label>
+                    <Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link>
+                  </div>
+                  <Input id="signin-password" name="password" type="password" autoComplete="current-password" required />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Signing in…' : 'Sign In'}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div>
+                  <Label htmlFor="signup-name">Full Name</Label>
+                  <Input id="signup-name" name="signup-name" type="text" autoComplete="name" required />
+                </div>
+                <div>
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input id="signup-email" name="signup-email" type="email" autoComplete="email" required />
+                </div>
+                <div>
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input id="signup-password" name="signup-password" type="password" autoComplete="new-password" required minLength={6} />
+                </div>
+                <div>
+                  <Label>Role</Label>
+                  <Select value={signupRole} onValueChange={(v) => setSignupRole(v as 'STAFF' | 'FIELD_EXECUTIVE')}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="STAFF">Service Manager</SelectItem>
+                      <SelectItem value="FIELD_EXECUTIVE">Field Executive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Organisation</Label>
+                  <Select value={signupOrgId} onValueChange={setSignupOrgId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select organisation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {organisations.map((org) => (
+                        <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" className="w-full" disabled={loading || organisations.length === 0 || !signupOrgId}>
+                  {loading ? 'Submitting…' : 'Submit request'}
+                  <UserPlus className="ml-2 h-4 w-4" />
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
         <div className="relative z-10 flex flex-col items-center mt-8">

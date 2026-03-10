@@ -169,6 +169,8 @@ export interface User {
   is_active?: boolean;
   created_at: string;
   organisation_id?: string | null;
+  /** Organisation-based signup: 'pending' | 'approved' | 'rejected'. Only approved can log in. */
+  approval_status?: 'pending' | 'approved' | 'rejected';
 }
 
 // Organisation from database

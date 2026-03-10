@@ -424,6 +424,14 @@ interface AuthContextType {
     role: UserRole,
     organisationId?: string | null
   ) => Promise<{ data?: { user: { id: string }; userId?: string }; error: Error | null }>;
+  /** Public signup (Service Manager / Field Executive). Account is created as pending until admin approves. */
+  signUpPublic: (
+    name: string,
+    email: string,
+    password: string,
+    role: "STAFF" | "FIELD_EXECUTIVE",
+    organisationId: string
+  ) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isFieldExecutive: boolean;
   isServiceStaff: boolean;
@@ -463,14 +471,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resolveUserProfile = async (
     authUser: User
-  ): Promise<{ profile: UserProfile | null; deactivated: boolean }> => {
+  ): Promise<{ profile: UserProfile | null; deactivated: boolean; approvalStatus?: "pending" | "rejected" }> => {
     const { data, error } = await supabase
       .from("users")
-      .select("id, name, email, role, active, is_active, client_slug, organisation_id")
+      .select("id, name, email, role, active, is_active, client_slug, organisation_id, approval_status")
       .eq("auth_id", authUser.id)
       .maybeSingle();
 
     if (error || !data) return { profile: null, deactivated: false };
+
+    // Only block when explicitly pending or rejected. Treat null/undefined as approved (backward compatibility if migration not run).
+    const approvalStatus = (data as { approval_status?: string | null }).approval_status;
+    if (approvalStatus === "pending" || approvalStatus === "rejected") {
+      return { profile: null, deactivated: false, approvalStatus };
+    }
 
     if (data.is_active === false) {
       return { profile: null, deactivated: true };
@@ -516,6 +530,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await supabase.auth.signOut();
           if (typeof sessionStorage !== "undefined") {
             sessionStorage.setItem("auth_deactivated", "1");
+          }
+          if (!cancelled) {
+            setUser(null);
+            setSession(null);
+            setUserProfile(null);
+          }
+          if (!cancelled) setLoading(false);
+          return;
+        }
+
+        if (result.approvalStatus) {
+          await supabase.auth.signOut();
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.setItem("auth_approval_status", result.approvalStatus);
           }
           if (!cancelled) {
             setUser(null);
@@ -618,6 +646,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role,
           active: true,
           is_active: true,
+          approval_status: "approved",
         };
         if (organisationId && role !== "SUPER_ADMIN") payload.organisation_id = organisationId;
         const { data: inserted, error: insertErr } = await (supabase as any)
@@ -637,6 +666,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: new Error(formatZodError(err)) };
       }
       return { error: err as Error };
+    }
+  };
+
+  /** Public signup: creates auth user + users row with approval_status 'pending'. Only STAFF and FIELD_EXECUTIVE. */
+  const signUpPublic = async (
+    name: string,
+    email: string,
+    password: string,
+    role: "STAFF" | "FIELD_EXECUTIVE",
+    organisationId: string
+  ): Promise<{ error: Error | null }> => {
+    try {
+      const trimmedEmail = email.trim();
+      const trimmedName = (name || "").trim() || trimmedEmail;
+      if (!organisationId || !trimmedEmail || !password) {
+        return { error: new Error("Name, email, password and organisation are required.") };
+      }
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password,
+        options: { data: { name: trimmedName, role, organisation_id: organisationId } },
+      });
+      if (authError) return { error: authError as Error };
+      if (!authData?.user) return { error: new Error("Account could not be created.") };
+
+      const { error: insertError } = await (supabase as any)
+        .from("users")
+        .insert({
+          auth_id: authData.user.id,
+          email: trimmedEmail,
+          name: trimmedName,
+          role,
+          organisation_id: organisationId,
+          approval_status: "pending",
+          is_active: false,
+          active: false,
+        });
+      if (insertError) {
+        if (insertError.code === "23505") {
+          return { error: new Error("An account with this email already exists.") };
+        }
+        return { error: insertError as Error };
+      }
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error("Signup failed") };
     }
   };
 
@@ -671,6 +746,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signIn,
         signUp,
+        signUpPublic,
         signOut,
         isFieldExecutive,
         isServiceStaff,
