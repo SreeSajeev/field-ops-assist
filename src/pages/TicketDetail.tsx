@@ -51,6 +51,7 @@ export default function TicketDetail() {
   const { ticketId } = useParams<{ ticketId: string }>();
   const navigate = useNavigate();
   const { userProfile } = useAuth();
+  const isClient = userProfile?.role === "CLIENT";
 
   const queryClient = useQueryClient();
   const { data: ticket, isLoading } = useTicket(ticketId ?? "");
@@ -94,30 +95,28 @@ export default function TicketDetail() {
   }, [ticket?.id, canCompleteReview, ticket?.category, ticket?.issue_type, ticket?.vehicle_number, ticket?.location, ticket?.priority]);
 
   if (isLoading) {
-    return (
-      <AppLayoutNew>
-        <PageContainer>
-          <div className="flex h-64 items-center justify-center text-muted-foreground">
-            Loading ticket…
-          </div>
-        </PageContainer>
-      </AppLayoutNew>
+    const content = (
+      <PageContainer>
+        <div className="flex h-64 items-center justify-center text-muted-foreground">
+          Loading ticket…
+        </div>
+      </PageContainer>
     );
+    return isClient ? content : <AppLayoutNew>{content}</AppLayoutNew>;
   }
 
   if (!ticket) {
-    return (
-      <AppLayoutNew>
-        <PageContainer>
-          <div className="space-y-2 text-center">
-            <h2 className="text-xl font-semibold">Ticket not found</h2>
-            <Link to="/app/tickets" className="text-primary hover:underline">
-              Back to tickets
-            </Link>
-          </div>
-        </PageContainer>
-      </AppLayoutNew>
+    const content = (
+      <PageContainer>
+        <div className="space-y-2 text-center">
+          <h2 className="text-xl font-semibold">Ticket not found</h2>
+          <Link to={isClient ? "/app/client" : "/app/tickets"} className="text-primary hover:underline">
+            Back to {isClient ? "dashboard" : "tickets"}
+          </Link>
+        </div>
+      </PageContainer>
     );
+    return isClient ? content : <AppLayoutNew>{content}</AppLayoutNew>;
   }
 
   if (userProfile?.role === "CLIENT" && ticket.client_slug !== userProfile.client_slug) {
@@ -299,14 +298,14 @@ export default function TicketDetail() {
 
   /* ================= UI ================= */
 
-  return (
-    <AppLayoutNew>
-      <PageContainer>
+  const backTo = isClient ? "/app/client" : "/app";
+  const detailContent = (
+    <PageContainer>
       <div className="space-y-6">
         {/* HEADER */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/app")} aria-label="Back to dashboard">
+            <Button variant="ghost" size="icon" onClick={() => navigate(backTo)} aria-label="Back to dashboard">
               <ArrowLeft className="h-5 w-5" />
             </Button>
 
@@ -656,8 +655,8 @@ export default function TicketDetail() {
         isPending={closePending}
       />
     </PageContainer>
-    </AppLayoutNew>
   );
+  return isClient ? detailContent : <AppLayoutNew>{detailContent}</AppLayoutNew>;
 }
 
 /* ===== Helpers ===== */

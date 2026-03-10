@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ClientHeader, DashboardFooter } from "@/pages/ClientDashboard";
+import { DashboardFooter } from "@/pages/ClientDashboard";
 import { CreateTicketModal } from "@/components/tickets/CreateTicketModal";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -24,10 +24,9 @@ export default function ClientSupport() {
     : null;
 
   return (
-    <div className="min-h-screen" style={{ background: "hsl(30 5% 98%)" }}>
-      <ClientHeader />
-      <main className="pt-14">
-        <div className="w-full md:mx-auto md:max-w-3xl px-3 md:px-6 py-8">
+    <>
+    <section className="py-6 md:py-8">
+      <div className="w-full md:mx-auto md:max-w-3xl px-3 md:px-6">
           <div className="mb-8 flex items-center gap-3">
             <div
               className="flex h-11 w-11 items-center justify-center rounded-xl shrink-0 text-white"
@@ -83,8 +82,8 @@ export default function ClientSupport() {
               </Button>
             </CardContent>
           </Card>
-        </div>
-      </main>
+      </div>
+    </section>
       <DashboardFooter />
 
       <CreateTicketModal
@@ -92,6 +91,6 @@ export default function ClientSupport() {
         onOpenChange={setCreateModalOpen}
         clientContext={clientContext}
       />
-    </div>
+    </>
   );
 }

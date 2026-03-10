@@ -105,6 +105,7 @@ import {
   RequireSuperAdmin,
   RequireClient,
 } from "@/components/auth/AuthGuards";
+import { ClientLayout } from "@/components/layout/ClientLayout";
 
 // Pages
 import SahayaLanding from "@/pages/SahayaLanding";
@@ -212,42 +213,28 @@ export default function App() {
               </Route>
 
               {/* ========================= */}
-              {/* 📋 CLIENT */}
+              {/* 📋 CLIENT — top nav only, no operations sidebar */}
               {/* ========================= */}
-              <Route
-                path="/app/client/reports"
-                element={
-                  <RequireClient>
-                    <ClientReports />
-                  </RequireClient>
-                }
-              />
-              <Route
-                path="/app/client/support"
-                element={
-                  <RequireClient>
-                    <ClientSupport />
-                  </RequireClient>
-                }
-              />
               <Route
                 path="/app/client"
                 element={
                   <RequireClient>
-                    <ClientDashboard />
+                    <ClientLayout />
                   </RequireClient>
                 }
-              />
-              <Route
-                path="/app/client/tickets/:ticketId"
-                element={
-                  <RequireClient>
+              >
+                <Route index element={<ClientDashboard />} />
+                <Route path="reports" element={<ClientReports />} />
+                <Route path="support" element={<ClientSupport />} />
+                <Route
+                  path="tickets/:ticketId"
+                  element={
                     <Suspense fallback={<PageLoader />}>
                       <TicketDetail />
                     </Suspense>
-                  </RequireClient>
-                }
-              />
+                  }
+                />
+              </Route>
 
               {/* ========================= */}
               {/* 🧑‍💼 STAFF / ADMIN */}

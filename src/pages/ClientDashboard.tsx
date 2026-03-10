@@ -599,33 +599,45 @@ export default function ClientDashboard() {
   const reportOrgSlug = userProfile?.client_slug ?? "client";
 
   return (
-    <div className="min-h-screen" style={{ background: "hsl(30 5% 98%)" }}>
-      <ClientHeader />
-      <main className="pt-14">
-        <WelcomeSection clientDisplayName={clientDisplayName} stats={stats} loading={statsLoading} />
-        <GradientDivider />
-        <section className="pb-8">
-          <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
-            <h2 className="mb-4 text-base font-bold text-foreground tracking-tight">Service Overview</h2>
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg, hsl(285 15% 97%) 0%, hsl(30 5% 98%) 100%)", border: "1px solid hsl(270 15% 88% / 0.5)", boxShadow: "0 4px 24px hsl(285 25% 10% / 0.05), inset 0 1px 0 hsl(0 0% 100% / 0.7)" }}>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <MetricCard label="Active Tickets" value={statsLoading ? "—" : stats?.openTickets ?? 0} desc="Currently in progress" icon={Ticket} variant="primary" />
-                <MetricCard label="Resolved" value={statsLoading ? "—" : (stats?.totalTickets ?? 0) - (stats?.openTickets ?? 0)} desc="Successfully completed" icon={CheckCircle2} variant="default" />
-                <MetricCard label="SLA Compliance" value={(stats?.totalTickets ?? 0) > 0 ? ((stats?.slaBreaches ?? 0) === 0 ? "On track" : "Alert") : "—"} desc="Phase-based tracking" icon={Clock} variant="accent" />
-                <MetricCard label="Total Requests" value={statsLoading ? "—" : stats?.totalTickets ?? 0} desc="All time" icon={BarChart3} variant="default" />
-              </div>
+    <>
+      {/* Same gradient section and card styling as staff Dashboard */}
+      <section className="relative overflow-hidden py-6 md:py-8">
+        <div className="absolute inset-0 pointer-events-none hidden md:block" style={{ background: "linear-gradient(180deg, hsl(285 30% 96%) 0%, hsl(30 5% 98%) 100%)" }} />
+        <div className="absolute inset-0 pointer-events-none hidden md:block" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.025) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.025) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
+        <div className="absolute pointer-events-none hidden md:block" style={{ top: "-20%", right: "10%", width: 400, height: 300, background: "radial-gradient(ellipse, hsl(32 95% 52% / 0.06) 0%, transparent 70%)" }} />
+        <div className="relative z-10 w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
+          <WelcomeSection clientDisplayName={clientDisplayName} stats={stats} loading={statsLoading} />
+        </div>
+      </section>
+      <GradientDivider />
+      <section className="pb-6 md:pb-8">
+        <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
+          <h2 className="mb-4 text-lg font-semibold text-foreground">Service Overview</h2>
+          <div
+            className="rounded-xl p-6 md:rounded-2xl md:p-6"
+            style={{
+              background: "linear-gradient(135deg, hsl(285 15% 97%) 0%, hsl(30 5% 98%) 100%)",
+              border: "1px solid hsl(270 15% 88% / 0.5)",
+              boxShadow: "0 1px 3px hsl(285 25% 10% / 0.05), inset 0 1px 0 hsl(0 0% 100% / 0.7)",
+            }}
+          >
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <MetricCard label="Active Tickets" value={statsLoading ? "—" : stats?.openTickets ?? 0} desc="Currently in progress" icon={Ticket} variant="primary" />
+              <MetricCard label="Resolved" value={statsLoading ? "—" : (stats?.totalTickets ?? 0) - (stats?.openTickets ?? 0)} desc="Successfully completed" icon={CheckCircle2} variant="default" />
+              <MetricCard label="SLA Compliance" value={(stats?.totalTickets ?? 0) > 0 ? ((stats?.slaBreaches ?? 0) === 0 ? "On track" : "Alert") : "—"} desc="Phase-based tracking" icon={Clock} variant="accent" />
+              <MetricCard label="Total Requests" value={statsLoading ? "—" : stats?.totalTickets ?? 0} desc="All time" icon={BarChart3} variant="default" />
             </div>
           </div>
-        </section>
-        <GradientDivider />
-        <ClientTicketsTable tickets={tickets} loading={ticketsLoading} onSelect={setSelectedTicket} />
-        <GradientDivider />
-        <ReportsSection tickets={tickets} stats={stats ?? null} slaData={slaData} orgNameOrSlug={reportOrgSlug} />
-        <GradientDivider />
-        <SupportSection />
-      </main>
+        </div>
+      </section>
+      <GradientDivider />
+      <ClientTicketsTable tickets={tickets} loading={ticketsLoading} onSelect={setSelectedTicket} />
+      <GradientDivider />
+      <ReportsSection tickets={tickets} stats={stats ?? null} slaData={slaData} orgNameOrSlug={reportOrgSlug} />
+      <GradientDivider />
+      <SupportSection />
       <DashboardFooter />
       <TicketDetailDrawer ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
-    </div>
+    </>
   );
 }
