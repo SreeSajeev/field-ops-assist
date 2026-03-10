@@ -111,6 +111,9 @@ import { ClientLayout } from "@/components/layout/ClientLayout";
 import SahayaLanding from "@/pages/SahayaLanding";
 import EnquiryPage from "@/pages/EnquiryPage";
 import Index from "@/pages/Index";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
+import ChangePassword from "@/pages/ChangePassword";
 import Dashboard from "@/pages/Dashboard";
 import ClientDashboard from "@/pages/ClientDashboard";
 import ClientReports from "@/pages/ClientReports";
@@ -179,6 +182,11 @@ export default function App() {
 
               {/* Login + role-based redirect */}
               <Route path="/login" element={<Index />} />
+
+              {/* Password management (public except change = logged-in) */}
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/change-password" element={<ChangePassword />} />
 
               {/* Public enquiry / request demo */}
               <Route path="/enquiry" element={<EnquiryPage />} />

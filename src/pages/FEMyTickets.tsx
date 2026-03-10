@@ -1,5 +1,5 @@
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { formatIST } from '@/lib/dateUtils';
 import { APP_NAME } from '@/lib/constants';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,7 +22,8 @@ import {
   Shield,
   PlayCircle,
   Loader2,
-  Ticket as TicketIcon
+  Ticket as TicketIcon,
+  KeyRound
 } from 'lucide-react';
 
 export default function FEMyTickets() {
@@ -214,6 +215,11 @@ const { data: feTokens } = useQuery({
                 Field Executive
               </Badge>
             </div>
+            <Button variant="ghost" size="icon" asChild className="text-white/70 hover:text-white hover:bg-white/10">
+              <Link to="/change-password" title="Change password">
+                <KeyRound className="h-5 w-5" />
+              </Link>
+            </Button>
             <Button variant="ghost" size="icon" onClick={signOut} className="text-white/70 hover:text-white hover:bg-white/10">
               <LogOut className="h-5 w-5" />
             </Button>

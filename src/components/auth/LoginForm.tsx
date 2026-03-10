@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
 import { Truck, Mail, ArrowRight, CheckCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -140,7 +141,15 @@ export function LoginForm() {
                 <Input id="signin-email" name="email" type="email" autoComplete="email" required />
               </div>
               <div>
-                <Label htmlFor="signin-password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="signin-password">Password</Label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <Input
                   id="signin-password"
                   name="password"

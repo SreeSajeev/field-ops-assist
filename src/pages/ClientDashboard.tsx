@@ -20,6 +20,7 @@ import {
   ImageIcon,
   Mail,
   LogOut,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
@@ -121,6 +122,13 @@ export const ClientHeader = () => {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <Link
+            to="/change-password"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground transition-all duration-200 hover:bg-muted/40 hover:text-foreground"
+          >
+            <KeyRound className="h-4 w-4" />
+            <span className="hidden sm:inline">Change password</span>
+          </Link>
           <button
             type="button"
             onClick={signOut}

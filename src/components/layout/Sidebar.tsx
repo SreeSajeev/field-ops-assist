@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Ticket,
@@ -16,6 +16,7 @@ import {
   Building2,
   Sliders,
   ListOrdered,
+  KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/constants';
@@ -223,6 +224,16 @@ export function Sidebar() {
           </div>
         </div>
 
+        <Link to="/change-password">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-sm text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <KeyRound className="mr-2 h-4 w-4" />
+            Change password
+          </Button>
+        </Link>
         <Button
           variant="ghost"
           size="sm"
