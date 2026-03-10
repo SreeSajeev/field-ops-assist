@@ -16,12 +16,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useOrganisationsTable, useCreateOrganisation } from "@/hooks/useOrganisationsTable";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Ticket, Users, Truck, UserCheck, ChevronRight, Plus } from "lucide-react";
+import { Building2, Ticket, Users, Truck, UserCheck, ChevronRight, Plus, UserPlus } from "lucide-react";
 import { Organisation } from "@/lib/types";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Organisations list — Super Admin only.
@@ -29,12 +30,19 @@ import { Organisation } from "@/lib/types";
  * Click → /app/tenant/:orgId
  */
 export default function Organisations() {
-  const { userProfile } = useAuth();
+  const { userProfile, signUp } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createSlug, setCreateSlug] = useState("");
-  const [createEmail, setCreateEmail] = useState("");
+
+  const [createAdminOpen, setCreateAdminOpen] = useState(false);
+  const [createAdminOrgId, setCreateAdminOrgId] = useState<string | null>(null);
+  const [createAdminName, setCreateAdminName] = useState("");
+  const [createAdminEmail, setCreateAdminEmail] = useState("");
+  const [createAdminPassword, setCreateAdminPassword] = useState("");
+  const [createAdminSubmitting, setCreateAdminSubmitting] = useState(false);
 
   const { data: organisations = [], isLoading: orgsLoading } = useOrganisationsTable();
   const createOrgMutation = useCreateOrganisation();
@@ -135,49 +143,62 @@ export default function Organisations() {
             {(organisations as Organisation[]).map((org) => {
               const s = statsLoading ? null : perOrgStats?.[org.id];
               return (
-                <Link
-                  key={org.id}
-                  to={`/app/tenant/${encodeURIComponent(org.id)}`}
-                  className="block"
-                >
-                  <Card className="h-full border-border/60 shadow-sm transition-shadow hover:shadow-md">
-                    <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                      <CardTitle className="text-base">{org.name}</CardTitle>
-                      <Badge variant={org.status === "active" ? "default" : "secondary"}>
-                        {org.status}
-                      </Badge>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Ticket className="h-4 w-4" />
-                        <span>{s?.totalTickets ?? "—"} tickets</span>
-                        {s != null && s.openTickets > 0 && (
-                          <span className="text-amber-600">({s.openTickets} open)</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Truck className="h-4 w-4" />
-                        <span>{s?.feCount ?? "—"} FEs</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Users className="h-4 w-4" />
-                        <span>{s?.userCount ?? "—"} users</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <UserCheck className="h-4 w-4" />
-                        <span>{s?.distinctClients ?? "—"} clients</span>
-                      </div>
-                      {s != null && s.slaBreached > 0 && (
-                        <p className="text-xs text-destructive font-medium">
-                          {s.slaBreached} SLA breached
-                        </p>
+                <Card key={org.id} className="h-full border-border/60 shadow-sm transition-shadow hover:shadow-md flex flex-col">
+                  <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                    <CardTitle className="text-base">{org.name}</CardTitle>
+                    <Badge variant={org.status === "active" ? "default" : "secondary"}>
+                      {org.status}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="space-y-2 flex-1 flex flex-col">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Ticket className="h-4 w-4" />
+                      <span>{s?.totalTickets ?? "—"} tickets</span>
+                      {s != null && s.openTickets > 0 && (
+                        <span className="text-amber-600">({s.openTickets} open)</span>
                       )}
-                      <div className="pt-2 flex items-center gap-1 text-primary text-sm font-medium">
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Truck className="h-4 w-4" />
+                      <span>{s?.feCount ?? "—"} FEs</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{s?.userCount ?? "—"} users</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <UserCheck className="h-4 w-4" />
+                      <span>{s?.distinctClients ?? "—"} clients</span>
+                    </div>
+                    {s != null && s.slaBreached > 0 && (
+                      <p className="text-xs text-destructive font-medium">
+                        {s.slaBreached} SLA breached
+                      </p>
+                    )}
+                    <div className="pt-2 flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCreateAdminOrgId(org.id);
+                          setCreateAdminOpen(true);
+                        }}
+                      >
+                        <UserPlus className="h-3.5 w-3.5 mr-1" />
+                        Create Admin
+                      </Button>
+                      <Link
+                        to={`/app/tenant/${encodeURIComponent(org.id)}`}
+                        className="inline-flex items-center gap-1 text-primary text-sm font-medium hover:underline"
+                      >
                         Tenant view <ChevronRight className="h-4 w-4" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
               );
             })}
           </div>
@@ -218,16 +239,6 @@ export default function Organisations() {
                   placeholder="acme-corp"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="org-email">Email (optional)</Label>
-                <Input
-                  id="org-email"
-                  type="email"
-                  value={createEmail}
-                  onChange={(e) => setCreateEmail(e.target.value)}
-                  placeholder="org@example.com"
-                />
-              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateOpen(false)}>
@@ -240,12 +251,11 @@ export default function Organisations() {
                   const slug = createSlug.trim().toLowerCase().replace(/\s+/g, "-");
                   if (!name || !slug) return;
                   try {
-                    await createOrgMutation.mutateAsync({ name, slug, email: createEmail.trim() || undefined });
-                    toast({ title: "Organisation created", description: `${name} is now available.` });
+                    await createOrgMutation.mutateAsync({ name, slug });
+                    toast({ title: "Organisation created", description: `${name} is now available. You can assign an admin next.` });
                     setCreateOpen(false);
                     setCreateName("");
                     setCreateSlug("");
-                    setCreateEmail("");
                   } catch (err) {
                     toast({
                       title: "Failed to create organisation",
@@ -256,6 +266,121 @@ export default function Organisations() {
                 }}
               >
                 {createOrgMutation.isPending ? "Creating…" : "Create"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Admin for organisation */}
+        <Dialog
+          open={createAdminOpen}
+          onOpenChange={(open) => {
+            setCreateAdminOpen(open);
+            if (!open) {
+              setCreateAdminOrgId(null);
+              setCreateAdminName("");
+              setCreateAdminEmail("");
+              setCreateAdminPassword("");
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Organisation Admin</DialogTitle>
+              <DialogDescription>
+                Create an admin user for this organisation. They will manage only this tenant (tickets, users, field executives).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="admin-name">Name</Label>
+                <Input
+                  id="admin-name"
+                  value={createAdminName}
+                  onChange={(e) => setCreateAdminName(e.target.value)}
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="admin-email">Email</Label>
+                <Input
+                  id="admin-email"
+                  type="email"
+                  value={createAdminEmail}
+                  onChange={(e) => setCreateAdminEmail(e.target.value)}
+                  placeholder="admin@example.com"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="admin-password">Password</Label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  value={createAdminPassword}
+                  onChange={(e) => setCreateAdminPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+              {createAdminOrgId && (
+                <p className="text-xs text-muted-foreground">
+                  Organisation: {(organisations as Organisation[]).find((o) => o.id === createAdminOrgId)?.name ?? createAdminOrgId}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateAdminOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={
+                  !createAdminName.trim() ||
+                  !createAdminEmail.trim() ||
+                  !createAdminPassword ||
+                  !createAdminOrgId ||
+                  createAdminSubmitting
+                }
+                onClick={async () => {
+                  if (!createAdminOrgId) return;
+                  setCreateAdminSubmitting(true);
+                  try {
+                    const { error } = await signUp(
+                      createAdminEmail.trim(),
+                      createAdminPassword,
+                      createAdminName.trim(),
+                      "ADMIN",
+                      createAdminOrgId
+                    );
+                    if (error) {
+                      toast({
+                        title: "Failed to create admin",
+                        description: error.message,
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    queryClient.invalidateQueries({ queryKey: ["users"] });
+                    queryClient.invalidateQueries({ queryKey: ["organisations-stats"] });
+                    toast({
+                      title: "Organisation Admin created",
+                      description: "They can sign in with the email and password.",
+                    });
+                    setCreateAdminOpen(false);
+                    setCreateAdminOrgId(null);
+                    setCreateAdminName("");
+                    setCreateAdminEmail("");
+                    setCreateAdminPassword("");
+                  } catch (err) {
+                    toast({
+                      title: "Failed to create admin",
+                      description: err instanceof Error ? err.message : "Something went wrong",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setCreateAdminSubmitting(false);
+                  }
+                }}
+              >
+                {createAdminSubmitting ? "Creating…" : "Create Admin"}
               </Button>
             </DialogFooter>
           </DialogContent>

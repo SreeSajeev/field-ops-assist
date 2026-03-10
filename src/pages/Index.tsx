@@ -158,14 +158,14 @@ export default function Index() {
   }
 
   /* =========================
-     PROFILE NOT READY (e.g. no organisation assigned)
+     PROFILE NOT READY or PENDING ORGANISATION
   ========================= */
 
   if (!userProfile) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4">
         <p className="max-w-sm text-center text-muted-foreground">
-          Your account is not assigned to an organisation. Contact your administrator to get access.
+          Your account is pending organisation assignment.
         </p>
         <Button variant="outline" onClick={() => signOut()}>
           Sign out
@@ -176,7 +176,16 @@ export default function Index() {
 
   /* =========================
      ROLE-BASED ROUTING
+     SUPER_ADMIN → super admin dashboard
+     ADMIN → organisation admin dashboard
+     STAFF → ticket dashboard
+     FIELD_EXECUTIVE → FE dashboard
+     CLIENT → client dashboard
   ========================= */
+
+  if (userProfile.role === "SUPER_ADMIN") {
+    return <Navigate to="/app/super-admin" replace />;
+  }
 
   if (userProfile.role === "CLIENT") {
     return <Navigate to="/app/client" replace />;
@@ -186,11 +195,7 @@ export default function Index() {
     return <Navigate to="/fe" replace />;
   }
 
-  if (
-    userProfile.role === "STAFF" ||
-    userProfile.role === "ADMIN" ||
-    userProfile.role === "SUPER_ADMIN"
-  ) {
+  if (userProfile.role === "ADMIN" || userProfile.role === "STAFF") {
     return <Navigate to="/app" replace />;
   }
 

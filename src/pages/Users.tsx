@@ -73,7 +73,8 @@ const ROLE_BADGES: Record<UserRole, { label: string; className: string }> = {
 
 const apiBase = () => import.meta.env.VITE_CRM_API_URL ?? 'http://localhost:3000';
 
-const TENANT_ADMIN_ROLES: UserRole[] = ['ADMIN', 'STAFF', 'FIELD_EXECUTIVE', 'CLIENT'];
+/** Roles an Organisation Admin can create (STAFF and FIELD_EXECUTIVE only). */
+const TENANT_ADMIN_ROLES: UserRole[] = ['STAFF', 'FIELD_EXECUTIVE'];
 const SUPER_ADMIN_ROLES: UserRole[] = ['ADMIN', 'STAFF', 'FIELD_EXECUTIVE', 'CLIENT', 'SUPER_ADMIN'];
 
 export default function Users() {
