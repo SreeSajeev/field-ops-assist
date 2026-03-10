@@ -37,7 +37,7 @@ export const SignUpSchema = z.object({
     .max(255, { message: 'Email must be less than 255 characters' }),
   password: passwordComplexity,
   name: safeDisplayName,
-  role: z.enum(['STAFF', 'FIELD_EXECUTIVE', 'ADMIN', 'SUPER_ADMIN']),
+  role: z.enum(['CLIENT', 'STAFF', 'FIELD_EXECUTIVE', 'ADMIN', 'SUPER_ADMIN']),
 });
 
 export type SignUpInput = z.infer<typeof SignUpSchema>;

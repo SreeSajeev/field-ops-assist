@@ -636,8 +636,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) return { error: error as Error | null };
 
-      // Always insert into public.users for ADMIN, STAFF, FIELD_EXECUTIVE so they appear in Users page
-      const insertRoles: UserRole[] = ["ADMIN", "STAFF", "FIELD_EXECUTIVE"];
+      // Insert into public.users for ADMIN, STAFF, FIELD_EXECUTIVE, CLIENT so they appear in Users page
+      const insertRoles: UserRole[] = ["ADMIN", "STAFF", "FIELD_EXECUTIVE", "CLIENT"];
       if (authData?.user && insertRoles.includes(role)) {
         const payload: Record<string, unknown> = {
           auth_id: authData.user.id,
