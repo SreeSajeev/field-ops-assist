@@ -22,7 +22,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Ticket, Users, Truck, UserCheck, ChevronRight, Plus, UserPlus } from "lucide-react";
 import { Organisation } from "@/lib/types";
-import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Organisations list — Super Admin only.

@@ -118,6 +118,7 @@ import Dashboard from "@/pages/Dashboard";
 import ClientDashboard from "@/pages/ClientDashboard";
 import ClientReports from "@/pages/ClientReports";
 import ClientSupport from "@/pages/ClientSupport";
+import ClientTicketDetail from "@/pages/ClientTicketDetail";
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
 import SuperAdminOrgView from "@/pages/SuperAdminOrgView";
 import PlatformOverview from "@/pages/PlatformOverview";
@@ -238,7 +239,7 @@ export default function App() {
                   path="tickets/:ticketId"
                   element={
                     <Suspense fallback={<PageLoader />}>
-                      <TicketDetail />
+                      <ClientTicketDetail />
                     </Suspense>
                   }
                 />

@@ -1,9 +1,20 @@
+/**
+ * Client Dashboard
+ *
+ * Current system (UI/routing only; no backend changes):
+ * - Layout: ClientLayout wraps this page (ClientHeader + main content). No staff sidebar.
+ * - Data: useDashboardStats(client_slug) and useTickets({ status: "all", clientSlug }) fetch
+ *   stats and tickets; sla_tracking is fetched by ticket ids. All existing hooks/API unchanged.
+ * - Ticket list: ClientTicketsTable renders tickets; row click opens TicketDetailDrawer;
+ *   "Details" link navigates to /app/client/tickets/:ticketId (client ticket detail page).
+ * - Analytics: ClientReports page embeds Analytics in clientReportsMode (same charts, client-scoped).
+ * - Ticket detail routing: /app/client/tickets/:ticketId renders a view-only client ticket detail page.
+ */
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Shield,
   LayoutDashboard,
   FileText,
   HelpCircle,
@@ -250,64 +261,71 @@ const SlaBadge = ({ onTrack }: { onTrack: boolean }) => (
 );
 
 // ─── Tickets Table (client list) ─────────────────────────────────────────────
+// Details uses programmatic navigation so it always goes to ClientTicketDetail.
 
-const ClientTicketsTable = ({ tickets, loading, onSelect }: { tickets: TicketType[]; loading: boolean; onSelect: (t: TicketType) => void }) => (
-  <section className="py-10">
-    <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
-      <h2 className="mb-4 text-base font-bold text-foreground tracking-tight">Your Service Requests</h2>
-      <div className="overflow-hidden rounded-2xl" style={{ border: "1px solid hsl(270 15% 88% / 0.7)", boxShadow: "0 1px 4px hsl(285 25% 10% / 0.04), 0 8px 24px hsl(285 25% 10% / 0.06)" }}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ background: "linear-gradient(135deg, hsl(285 20% 96%), hsl(270 10% 94%))", borderBottom: "1px solid hsl(270 15% 88% / 0.7)" }}>
-                <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Ticket ID</th>
-                <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Summary</th>
-                <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Status</th>
-                <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Last Updated</th>
-                <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground" />
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading...</td>
+const ClientTicketsTable = ({ tickets, loading }: { tickets: TicketType[]; loading: boolean }) => {
+  const navigate = useNavigate();
+  return (
+    <section className="py-10">
+      <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
+        <h2 className="mb-4 text-base font-bold text-foreground tracking-tight">Your Service Requests</h2>
+        <div className="overflow-hidden rounded-2xl" style={{ border: "1px solid hsl(270 15% 88% / 0.7)", boxShadow: "0 1px 4px hsl(285 25% 10% / 0.04), 0 8px 24px hsl(285 25% 10% / 0.06)" }}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ background: "linear-gradient(135deg, hsl(285 20% 96%), hsl(270 10% 94%))", borderBottom: "1px solid hsl(270 15% 88% / 0.7)" }}>
+                  <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Ticket ID</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Summary</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Status</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Last Updated</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground" />
                 </tr>
-              ) : tickets.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-sm text-muted-foreground">No tickets yet.</td>
-                </tr>
-              ) : (
-                tickets.map((ticket, i) => (
-                  <tr
-                    key={ticket.id}
-                    className="group transition-all duration-150 cursor-pointer"
-                    style={{
-                      background: i % 2 === 1 ? "hsl(270 10% 94% / 0.15)" : "hsl(0 0% 100%)",
-                      borderBottom: i < tickets.length - 1 ? "1px solid hsl(270 15% 88% / 0.4)" : "none",
-                    }}
-                    onClick={() => onSelect(ticket)}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "hsl(285 20% 96% / 0.6)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 1 ? "hsl(270 10% 94% / 0.15)" : "hsl(0 0% 100%)"; }}
-                  >
-                    <td className="whitespace-nowrap px-5 py-3 font-mono text-xs font-medium text-foreground">{ticket.ticket_number}</td>
-                    <td className="max-w-xs truncate px-5 py-3 text-foreground">{ticket.issue_type || ticket.category || ticket.ticket_number}</td>
-                    <td className="px-5 py-3"><StatusBadge status={ticket.status} /></td>
-                    <td className="whitespace-nowrap px-5 py-3 text-muted-foreground">{formatIST(ticket.updated_at, "yyyy-MM-dd")}</td>
-                    <td className="px-5 py-3 text-right">
-                      <Link to={`/app/client/tickets/${ticket.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition-all duration-200 hover:bg-primary/6">
-                        Details <ChevronRight className="h-3 w-3" />
-                      </Link>
-                    </td>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading...</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : tickets.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-8 text-center text-sm text-muted-foreground">No tickets yet.</td>
+                  </tr>
+                ) : (
+                  tickets.map((ticket, i) => (
+                    <tr
+                      key={ticket.id}
+                      className="group transition-all duration-150"
+                      style={{
+                        background: i % 2 === 1 ? "hsl(270 10% 94% / 0.15)" : "hsl(0 0% 100%)",
+                        borderBottom: i < tickets.length - 1 ? "1px solid hsl(270 15% 88% / 0.4)" : "none",
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "hsl(285 20% 96% / 0.6)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = i % 2 === 1 ? "hsl(270 10% 94% / 0.15)" : "hsl(0 0% 100%)"; }}
+                    >
+                      <td className="whitespace-nowrap px-5 py-3 font-mono text-xs font-medium text-foreground">{ticket.ticket_number}</td>
+                      <td className="max-w-xs truncate px-5 py-3 text-foreground">{ticket.issue_type || ticket.category || ticket.ticket_number}</td>
+                      <td className="px-5 py-3"><StatusBadge status={ticket.status} /></td>
+                      <td className="whitespace-nowrap px-5 py-3 text-muted-foreground">{formatIST(ticket.updated_at, "yyyy-MM-dd")}</td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/app/client/tickets/${ticket.id}`)}
+                          className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition-all duration-200 hover:bg-primary/6 cursor-pointer bg-transparent border-0"
+                        >
+                          Details <ChevronRight className="h-3 w-3" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 // ─── Ticket Detail Drawer ─────────────────────────────────────────────────────
 
@@ -608,43 +626,58 @@ export default function ClientDashboard() {
 
   return (
     <>
-      {/* Same gradient section and card styling as staff Dashboard */}
-      <section className="relative overflow-hidden py-6 md:py-8">
-        <div className="absolute inset-0 pointer-events-none hidden md:block" style={{ background: "linear-gradient(180deg, hsl(285 30% 96%) 0%, hsl(30 5% 98%) 100%)" }} />
-        <div className="absolute inset-0 pointer-events-none hidden md:block" style={{ backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.025) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.025) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
-        <div className="absolute pointer-events-none hidden md:block" style={{ top: "-20%", right: "10%", width: 400, height: 300, background: "radial-gradient(ellipse, hsl(32 95% 52% / 0.06) 0%, transparent 70%)" }} />
-        <div className="relative z-10 w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
-          <WelcomeSection clientDisplayName={clientDisplayName} stats={stats} loading={statsLoading} />
-        </div>
-      </section>
-      <GradientDivider />
-      <section className="pb-6 md:pb-8">
-        <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">Service Overview</h2>
-          <div
-            className="rounded-xl p-6 md:rounded-2xl md:p-6"
-            style={{
-              background: "linear-gradient(135deg, hsl(285 15% 97%) 0%, hsl(30 5% 98%) 100%)",
-              border: "1px solid hsl(270 15% 88% / 0.5)",
-              boxShadow: "0 1px 3px hsl(285 25% 10% / 0.05), inset 0 1px 0 hsl(0 0% 100% / 0.7)",
-            }}
-          >
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <MetricCard label="Active Tickets" value={statsLoading ? "—" : stats?.openTickets ?? 0} desc="Currently in progress" icon={Ticket} variant="primary" />
-              <MetricCard label="Resolved" value={statsLoading ? "—" : (stats?.totalTickets ?? 0) - (stats?.openTickets ?? 0)} desc="Successfully completed" icon={CheckCircle2} variant="default" />
-              <MetricCard label="SLA Compliance" value={(stats?.totalTickets ?? 0) > 0 ? ((stats?.slaBreaches ?? 0) === 0 ? "On track" : "Alert") : "—"} desc="Phase-based tracking" icon={Clock} variant="accent" />
-              <MetricCard label="Total Requests" value={statsLoading ? "—" : stats?.totalTickets ?? 0} desc="All time" icon={BarChart3} variant="default" />
+      {/* Full-page background: platform gradient + grid + decorative blobs (not white) */}
+      <div className="relative min-h-full">
+        {/* Base gradient — matches rest of platform */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: "linear-gradient(180deg, hsl(285 30% 96%) 0%, hsl(285 20% 97%) 35%, hsl(30 5% 98%) 100%)" }}
+        />
+        {/* Subtle grid — desktop only */}
+        <div
+          className="absolute inset-0 pointer-events-none hidden md:block"
+          style={{
+            backgroundImage: "linear-gradient(hsl(285 45% 55% / 0.03) 1px, transparent 1px), linear-gradient(90deg, hsl(285 45% 55% / 0.03) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+        {/* Decorative blobs for depth */}
+        <div
+          className="absolute pointer-events-none hidden md:block"
+          style={{ top: "-15%", right: "5%", width: 420, height: 320, background: "radial-gradient(ellipse, hsl(32 95% 52% / 0.07) 0%, transparent 70%)" }}
+        />
+        <div
+          className="absolute pointer-events-none hidden md:block"
+          style={{ bottom: "10%", left: "-5%", width: 360, height: 280, background: "radial-gradient(ellipse, hsl(285 45% 55% / 0.05) 0%, transparent 70%)" }}
+        />
+
+        <div className="relative z-10">
+          <section className="relative overflow-hidden py-6 md:py-8">
+            <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
+              <WelcomeSection clientDisplayName={clientDisplayName} stats={stats} loading={statsLoading} />
             </div>
-          </div>
+          </section>
+          <GradientDivider />
+          <section className="pb-6 md:pb-8">
+            <div className="w-full md:mx-auto md:max-w-7xl px-3 md:px-6">
+              <h2 className="mb-4 text-lg font-semibold text-foreground">Service Overview</h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <MetricCard label="Active Tickets" value={statsLoading ? "—" : stats?.openTickets ?? 0} desc="Currently in progress" icon={Ticket} variant="primary" />
+                <MetricCard label="Resolved" value={statsLoading ? "—" : (stats?.totalTickets ?? 0) - (stats?.openTickets ?? 0)} desc="Successfully completed" icon={CheckCircle2} variant="default" />
+                <MetricCard label="SLA Compliance" value={(stats?.totalTickets ?? 0) > 0 ? ((stats?.slaBreaches ?? 0) === 0 ? "On track" : "Alert") : "—"} desc="Phase-based tracking" icon={Clock} variant="accent" />
+                <MetricCard label="Total Requests" value={statsLoading ? "—" : stats?.totalTickets ?? 0} desc="All time" icon={BarChart3} variant="default" />
+              </div>
+            </div>
+          </section>
+          <GradientDivider />
+          <ClientTicketsTable tickets={tickets} loading={ticketsLoading} />
+          <GradientDivider />
+          <ReportsSection tickets={tickets} stats={stats ?? null} slaData={slaData} orgNameOrSlug={reportOrgSlug} />
+          <GradientDivider />
+          <SupportSection />
+          <DashboardFooter />
         </div>
-      </section>
-      <GradientDivider />
-      <ClientTicketsTable tickets={tickets} loading={ticketsLoading} onSelect={setSelectedTicket} />
-      <GradientDivider />
-      <ReportsSection tickets={tickets} stats={stats ?? null} slaData={slaData} orgNameOrSlug={reportOrgSlug} />
-      <GradientDivider />
-      <SupportSection />
-      <DashboardFooter />
+      </div>
       <TicketDetailDrawer ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
     </>
   );

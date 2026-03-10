@@ -12,10 +12,11 @@
     />
     <meta name="author" content="Sahaya" />
 
-    <!-- Content Security Policy: mitigate XSS; adjust if Supabase/analytics need more sources -->
+    <!-- Content Security Policy: mitigate XSS; adjust if Supabase/analytics need more sources.
+         Note: frame-ancestors is not supported in meta; set via HTTP headers (e.g. vercel.json) if needed. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss:; font-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self';"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss:; font-src 'self'; base-uri 'self'; form-action 'self';"
     />
 
     <!-- Favicon (Add sahaya-logo.png inside /public) -->

@@ -18,10 +18,12 @@ export default function ClientSupport() {
 
   const email = user?.email ?? "";
   const clientSlug = userProfile?.client_slug ?? null;
+  const organisationId = userProfile?.organisation_id ?? null;
   const canCreate = !!email && !!clientSlug;
   const clientContext = canCreate
     ? { openedByEmail: email, clientSlug }
     : null;
+  const showUnlinkedWarning = !organisationId && !clientSlug;
 
   return (
     <>
@@ -47,10 +49,17 @@ export default function ClientSupport() {
             </div>
           </div>
 
-          {!canCreate && (
+          {showUnlinkedWarning && (
             <Alert variant="destructive" className="mb-6">
               <AlertDescription>
                 Your account is not linked to a client. Contact your administrator to submit support requests.
+              </AlertDescription>
+            </Alert>
+          )}
+          {!showUnlinkedWarning && !clientSlug && organisationId && (
+            <Alert className="mb-6 border-amber-200 bg-amber-50/80 text-amber-900">
+              <AlertDescription>
+                Support requests are available once your account is linked to a client. Please ask your administrator to link your account to a client so you can create and track requests.
               </AlertDescription>
             </Alert>
           )}

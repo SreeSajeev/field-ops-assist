@@ -563,356 +563,409 @@ export default function Analytics({ clientReportsMode = false }: AnalyticsProps)
     ].filter((d) => d.value > 0);
   }, [analyticsData?.tickets]);
 
-  const content = (
-    <div className="space-y-8">
-      {/* Page header with export actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shrink-0 shadow-sm">
-            <BarChart3 className="h-5 w-5 text-white" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold break-words">Analytics</h1>
-            <p className="text-muted-foreground text-sm">Executive overview and key metrics</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExportTickets} disabled={!analyticsData?.tickets?.length}>
-            <Download className="h-4 w-4 mr-2" />
-            Export Tickets
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExportMetrics} disabled={!analyticsData}>
-            <Download className="h-4 w-4 mr-2" />
-            Export Metrics
-          </Button>
-        </div>
-      </div>
+  const ticketsThisWeek = useMemo(() => {
+    const vol = (analyticsData?.volumeByDay ?? []) as { count: number }[];
+    return vol.reduce((s, d) => s + d.count, 0);
+  }, [analyticsData?.volumeByDay]);
 
-      {/* SECTION 1 — Full-width filter bar */}
-      <Card className="shadow-sm border-border/60 w-full">
-        <CardContent className="p-4 md:p-6">
-          <div className="flex flex-wrap gap-2 items-center mb-4">
-            <span className="text-xs text-muted-foreground font-medium">Quick range:</span>
-            <Button variant="outline" size="sm" onClick={() => setDateRange(7)} className="shrink-0">
-              Last 7 days
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setDateRange(30)} className="shrink-0">
-              Last 30 days
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setDateRange(90)} className="shrink-0">
-              Last 90 days
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setDateRange(null)} className="shrink-0">
-              Clear range
-            </Button>
+  const ticketsThisMonth = useMemo(() => {
+    const tickets = (analyticsData?.tickets ?? []) as Array<Record<string, unknown> & { opened_at?: string | null; created_at?: string | null }>;
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    return tickets.filter((t) => {
+      const opened = (t.opened_at ?? t.created_at) as string | undefined;
+      if (!opened) return false;
+      const d = new Date(opened);
+      return d.getFullYear() === year && d.getMonth() === month;
+    }).length;
+  }, [analyticsData?.tickets]);
+
+  const slaBreachRatePct = useMemo(() => {
+    const total = analyticsData?.totalTickets ?? 0;
+    const breached = analyticsData?.totalBreachedTickets ?? 0;
+    if (total === 0) return 0;
+    return Math.round((breached / total) * 100);
+  }, [analyticsData?.totalTickets, analyticsData?.totalBreachedTickets]);
+
+  const content = (
+    <div className="space-y-10">
+      {/* Section 1 — Filters: page title, quick range, date range, refresh / export */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shrink-0 shadow-sm">
+              <BarChart3 className="h-5 w-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold break-words">Analytics</h1>
+              <p className="text-muted-foreground text-sm">Executive overview and key metrics</p>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-3 items-end">
-            {showClientSelector && (
-              <div className="min-w-[140px] w-full sm:w-auto sm:min-w-[160px] lg:max-w-[200px]">
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Client</Label>
-                <Select
-                  value={selectedClientSlug || 'all'}
-                  onValueChange={(v) => setSelectedClientSlug(v === 'all' ? '' : v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All Clients" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Clients</SelectItem>
-                    {clientOptions.map((slug) => (
-                      <SelectItem key={slug} value={slug}>{slug}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="min-w-[140px] w-full sm:w-auto lg:max-w-[160px]">
-              <Label htmlFor="startDate" className="text-xs text-muted-foreground mb-1.5 block">From</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <div className="min-w-[140px] w-full sm:w-auto lg:max-w-[160px]">
-              <Label htmlFor="endDate" className="text-xs text-muted-foreground mb-1.5 block">To</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <Button variant="outline" size="default" onClick={() => refetch()} disabled={isLoading} className="shrink-0">
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
+            <Button variant="outline" size="sm" onClick={handleExportTickets} disabled={!analyticsData?.tickets?.length}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Tickets
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportMetrics} disabled={!analyticsData}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Metrics
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* SECTION 2 — KPI summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <Card className="w-full shadow-sm border-border/60">
+        </div>
+        <Card className="shadow-md border-border/60 w-full">
           <CardContent className="p-4 md:p-6">
-            <p className="text-2xl lg:text-3xl font-bold break-words">{analyticsData?.totalTickets ?? 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total Tickets</p>
-          </CardContent>
-        </Card>
-        <Card className="w-full shadow-sm border-border/60">
-          <CardContent className="p-4 md:p-6">
-            <p className="text-2xl lg:text-3xl font-bold break-words">{analyticsData?.openTickets ?? 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">Open Tickets</p>
-          </CardContent>
-        </Card>
-        <Card className="w-full shadow-sm border-border/60">
-          <CardContent className="p-4 md:p-6">
-            <p className="text-2xl lg:text-3xl font-bold break-words">{analyticsData?.resolvedTickets ?? 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">Resolved Tickets</p>
-          </CardContent>
-        </Card>
-        <Card className="w-full shadow-sm border-border/60">
-          <CardContent className="p-4 md:p-6">
-            <p className="text-2xl lg:text-3xl font-bold break-words">{analyticsData?.slaCompliance ?? 100}%</p>
-            <p className="text-xs text-muted-foreground mt-1">SLA Compliance</p>
-          </CardContent>
-        </Card>
-        <Card className="w-full shadow-sm border-border/60">
-          <CardContent className="p-4 md:p-6">
-            <p className="text-2xl lg:text-3xl font-bold break-words">
-              {analyticsData?.avgResolutionHours != null ? analyticsData.avgResolutionHours.toFixed(1) : '—'}h
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">Avg Resolution Time</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* SECTION 3 — Graphs: 5–6 executive charts, 2 per row, gap-8 */}
-      {/* Row 1: Ticket Volume (largest) + Status Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        <Card className="flex w-full flex-col shadow-sm border-border/60 min-h-[340px] overflow-hidden">
-          <CardHeader className="pb-2 px-4 md:px-6">
-            <CardTitle className="text-base flex items-center gap-2 break-words min-w-0">
-              <Activity className="h-4 w-4 shrink-0" />
-              Ticket Volume (Last 7 Days)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 px-4 pt-0 pb-4 md:px-6 md:pb-6 min-h-[280px] w-full overflow-hidden">
-            {isLoading ? (
-              <div className="min-h-[280px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
-              </div>
-            ) : (analyticsData?.volumeByDay?.length ?? 0) > 0 ? (
-              <div className="w-full overflow-hidden" style={{ minHeight: 280 }}>
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={analyticsData?.volumeByDay ?? []} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" fontSize={12} tickLine={false} />
-                  <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="#6B21A8" strokeWidth={2} dot={{ fill: '#6B21A8', strokeWidth: 2, r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="min-h-[280px] flex items-center justify-center text-muted-foreground text-sm">No volume data for the selected range</div>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="flex w-full flex-col shadow-sm border-border/60 min-h-[340px] overflow-hidden">
-          <CardHeader className="pb-2 px-4 md:px-6">
-            <CardTitle className="text-base flex items-center gap-2 break-words min-w-0">
-              <PieChart className="h-4 w-4 shrink-0" />
-              Ticket Status Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 px-4 pt-0 pb-4 md:px-6 md:pb-6 min-h-[280px] w-full overflow-hidden">
-            {isLoading ? (
-              <div className="min-h-[280px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
-              </div>
-            ) : (analyticsData?.statusData?.length ?? 0) > 0 ? (
-              <div className="w-full overflow-hidden" style={{ minHeight: 280 }}>
-              <ResponsiveContainer width="100%" height={280}>
-                <RechartsPie>
-                  <Pie
-                    data={analyticsData?.statusData ?? []}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
+            <div className="flex flex-wrap gap-2 items-center mb-4">
+              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Quick range</span>
+              <Button variant="outline" size="sm" onClick={() => setDateRange(7)} className="shrink-0">
+                Last 7 days
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setDateRange(30)} className="shrink-0">
+                Last 30 days
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setDateRange(90)} className="shrink-0">
+                Last 90 days
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setDateRange(null)} className="shrink-0">
+                Clear range
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-3 items-end">
+              {showClientSelector && (
+                <div className="min-w-[140px] w-full sm:w-auto sm:min-w-[160px] lg:max-w-[200px]">
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Client</Label>
+                  <Select
+                    value={selectedClientSlug || 'all'}
+                    onValueChange={(v) => setSelectedClientSlug(v === 'all' ? '' : v)}
                   >
-                    {(analyticsData?.statusData ?? []).map((_: { name: string; value: number }, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend layout="vertical" align="right" verticalAlign="middle" fontSize={11} wrapperStyle={{ paddingLeft: 8 }} />
-                </RechartsPie>
-              </ResponsiveContainer>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="All Clients" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Clients</SelectItem>
+                      {clientOptions.map((slug) => (
+                        <SelectItem key={slug} value={slug}>{slug}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="min-w-[140px] w-full sm:w-auto lg:max-w-[160px]">
+                <Label htmlFor="startDate" className="text-xs text-muted-foreground mb-1.5 block">From</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full"
+                />
               </div>
-            ) : (
-              <div className="min-h-[280px] flex items-center justify-center text-muted-foreground text-sm">No status data</div>
-            )}
+              <div className="min-w-[140px] w-full sm:w-auto lg:max-w-[160px]">
+                <Label htmlFor="endDate" className="text-xs text-muted-foreground mb-1.5 block">To</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <Button variant="outline" size="default" onClick={() => refetch()} disabled={isLoading} className="shrink-0">
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Row 2: SLA Performance by Phase + Resolution Time Trend */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        <Card className="flex w-full flex-col shadow-sm border-border/60 min-h-[320px] overflow-hidden">
-          <CardHeader className="pb-2 px-4 md:px-6">
-            <CardTitle className="text-base flex items-center gap-2 break-words min-w-0">
-              <Target className="h-4 w-4 shrink-0" />
-              SLA Compliance by Phase
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 px-4 pt-0 pb-4 md:px-6 md:pb-6 min-h-[260px] w-full overflow-hidden">
-            {isLoading ? (
-              <div className="min-h-[260px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
-              </div>
-            ) : slaByPhaseData.length > 0 ? (
-              <div className="w-full overflow-hidden" style={{ minHeight: 260 }}>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={slaByPhaseData} layout="vertical" margin={{ top: 8, right: 24, left: 72, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                  <XAxis type="number" domain={[0, 100]} unit="%" fontSize={12} tickLine={false} />
-                  <YAxis type="category" dataKey="name" fontSize={12} width={70} tickLine={false} axisLine={false} />
-                  <Tooltip formatter={(v: number) => [`${v}%`, 'Compliance']} />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                    {slaByPhaseData.map((entry: { fill: string }, index: number) => (
-                      <Cell key={`sla-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-        <Card className="flex w-full flex-col shadow-sm border-border/60 min-h-[320px] overflow-hidden">
-          <CardHeader className="pb-2 px-4 md:px-6">
-            <CardTitle className="text-base flex items-center gap-2 break-words min-w-0">
-              <Clock className="h-4 w-4 shrink-0" />
-              Resolution Time Trend (Last 7 Days)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 px-4 pt-0 pb-4 md:px-6 md:pb-6 min-h-[260px] w-full overflow-hidden">
-            {isLoading ? (
-              <div className="min-h-[260px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
-              </div>
-            ) : resolutionTimeByDay.some((d) => d.count > 0) ? (
-              <div className="w-full overflow-hidden" style={{ minHeight: 260 }}>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={resolutionTimeByDay} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" fontSize={12} tickLine={false} />
-                  <YAxis fontSize={12} tickLine={false} axisLine={false} unit="h" />
-                  <Tooltip formatter={(v: number) => [v, 'Avg hours']} />
-                  <Line type="monotone" dataKey="avgHours" stroke="#22C55E" strokeWidth={2} dot={{ fill: '#22C55E', strokeWidth: 2, r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="min-h-[260px] flex items-center justify-center text-muted-foreground text-sm">No resolution data for the last 7 days</div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Section 2 — Key Metrics: 8 cards in consistent grid */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold text-foreground tracking-tight">Key Metrics</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
+          <Card className="w-full shadow-md border-border/60">
+            <CardContent className="p-4 md:p-6">
+              <p className="text-2xl lg:text-3xl font-bold break-words">{ticketsThisWeek}</p>
+              <p className="text-xs text-muted-foreground mt-1">Tickets This Week</p>
+            </CardContent>
+          </Card>
+          <Card className="w-full shadow-md border-border/60">
+            <CardContent className="p-4 md:p-6">
+              <p className="text-2xl lg:text-3xl font-bold break-words">{ticketsThisMonth}</p>
+              <p className="text-xs text-muted-foreground mt-1">Tickets This Month</p>
+            </CardContent>
+          </Card>
+          <Card className="w-full shadow-md border-border/60">
+            <CardContent className="p-4 md:p-6">
+              <p className="text-2xl lg:text-3xl font-bold break-words">{analyticsData?.totalTickets ?? 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">Total Tickets</p>
+            </CardContent>
+          </Card>
+          <Card className="w-full shadow-md border-border/60">
+            <CardContent className="p-4 md:p-6">
+              <p className="text-2xl lg:text-3xl font-bold break-words">{analyticsData?.openTickets ?? 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">Open Tickets</p>
+            </CardContent>
+          </Card>
+          <Card className="w-full shadow-md border-border/60">
+            <CardContent className="p-4 md:p-6">
+              <p className="text-2xl lg:text-3xl font-bold break-words">{analyticsData?.resolvedTickets ?? 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">Resolved Tickets</p>
+            </CardContent>
+          </Card>
+          <Card className="w-full shadow-md border-border/60">
+            <CardContent className="p-4 md:p-6">
+              <p className="text-2xl lg:text-3xl font-bold break-words">{analyticsData?.slaCompliance ?? 100}%</p>
+              <p className="text-xs text-muted-foreground mt-1">SLA Compliance</p>
+            </CardContent>
+          </Card>
+          <Card className="w-full shadow-md border-border/60">
+            <CardContent className="p-4 md:p-6">
+              <p className="text-2xl lg:text-3xl font-bold break-words">
+                {analyticsData?.avgResolutionHours != null ? analyticsData.avgResolutionHours.toFixed(1) : '—'}h
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">Average Resolution Time</p>
+            </CardContent>
+          </Card>
+          <Card className="w-full shadow-md border-border/60">
+            <CardContent className="p-4 md:p-6">
+              <p className="text-2xl lg:text-3xl font-bold break-words">{slaBreachRatePct}%</p>
+              <p className="text-xs text-muted-foreground mt-1">SLA Breach Rate</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      {/* Row 3: Tickets by Category + Tickets by Priority (or Location) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        <Card className="flex w-full flex-col shadow-sm border-border/60 min-h-[320px] overflow-hidden">
-          <CardHeader className="pb-2 px-4 md:px-6">
-            <CardTitle className="text-base flex items-center gap-2 break-words min-w-0">
-              <BarChart3 className="h-4 w-4 shrink-0" />
-              Tickets by Category
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 px-4 pt-0 pb-4 md:px-6 md:pb-6 min-h-[260px] w-full overflow-hidden">
-            {isLoading ? (
-              <div className="min-h-[260px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
-              </div>
-            ) : (analyticsData?.categoryData?.length ?? 0) > 0 ? (
-              <div className="w-full overflow-hidden" style={{ minHeight: 260 }}>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={analyticsData?.categoryData ?? []} layout="vertical" margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                  <XAxis type="number" fontSize={12} tickLine={false} />
-                  <YAxis type="category" dataKey="name" fontSize={11} width={100} tickLine={false} axisLine={false} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#F97316" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="min-h-[260px] flex items-center justify-center text-muted-foreground text-sm">No category data</div>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="flex w-full flex-col shadow-sm border-border/60 min-h-[320px] overflow-hidden">
-          <CardHeader className="pb-2 px-4 md:px-6">
-            <CardTitle className="text-base flex items-center gap-2 break-words min-w-0">
-              {priorityData.length > 0 ? <Star className="h-4 w-4 shrink-0" /> : <MapPin className="h-4 w-4 shrink-0" />}
-              {priorityData.length > 0 ? 'Tickets by Priority' : 'Tickets by Location'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 px-4 pt-0 pb-4 md:px-6 md:pb-6 min-h-[260px] w-full overflow-hidden">
-            {isLoading ? (
-              <div className="min-h-[260px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
-              </div>
-            ) : priorityData.length > 0 ? (
-              <div className="w-full overflow-hidden" style={{ minHeight: 260 }}>
-              <ResponsiveContainer width="100%" height={260}>
-                <RechartsPie>
-                  <Pie
-                    data={priorityData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={85}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {priorityData.map((entry: { fill: string }, index: number) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend layout="vertical" align="right" verticalAlign="middle" fontSize={11} wrapperStyle={{ paddingLeft: 8 }} />
-                </RechartsPie>
-              </ResponsiveContainer>
-              </div>
-            ) : (analyticsData?.locationData?.length ?? 0) > 0 ? (
-              <div className="w-full overflow-hidden" style={{ minHeight: 260 }}>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={analyticsData?.locationData ?? []} layout="vertical" margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                  <XAxis type="number" fontSize={12} tickLine={false} />
-                  <YAxis type="category" dataKey="name" fontSize={11} width={80} tickLine={false} axisLine={false} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#0EA5E9" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="min-h-[260px] flex items-center justify-center text-muted-foreground text-sm">No priority or location data</div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Section 3 — Charts: single grid, equal-height cards, ResponsiveContainer 100% */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold text-foreground tracking-tight">Charts</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* 1. Ticket Volume Trend */}
+          <Card className="flex w-full min-w-0 flex-col shadow-md border-border/60 min-h-[340px] overflow-hidden">
+            <CardHeader className="pb-2 px-4 md:px-6 pt-4 md:pt-6 shrink-0">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 break-words min-w-0">
+                <Activity className="h-4 w-4 shrink-0" />
+                Ticket Volume Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col min-h-0 px-4 pb-4 md:px-6 md:pb-6 pt-0">
+              {isLoading ? (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                </div>
+              ) : (analyticsData?.volumeByDay?.length ?? 0) > 0 ? (
+                <div className="w-full h-[300px] min-h-[300px] overflow-hidden">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={analyticsData?.volumeByDay ?? []} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="date" fontSize={12} tickLine={false} />
+                      <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="count" stroke="#6B21A8" strokeWidth={2} dot={{ fill: '#6B21A8', strokeWidth: 2, r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center text-muted-foreground text-sm">No volume data for the selected range</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 2. Ticket Status Distribution — pie, legend bottom, reduced radius */}
+          <Card className="flex w-full min-w-0 flex-col shadow-md border-border/60 min-h-[340px] overflow-hidden">
+            <CardHeader className="pb-2 px-4 md:px-6 pt-4 md:pt-6 shrink-0">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 break-words min-w-0">
+                <PieChart className="h-4 w-4 shrink-0" />
+                Ticket Status Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col min-h-0 px-4 pb-4 md:px-6 md:pb-6 pt-0 items-center">
+              {isLoading ? (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center w-full">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                </div>
+              ) : (analyticsData?.statusData?.length ?? 0) > 0 ? (
+                <div className="w-full h-[300px] min-h-[300px] overflow-hidden px-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPie margin={{ top: 16, right: 8, bottom: 56, left: 8 }}>
+                      <Pie
+                        data={analyticsData?.statusData ?? []}
+                        cx="50%"
+                        cy="38%"
+                        innerRadius={32}
+                        outerRadius={52}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {(analyticsData?.statusData ?? []).map((_: { name: string; value: number }, index: number) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend layout="horizontal" verticalAlign="bottom" align="center" fontSize={8} iconSize={6} iconType="square" wrapperStyle={{ paddingTop: 6 }} />
+                    </RechartsPie>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center text-muted-foreground text-sm w-full">No status data</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 3. SLA Compliance by Phase */}
+          <Card className="flex w-full min-w-0 flex-col shadow-md border-border/60 min-h-[340px] overflow-hidden">
+            <CardHeader className="pb-2 px-4 md:px-6 pt-4 md:pt-6 shrink-0">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 break-words min-w-0">
+                <Target className="h-4 w-4 shrink-0" />
+                SLA Compliance by Phase
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col min-h-0 px-4 pb-4 md:px-6 md:pb-6 pt-0">
+              {isLoading ? (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                </div>
+              ) : slaByPhaseData.length > 0 ? (
+                <div className="w-full h-[300px] min-h-[300px] overflow-hidden">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={slaByPhaseData} layout="vertical" margin={{ top: 8, right: 24, left: 72, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                      <XAxis type="number" domain={[0, 100]} unit="%" fontSize={12} tickLine={false} />
+                      <YAxis type="category" dataKey="name" fontSize={12} width={70} tickLine={false} axisLine={false} />
+                      <Tooltip formatter={(v: number) => [`${v}%`, 'Compliance']} />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                        {slaByPhaseData.map((entry: { fill: string }, index: number) => (
+                          <Cell key={`sla-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center text-muted-foreground text-sm">No SLA data</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 4. Resolution Time Trend */}
+          <Card className="flex w-full min-w-0 flex-col shadow-md border-border/60 min-h-[340px] overflow-hidden">
+            <CardHeader className="pb-2 px-4 md:px-6 pt-4 md:pt-6 shrink-0">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 break-words min-w-0">
+                <Clock className="h-4 w-4 shrink-0" />
+                Resolution Time Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col min-h-0 px-4 pb-4 md:px-6 md:pb-6 pt-0">
+              {isLoading ? (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                </div>
+              ) : resolutionTimeByDay.some((d) => d.count > 0) ? (
+                <div className="w-full h-[300px] min-h-[300px] overflow-hidden">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={resolutionTimeByDay} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="date" fontSize={12} tickLine={false} />
+                      <YAxis fontSize={12} tickLine={false} axisLine={false} unit="h" />
+                      <Tooltip formatter={(v: number) => [v, 'Avg hours']} />
+                      <Line type="monotone" dataKey="avgHours" stroke="#22C55E" strokeWidth={2} dot={{ fill: '#22C55E', strokeWidth: 2, r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center text-muted-foreground text-sm">No resolution data for the last 7 days</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 5. Tickets by Category */}
+          <Card className="flex w-full min-w-0 flex-col shadow-md border-border/60 min-h-[340px] overflow-hidden">
+            <CardHeader className="pb-2 px-4 md:px-6 pt-4 md:pt-6 shrink-0">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 break-words min-w-0">
+                <BarChart3 className="h-4 w-4 shrink-0" />
+                Tickets by Category
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col min-h-0 px-4 pb-4 md:px-6 md:pb-6 pt-0">
+              {isLoading ? (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                </div>
+              ) : (analyticsData?.categoryData?.length ?? 0) > 0 ? (
+                <div className="w-full h-[300px] min-h-[300px] overflow-hidden">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={analyticsData?.categoryData ?? []} layout="vertical" margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                      <XAxis type="number" fontSize={12} tickLine={false} />
+                      <YAxis type="category" dataKey="name" fontSize={11} width={100} tickLine={false} axisLine={false} />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#F97316" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center text-muted-foreground text-sm">No category data</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 6. Tickets by Priority (or Location fallback) */}
+          <Card className="flex w-full min-w-0 flex-col shadow-md border-border/60 min-h-[340px] overflow-hidden">
+            <CardHeader className="pb-2 px-4 md:px-6 pt-4 md:pt-6 shrink-0">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 break-words min-w-0">
+                {priorityData.length > 0 ? <Star className="h-4 w-4 shrink-0" /> : <MapPin className="h-4 w-4 shrink-0" />}
+                {priorityData.length > 0 ? 'Tickets by Priority' : 'Tickets by Location'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col min-h-0 px-4 pb-4 md:px-6 md:pb-6 pt-0 items-center">
+              {isLoading ? (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center w-full">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                </div>
+              ) : priorityData.length > 0 ? (
+                <div className="w-full h-[300px] min-h-[300px] overflow-hidden px-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPie margin={{ top: 16, right: 8, bottom: 56, left: 8 }}>
+                      <Pie
+                        data={priorityData}
+                        cx="50%"
+                        cy="38%"
+                        innerRadius={32}
+                        outerRadius={52}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {priorityData.map((entry: { fill: string }, index: number) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend layout="horizontal" verticalAlign="bottom" align="center" fontSize={8} iconSize={6} iconType="square" wrapperStyle={{ paddingTop: 6 }} />
+                    </RechartsPie>
+                  </ResponsiveContainer>
+                </div>
+              ) : (analyticsData?.locationData?.length ?? 0) > 0 ? (
+                <div className="w-full h-[300px] min-h-[300px] overflow-hidden">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={analyticsData?.locationData ?? []} layout="vertical" margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                      <XAxis type="number" fontSize={12} tickLine={false} />
+                      <YAxis type="category" dataKey="name" fontSize={11} width={80} tickLine={false} axisLine={false} />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#0EA5E9" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex-1 min-h-[300px] flex items-center justify-center text-muted-foreground text-sm">No priority or location data</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
