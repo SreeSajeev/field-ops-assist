@@ -1,26 +1,21 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Mail, Phone, Menu, X } from "lucide-react";
+import { MapPin, Mail, Phone, Menu, X, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 
-const OFFICE_ADDRESS = [
-  "PARISKQ IOT SOLUTIONS PRIVATE LIMITED",
+const OFFICE_EMAIL = "enquiry@pariskq.in";
+const OFFICE_PHONE = "+91 98801 18388";
+
+const OFFICE_ADDRESS_LINES = [
   "#19, 1st Floor, Ranoji Rao Road",
   "Basavanagudi",
   "Bangalore 560004",
   "India",
 ];
-
-const OFFICE_EMAIL = "enquiry@pariskq.in";
-const OFFICE_PHONE = "+91 98801 18388";
-
-/** Google Maps embed URL — interactive, zoomable map for the office address */
-const MAP_EMBED_URL =
-  "https://www.google.com/maps?q=PARISKQ+IOT+SOLUTIONS+PRIVATE+LIMITED+Basavanagudi+Bangalore&output=embed";
 
 // ─── Header (matches SahayaLanding) ─────────────────────────────────────────
 
@@ -301,7 +296,7 @@ export default function EnquiryPage() {
             </form>
           </div>
 
-          {/* Right: Our Office card with map + contact details */}
+          {/* Right: Our Office card — office info + contact details */}
           <div
             className="rounded-2xl overflow-hidden flex flex-col"
             style={cardStyle}
@@ -313,38 +308,39 @@ export default function EnquiryPage() {
               </p>
             </div>
 
-            <div className="px-6 sm:px-8 pb-6 flex-1 min-h-0">
-              <div className="rounded-xl overflow-hidden border border-white/10 shadow-lg" style={{ height: 400 }}>
-                <iframe
-                  title="Office location — Pariskq, Basavanagudi Bangalore"
-                  src={MAP_EMBED_URL}
-                  width="100%"
-                  height="400"
-                  style={{ border: 0 }}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  allowFullScreen
-                  className="block w-full h-full min-h-[300px] sm:min-h-[400px]"
-                />
-              </div>
-
-              <div className="mt-6 space-y-4 text-white/90">
+            <div className="px-6 sm:px-8 pb-6 space-y-6">
+              {/* Office information block — same card look, no map */}
+              <div className="rounded-xl border border-white/10 bg-white/5 p-6">
                 <div className="flex gap-3">
+                  <Building2 className="h-5 w-5 text-white/50 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50 mb-1">
+                      Company
+                    </p>
+                    <p className="text-sm font-medium leading-snug text-white/90">
+                      PARISKQ IOT SOLUTIONS PRIVATE LIMITED
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-4 pt-4 border-t border-white/10">
                   <MapPin className="h-5 w-5 text-white/50 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50 mb-1">
-                      Office Location
+                      Address
                     </p>
                     <p className="text-sm leading-relaxed text-white/90">
-                      {OFFICE_ADDRESS.map((line, i) => (
+                      {OFFICE_ADDRESS_LINES.map((line, i) => (
                         <span key={i}>
                           {line}
-                          {i < OFFICE_ADDRESS.length - 1 && <br />}
+                          {i < OFFICE_ADDRESS_LINES.length - 1 && <br />}
                         </span>
                       ))}
                     </p>
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-4 text-white/90">
                 <div className="flex gap-3">
                   <Mail className="h-5 w-5 text-white/50 shrink-0 mt-0.5" />
                   <div>
