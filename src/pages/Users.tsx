@@ -214,7 +214,7 @@ export default function Users() {
     },
   });
 
-  const { data: pendingUsers = [], refetch: refetchPending } = useQuery({
+  const { data: pendingUsersTenant = [], refetch: refetchPendingTenant } = useQuery({
     queryKey: ['users-pending', organisationId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -228,6 +228,23 @@ export default function Users() {
     },
     enabled: isTenantAdmin && !!organisationId,
   });
+
+  const { data: pendingUsersSuperAdmin = [], refetch: refetchPendingSuperAdmin } = useQuery({
+    queryKey: ['users-pending-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('approval_status', 'pending')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as User[];
+    },
+    enabled: isSuperAdmin,
+  });
+
+  const pendingUsers = isSuperAdmin ? pendingUsersSuperAdmin : pendingUsersTenant;
+  const refetchPending = isSuperAdmin ? refetchPendingSuperAdmin : refetchPendingTenant;
 
   const isActive = (u: User) => u.is_active !== false && u.active !== false;
 
@@ -342,8 +359,8 @@ export default function Users() {
           </AlertDescription>
         </Alert>
 
-        {/* Pending User Requests — Organisation admins only */}
-        {isTenantAdmin && organisationId && (
+        {/* Pending User Requests — Organisation admins (their org) or Super Admin (all) */}
+        {((isTenantAdmin && organisationId) || isSuperAdmin) && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -351,7 +368,9 @@ export default function Users() {
                 Pending User Requests
               </CardTitle>
               <CardDescription>
-                Users who signed up and are waiting for your approval to access the platform.
+                {isSuperAdmin
+                  ? 'Users waiting for approval (any organisation). Approve so they can sign in.'
+                  : 'Users who signed up and are waiting for your approval to access the platform.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -365,6 +384,7 @@ export default function Users() {
                         <TableHead className="font-semibold">Name</TableHead>
                         <TableHead className="font-semibold">Email</TableHead>
                         <TableHead className="font-semibold">Role</TableHead>
+                        {isSuperAdmin && <TableHead className="font-semibold">Organisation</TableHead>}
                         <TableHead className="font-semibold text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -378,6 +398,11 @@ export default function Users() {
                               {ROLE_BADGES[u.role]?.label ?? u.role}
                             </Badge>
                           </TableCell>
+                          {isSuperAdmin && (
+                            <TableCell className="text-muted-foreground">
+                              {u.organisation_id ? (orgMap.get(u.organisation_id) ?? u.organisation_id) : '—'}
+                            </TableCell>
+                          )}
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button
