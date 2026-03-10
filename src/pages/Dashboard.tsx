@@ -3,6 +3,7 @@ import { AppLayoutNew } from "@/components/layout/AppLayoutNew";
 import { TicketsTable } from "@/components/tickets/TicketsTable";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useTickets } from "@/hooks/useTickets";
+import { useFieldExecutives } from "@/hooks/useFieldExecutives";
 import {
   Ticket,
   AlertTriangle,
@@ -75,6 +76,7 @@ function MetricCard({
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: recentTickets, isLoading: ticketsLoading } = useTickets({ status: "all" });
+  const { data: fieldExecutives = [] } = useFieldExecutives(true);
 
   return (
     <AppLayoutNew>
@@ -283,9 +285,9 @@ export default function Dashboard() {
                 <div className="space-y-3">
                   {[
                     { label: "Open", count: stats?.openTickets ?? 0, color: "hsl(205 85% 50%)" },
-                    { label: "Assigned", count: 0, color: "hsl(285 45% 50%)" },
-                    { label: "In Progress", count: 0, color: "hsl(175 60% 40%)" },
-                    { label: "Resolved", count: 0, color: "hsl(145 65% 35%)" },
+                    { label: "Assigned", count: stats?.assignedTickets ?? 0, color: "hsl(285 45% 50%)" },
+                    { label: "In Progress", count: stats?.inProgressTickets ?? 0, color: "hsl(175 60% 40%)" },
+                    { label: "Resolved", count: stats?.resolvedTickets ?? 0, color: "hsl(145 65% 35%)" },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center gap-3">
                       <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: item.color }} />
@@ -310,7 +312,7 @@ export default function Dashboard() {
                   Field Team
                 </h3>
                 <div className="py-4 text-center">
-                  <p className="text-3xl font-bold text-foreground">0</p>
+                  <p className="text-3xl font-bold text-foreground">{fieldExecutives.length}</p>
                   <p className="mt-1 text-sm text-muted-foreground">Active Executives</p>
                 </div>
                 <Link to="/app/field-executives">

@@ -188,6 +188,8 @@ export interface DashboardStats {
   openTickets: number;
   needsReviewCount: number;
   assignedTickets: number;
+  inProgressTickets: number;
+  resolvedTickets: number;
   resolvedToday: number;
   avgConfidenceScore: number;
   slaBreaches: number;

@@ -49,7 +49,11 @@ export function useDashboardStats(clientSlug?: string | null, organisationIdOver
       const openTickets = tickets?.filter(t => t.status === 'OPEN').length || 0;
       const needsReviewCount = tickets?.filter(t => t.status === 'NEEDS_REVIEW').length || 0;
       const assignedTickets = tickets?.filter(t => t.status === 'ASSIGNED').length || 0;
-      
+      const inProgressTickets = tickets?.filter(t =>
+        ['EN_ROUTE', 'ON_SITE', 'RESOLVED_PENDING_VERIFICATION'].includes(t.status)
+      ).length || 0;
+      const resolvedTickets = tickets?.filter(t => t.status === 'RESOLVED').length || 0;
+
       const resolvedToday = tickets?.filter(t => {
         if (t.status !== 'RESOLVED') return false;
         const createdDate = new Date(t.created_at);
@@ -70,6 +74,8 @@ export function useDashboardStats(clientSlug?: string | null, organisationIdOver
         openTickets,
         needsReviewCount,
         assignedTickets,
+        inProgressTickets,
+        resolvedTickets,
         resolvedToday,
         avgConfidenceScore: Math.round(avgConfidenceScore * 10) / 10,
         slaBreaches,
