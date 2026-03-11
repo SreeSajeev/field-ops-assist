@@ -43,11 +43,13 @@ export function RequireAuth({ fallback }: GuardProps) {
 /**
  * STAFF / ADMIN only.
  * FE and CLIENT are explicitly redirected.
+ * Blocks until profile is resolved (avoids role decision with null userProfile).
  */
 export function RequireStaff({ fallback }: GuardProps) {
-  const { user, loading, isFieldExecutive, isClient } = useAuth();
+  const { user, loading, userProfile, isFieldExecutive, isClient } = useAuth();
 
-  if (loading && !user) {
+  const authNotReady = loading || (user != null && userProfile == null);
+  if (authNotReady) {
     return fallback ?? <AuthLoading />;
   }
 
@@ -69,11 +71,13 @@ export function RequireStaff({ fallback }: GuardProps) {
 /* ================= CLIENT ONLY ================= */
 /**
  * CLIENT only. Redirect non-CLIENT to /app.
+ * Blocks until profile is resolved (avoids role decision with null userProfile).
  */
 export function RequireClient({ children, fallback }: GuardProps & { children?: React.ReactNode }) {
   const { user, loading, userProfile } = useAuth();
 
-  if (loading && !user) {
+  const authNotReady = loading || (user != null && userProfile == null);
+  if (authNotReady) {
     return (fallback ?? <AuthLoading />) as React.ReactElement;
   }
 
@@ -91,11 +95,13 @@ export function RequireClient({ children, fallback }: GuardProps & { children?: 
 /* ================= FE ONLY ================= */
 /**
  * FIELD_EXECUTIVE only.
+ * Blocks until profile is resolved.
  */
 export function RequireFE({ fallback }: GuardProps) {
-  const { user, loading, isFieldExecutive } = useAuth();
+  const { user, loading, userProfile, isFieldExecutive } = useAuth();
 
-  if (loading && !user) {
+  const authNotReady = loading || (user != null && userProfile == null);
+  if (authNotReady) {
     return fallback ?? <AuthLoading />;
   }
 
@@ -113,11 +119,13 @@ export function RequireFE({ fallback }: GuardProps) {
 /* ================= ADMIN ONLY ================= */
 /**
  * ADMIN / SUPER_ADMIN only.
+ * Blocks until profile is resolved.
  */
 export function RequireAdmin({ fallback }: GuardProps) {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, userProfile, isAdmin } = useAuth();
 
-  if (loading && !user) {
+  const authNotReady = loading || (user != null && userProfile == null);
+  if (authNotReady) {
     return fallback ?? <AuthLoading />;
   }
 
@@ -135,11 +143,13 @@ export function RequireAdmin({ fallback }: GuardProps) {
 /* ================= SUPER ADMIN ONLY ================= */
 /**
  * SUPER_ADMIN only. Used for SaaS super-admin dashboard.
+ * Blocks until profile is resolved.
  */
 export function RequireSuperAdmin({ fallback }: GuardProps) {
   const { user, loading, userProfile } = useAuth();
 
-  if (loading && !user) {
+  const authNotReady = loading || (user != null && userProfile == null);
+  if (authNotReady) {
     return fallback ?? <AuthLoading />;
   }
 

@@ -478,6 +478,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq("auth_id", authUser.id)
       .maybeSingle();
 
+    if (import.meta.env.DEV) {
+      // AUTH DEBUG: DB lookup result
+      // eslint-disable-next-line no-console
+      console.info("[AUTH DEBUG] DB profile lookup", {
+        authUserId: authUser.id,
+        email: authUser.email,
+        error: error ? { message: error.message, code: (error as any).code } : null,
+        found: !!data,
+        row: data
+          ? {
+              id: (data as { id: string }).id,
+              role: (data as { role: string }).role,
+              organisation_id: (data as { organisation_id?: string | null }).organisation_id ?? null,
+              client_slug: (data as { client_slug?: string | null }).client_slug ?? null,
+            }
+          : null,
+      });
+    }
+
     if (error || !data) return { profile: null, deactivated: false };
 
     // Only block when explicitly pending or rejected. Treat null/undefined as approved (backward compatibility if migration not run).
@@ -522,6 +541,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setSession(sess);
       setUser(sess?.user ?? null);
+
+      if (import.meta.env.DEV) {
+        // AUTH DEBUG: initial session / environment
+        // eslint-disable-next-line no-console
+        console.info("[AUTH DEBUG] hydrate", {
+          supabaseUrl: (import.meta as any).env?.VITE_SUPABASE_URL,
+          authUserId: sess?.user?.id ?? null,
+          email: sess?.user?.email ?? null,
+          hasSession: !!sess,
+        });
+      }
 
       if (sess?.user) {
         let result = await resolveUserProfile(sess.user);

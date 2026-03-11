@@ -178,10 +178,20 @@ export default function Index() {
      ROLE-BASED ROUTING
      SUPER_ADMIN → super admin dashboard
      ADMIN → organisation admin dashboard
-     STAFF → ticket dashboard
+     STAFF → ticket dashboard (Service Manager)
      FIELD_EXECUTIVE → FE dashboard
      CLIENT → client dashboard
+     Role is read from public.users.role (by auth_id). If staff land on client dashboard, check users.role in DB.
   ========================= */
+
+  if (import.meta.env.DEV && userProfile) {
+    // eslint-disable-next-line no-console
+    console.info("[AUTH DEBUG] redirect", {
+      role: userProfile.role,
+      email: userProfile.email,
+      supabaseUrl: (import.meta as any).env?.VITE_SUPABASE_URL,
+    });
+  }
 
   if (userProfile.role === "SUPER_ADMIN") {
     return <Navigate to="/app/super-admin" replace />;
